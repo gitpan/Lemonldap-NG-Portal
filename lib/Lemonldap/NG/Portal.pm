@@ -12,6 +12,8 @@ use warnings;
 use MIME::Base64;
 use CGI;
 
+our $VERSION = '0.02';
+
 our @ISA = qw(CGI Exporter);
 
 # Constants
@@ -30,7 +32,7 @@ sub PE_BADCERTIFICATE     {10}
 our %EXPORT_TAGS = (
     'all' => [
         qw( PE_OK PE_SESSIONEXPIRED PE_FORMEMPTY PE_WRONGMANAGERACCOUNT PE_USERNOTFOUND PE_BADCREDENTIALS
-            PE_LDAPCONNECTFAILED PE_LDAPERROR PE_APACHESESSIONERROR PE_FIRSTACCESS PE_BADCERTIFICATE)
+            PE_LDAPCONNECTFAILED PE_LDAPERROR PE_APACHESESSIONERROR PE_FIRSTACCESS PE_BADCERTIFICATE import)
     ]
 );
 
@@ -39,8 +41,6 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT =
   qw( PE_OK PE_SESSIONEXPIRED PE_FORMEMPTY PE_WRONGMANAGERACCOUNT PE_USERNOTFOUND PE_BADCREDENTIALS
       PE_LDAPCONNECTFAILED PE_LDAPERROR PE_APACHESESSIONERROR PE_FIRSTACCESS PE_BADCERTIFICATE);
-
-our $VERSION = '0.01';
 
 # Pre-loaded methods
 
@@ -87,9 +87,9 @@ sub process {
     my ($self) = @_;
     $self->{error} = PE_OK;
     foreach my $sub
-      qw(controlUrlOrigin extractFormInfo formateParams formateFilter
+      (qw(controlUrlOrigin extractFormInfo formateParams formateFilter
          connectLDAP bind search setSessionInfo authenticate store unbind
-	 buildCookie autoRedirect log)
+	 buildCookie log autoRedirect))
       {
 	if($self->{$sub}) {
 	    last if ( $self->{error} = &{$self->{$sub}}($self));

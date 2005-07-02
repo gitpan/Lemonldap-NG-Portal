@@ -9,6 +9,8 @@ use warnings;
 use CGI;
 use Lemonldap::NG::Portal;
 
+our $VERSION = '0.01';
+
 our @ISA = qw(Lemonldap::NG::Portal);
 
 # Authentication is made here before searching the LDAP Directory

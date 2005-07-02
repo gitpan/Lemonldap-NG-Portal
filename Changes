@@ -2,5 +2,7 @@ Revision history for Perl extension Lemonldap::NG::Portal.
 
 0.01  Tue Jun 21 11:14:00 2005
 	- original version; created by h2xs 1.23 with options
-		-Xn Lemonldap::NG::Portal
+		-AXn Lemonldap::NG::Portal
 
+0.02  Fri Jul 1 21.45.00 2005
+	- bug corrections
