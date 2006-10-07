@@ -12,37 +12,40 @@ use warnings;
 use MIME::Base64;
 use CGI;
 
-our $VERSION = '0.02';
+our $VERSION = '0.1';
 
 our @ISA = qw(CGI Exporter);
 
 # Constants
-sub PE_OK                  {0}
-sub PE_SESSIONEXPIRED      {1}
-sub PE_FORMEMPTY           {2}
-sub PE_WRONGMANAGERACCOUNT {3}
-sub PE_USERNOTFOUND        {4}
-sub PE_BADCREDENTIALS      {5}
-sub PE_LDAPCONNECTFAILED   {6}
-sub PE_LDAPERROR           {7}
-sub PE_APACHESESSIONERROR  {8}
-sub PE_FIRSTACCESS         {9}
-sub PE_BADCERTIFICATE     {10}
+sub PE_OK                  { 0 }
+sub PE_SESSIONEXPIRED      { 1 }
+sub PE_FORMEMPTY           { 2 }
+sub PE_WRONGMANAGERACCOUNT { 3 }
+sub PE_USERNOTFOUND        { 4 }
+sub PE_BADCREDENTIALS      { 5 }
+sub PE_LDAPCONNECTFAILED   { 6 }
+sub PE_LDAPERROR           { 7 }
+sub PE_APACHESESSIONERROR  { 8 }
+sub PE_FIRSTACCESS         { 9 }
+sub PE_BADCERTIFICATE      { 10 }
 
 our %EXPORT_TAGS = (
     'all' => [
         qw( PE_OK PE_SESSIONEXPIRED PE_FORMEMPTY PE_WRONGMANAGERACCOUNT PE_USERNOTFOUND PE_BADCREDENTIALS
-            PE_LDAPCONNECTFAILED PE_LDAPERROR PE_APACHESESSIONERROR PE_FIRSTACCESS PE_BADCERTIFICATE import)
-    ]
+          PE_LDAPCONNECTFAILED PE_LDAPERROR PE_APACHESESSIONERROR PE_FIRSTACCESS PE_BADCERTIFICATE import
+	  )
+    ],
+    'constants' => [
+        qw( PE_OK PE_SESSIONEXPIRED PE_FORMEMPTY PE_WRONGMANAGERACCOUNT PE_USERNOTFOUND PE_BADCREDENTIALS
+	  PE_LDAPCONNECTFAILED PE_LDAPERROR PE_APACHESESSIONERROR PE_FIRSTACCESS PE_BADCERTIFICATE )
+    ],
 );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
 our @EXPORT =
   qw( PE_OK PE_SESSIONEXPIRED PE_FORMEMPTY PE_WRONGMANAGERACCOUNT PE_USERNOTFOUND PE_BADCREDENTIALS
-      PE_LDAPCONNECTFAILED PE_LDAPERROR PE_APACHESESSIONERROR PE_FIRSTACCESS PE_BADCERTIFICATE);
-
-# Pre-loaded methods
+  PE_LDAPCONNECTFAILED PE_LDAPERROR PE_APACHESESSIONERROR PE_FIRSTACCESS PE_BADCERTIFICATE import);
 
 sub new {
     my $class = shift;
@@ -57,28 +60,29 @@ sub new {
     %$self = ( %$self, %args );
     die("You've to indicate a an Apache::Session storage module !")
       unless ( $self->{storageModule} );
-    eval "require ".$self->{storageModule};
-    die("Module ".$self->{storageModule}." not found in \@INC") if($@);
+    eval "require " . $self->{storageModule};
+    die( "Module " . $self->{storageModule} . " not found in \@INC" ) if ($@);
     $self->{domain} =~ s/^([^\.])/.$1/;
-    $self->{ldapServer} ||= 'localhost';
-    $self->{ldapPort}       ||= 389;
+    $self->{ldapServer}    ||= 'localhost';
+    $self->{ldapPort}      ||= 389;
     $self->{cookie_secure} ||= 0;
-    $self->{cookie_name} ||= "lemon";
+    $self->{cookie_name}   ||= "lemon";
     return $self;
 }
 
 sub error {
-    my $self = shift;
-    my @message = ('Everything is OK',
-         'Your connection has expired; You must to be authentified once again',
-         'User and password fields must be filled',
-         'Wrong directory manager account or password',
-         'User not found in directory',
-         'Wrong credentials',
-         'Unable to connect to LDAP server',
-         'Abnormal error from LDAP server',
-         'Apache::Session module failed',
-	 'Authentication required',
+    my $self    = shift;
+    my @message = (
+        'Everything is OK',
+        'Your connection has expired; You must to be authentified once again',
+        'User and password fields must be filled',
+        'Wrong directory manager account or password',
+        'User not found in directory',
+        'Wrong credentials',
+        'Unable to connect to LDAP server',
+        'Abnormal error from LDAP server',
+        'Apache::Session module failed',
+        'Authentication required',
     );
     return $message[ $self->{error} ];
 }
@@ -86,18 +90,18 @@ sub error {
 sub process {
     my ($self) = @_;
     $self->{error} = PE_OK;
-    foreach my $sub
-      (qw(controlUrlOrigin extractFormInfo formateParams formateFilter
-         connectLDAP bind search setSessionInfo authenticate store unbind
-	 buildCookie log autoRedirect))
-      {
-	if($self->{$sub}) {
-	    last if ( $self->{error} = &{$self->{$sub}}($self));
-	}
-	else {
+    foreach my $sub 
+        qw(controlUrlOrigin extractFormInfo formateParams formateFilter
+        connectLDAP bind search setSessionInfo setGroups authenticate store unbind
+        buildCookie log autoRedirect)
+    {
+        if ( $self->{$sub} ) {
+            last if ( $self->{error} = &{ $self->{$sub} }($self) );
+        }
+        else {
             last if ( $self->{error} = $self->$sub );
-	}
-      };
+        }
+    }
     return ( $self->{error} ? 0 : 1 );
 }
 
@@ -118,20 +122,20 @@ sub _bind {
 
 sub header {
     my $self = shift;
-    if($self->{cookie}) {
-	$self->SUPER::header(@_,-cookie => $self->{cookie});
+    if ( $self->{cookie} ) {
+        $self->SUPER::header( @_, -cookie => $self->{cookie} );
     }
     else {
-	$self->SUPER::header(@_);
+        $self->SUPER::header(@_);
     }
 }
 
 sub redirect {
-    if($_[0]->{cookie}) {
-	SUPER::redirect(@_,-cookie => $_[0]->{cookie});
+    if ( $_[0]->{cookie} ) {
+        SUPER::redirect( @_, -cookie => $_[0]->{cookie} );
     }
     else {
-	SUPER::redirect(@_);
+        SUPER::redirect(@_);
     }
 }
 
@@ -153,11 +157,11 @@ sub controlExistingSession {
 
 sub extractFormInfo {
     my $self = shift;
-    return PE_OK if($self->{id});
+    return PE_OK if ( $self->{id} );
     return PE_FIRSTACCESS
       unless ( $self->param('user') );
-    return PE_FORMEMPTY unless (
-      length( $self->{'user'} = $self->param('user') ) > 0
+    return PE_FORMEMPTY
+      unless ( length( $self->{'user'} = $self->param('user') ) > 0
         && length( $self->{'password'} = $self->param('password') ) > 0 );
     PE_OK;
 }
@@ -203,23 +207,37 @@ sub search {
         filter => $self->{filter},
     );
     if ( $mesg->code() != 0 ) {
+	print STDERR $mesg->error."\n";
         return PE_LDAPERROR;
     }
     return PE_USERNOTFOUND unless ( $self->{entry} = $mesg->entry(0) );
-    $self->{dn} = $self->{entry}->dn;
+    $self->{dn} = $self->{entry}->dn();
     PE_OK;
 }
 
 sub setSessionInfo {
     my ($self) = @_;
-    foreach $_ qw(dn uid cn mail) {
-        if($_ eq "dn") {
-	    $self->{sessionInfo}->{$_} = $self->{entry}->dn();
-	}
-	else {
-	    $self->{sessionInfo}->{$_} = $self->{entry}->get_value($_);
-	}
+    $self->{sessionInfo}->{dn} = $self->{dn};
+    unless ( $self->{exported_vars} ) {
+        foreach (qw(uid cn mail)) {
+            $self->{sessionInfo}->{$_} = $self->{entry}->get_value($_);
+        }
     }
+    elsif ( ref( $self->{exported_vars} ) eq 'HASH' ) {
+        foreach ( keys %{ $self->{exported_vars} } ) {
+            $self->{sessionInfo}->{$_} =
+              $self->{entry}->get_value( $self->{exported_vars}->{$_} );
+        }
+    }
+    else {
+        foreach ( @{ $self->{exported_vars} } ) {
+            $self->{sessionInfo}->{$_} = $self->{entry}->get_value($_);
+        }
+    }
+    PE_OK;
+}
+
+sub setGroups {
     PE_OK;
 }
 
@@ -232,25 +250,25 @@ sub unbind {
 
 sub authenticate {
     my $self = shift;
-    return PE_OK if($self->{id});
+    return PE_OK if ( $self->{id} );
     $self->unbind();
     my $err;
-    return $err unless(($err = $self->connectLDAP) == PE_OK);
+    return $err unless ( ( $err = $self->connectLDAP ) == PE_OK );
     return PE_BADCREDENTIALS
-      unless (
-        &_bind( $self->{ldap}, $self->{dn}, $self->{password} )
-      );
+      unless ( &_bind( $self->{ldap}, $self->{dn}, $self->{password} ) );
     PE_OK;
 }
 
 sub store {
     my ($self) = @_;
     my %h;
+
     # TODO: reuse old session
     eval { tie %h, $self->{storageModule}, undef, $self->{storageOptions}; };
     return PE_APACHESESSIONERROR if ($@);
     $self->{id} = $h{_session_id};
-    $h{$_} = $self->{sessionInfo}->{$_} foreach(keys%{$self->{sessionInfo}});
+    $h{$_} = $self->{sessionInfo}->{$_}
+      foreach ( keys %{ $self->{sessionInfo} } );
     $h{_utime} = time();
     untie %h;
     PE_OK;
@@ -264,7 +282,7 @@ sub buildCookie {
         -domain => $self->{domain},
         -path   => "/",
         -secure => $self->{cookie_secure},
-	@_,
+        @_,
     );
     PE_OK;
 }
@@ -272,13 +290,13 @@ sub buildCookie {
 sub autoRedirect {
     my $self = shift;
     if ( my $u = $self->{urldc} ) {
-        print $self->SUPER::redirect (
-		-uri => $u,
-		-cookie => $self->{cookie},
-		-type => 'text/html',
-		-cache_control => 'private',
-		-nph => 1,
-		);
+        print $self->SUPER::redirect(
+            -uri           => $u,
+            -cookie        => $self->{cookie},
+            -type          => 'text/html',
+            -cache_control => 'private',
+            -nph           => 1,
+        );
         print << "EOF";
 <html>
 <head>
@@ -293,8 +311,9 @@ function redirect() {
 </body>
 </html>
 EOF
+        exit;
     }
-    exit;
+    PE_OK;
 }
 
 sub log {
@@ -326,15 +345,8 @@ Lemonldap::NG::Portal - Perl extension for building Lemonldap compatible portals
 	 },
 	 ldapServer     => 'ldap.domaine.com',
 	 cookie_secure  => 1,
+	 exported_vars  => ["uid","cn","mail","appli"],
     );
-  # Example of overloading: choose the LDAP variables to store
-  $portal->{setSessionInfo} = sub {
-    my ($self) = @_;
-    foreach $_ qw(uid cn mail appli) {
-        $self->{sessionInfo}->{$_} = $entry->get_value($_);
-    }
-    PE_OK;
-  };
 
   if($portal->process()) {
     # Write here the menu with CGI methods. This page is displayed ONLY IF
@@ -382,6 +394,9 @@ L<Lemonldap::IdentityProvider>)
 This library is a way to build Lemonldap compatible portals. You can use it
 either by inheritance or by writing anonymous methods like in the example
 above.
+
+See L<Lemonldap::NG::Portal::SharedConf::DBI> for a complete example of use of
+Lemonldap::Portal::* libraries.
 
 =head1 METHODS
 
@@ -464,7 +479,8 @@ Retrives the LDAP entry corresponding to the user using $self->{filter}.
 =head3 setSessionInfo
 
 Prepares variables to store in central cache (stored temporarily in
-$self->{sessionInfo}).
+$self->{sessionInfo}). It use exported_vars entry (passed to the new sub) if
+defined to know what to store else it stores uid, cn and mail attributes.
 
 =head3 authenticate
 
@@ -639,8 +655,7 @@ the global store by calling them C<$E<lt>varnameE<gt>>.
 
 =head1 SEE ALSO
 
-Lemonldap::NG::Handler(3), http://lemonldap.sourceforge.net/,
-CGI(3)
+L<Lemonldap::NG::Handler>, L<Lemonldap::NG::Portal::SharedConf::DBI>, L<CGI>
 
 =head1 AUTHOR
 
@@ -648,23 +663,15 @@ Xavier Guimard, E<lt>x.guimard@free.frE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2004, 2005 by Eric German E<amp> Xavier Guimard
+Copyright (C) 2005 by Xavier Guimard E<lt>x.guimard@free.frE<gt>
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself, either Perl version 5.8.4 or,
+at your option, any later version of Perl 5 you may have available.
 
 Lemonldap was originaly written by Eric german who decided to publish him in
 2003 under the terms of the GNU General Public License version 2.
-
-=over 2
-
-=item This library is free software; you can redistribute it and/or modify it
-under same terms as Perl itself, either Perl version 5.8.4 or, at your option,
-any later version of Perl 5 you may have available.
-
-=item The primary copyright holder is Eric German.
-
-=item Portions are copyrighted under the GNU General Public License, Version 2
-
-=item Portions are copyrighted by Doug MacEachern and Lincoln Stein.
-
-=back
+Lemonldap::NG is a complete rewrite of Lemonldap and is able to have different
+policies in a same Apache virtual host.
 
 =cut
