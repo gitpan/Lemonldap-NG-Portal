@@ -14,7 +14,7 @@ use MIME::Base64;
 *EXPORT_TAGS = *Lemonldap::NG::Portal::SharedConf::EXPORT_TAGS;
 *EXPORT = *Lemonldap::NG::Portal::SharedConf::EXPORT;
 
-our $VERSION = '0.1';
+our $VERSION = '0.11';
 
 our @ISA = qw(Lemonldap::NG::Portal::SharedConf);
 
@@ -36,14 +36,14 @@ sub getConf {
         $self->{dbiChain}, $self->{dbiUser},
         $self->{dbiPassword}, { RaiseError => 1 }
     );
-    my $sth = $dbh->prepare("SELECT max(cfgNum) from config");
+    my $sth = $dbh->prepare("SELECT max(cfgNum) from lmConfig");
     $sth->execute();
     my @row = $sth->fetchrow_array;
     if ( $cfgNum != $row[0] ) {
         $cfgNum = $row[0];
         my $sth =
           $dbh->prepare(
-            "select groupRules from config where(cfgNum=$cfgNum)");
+            "select groupRules from lmConfig where(cfgNum=$cfgNum)");
         $sth->execute();
         @row = $sth->fetchrow_array;
         $self->{groups} = thaw( decode_base64( $row[0] ) );

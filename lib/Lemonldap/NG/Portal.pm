@@ -12,7 +12,7 @@ use warnings;
 use MIME::Base64;
 use CGI;
 
-our $VERSION = '0.1';
+our $VERSION = '0.11';
 
 our @ISA = qw(CGI Exporter);
 
@@ -220,18 +220,18 @@ sub setSessionInfo {
     $self->{sessionInfo}->{dn} = $self->{dn};
     unless ( $self->{exported_vars} ) {
         foreach (qw(uid cn mail)) {
-            $self->{sessionInfo}->{$_} = $self->{entry}->get_value($_);
+            $self->{sessionInfo}->{$_} = $self->{entry}->get_value($_) || "";
         }
     }
     elsif ( ref( $self->{exported_vars} ) eq 'HASH' ) {
         foreach ( keys %{ $self->{exported_vars} } ) {
             $self->{sessionInfo}->{$_} =
-              $self->{entry}->get_value( $self->{exported_vars}->{$_} );
+              $self->{entry}->get_value( $self->{exported_vars}->{$_} ) || "";
         }
     }
     else {
         foreach ( @{ $self->{exported_vars} } ) {
-            $self->{sessionInfo}->{$_} = $self->{entry}->get_value($_);
+            $self->{sessionInfo}->{$_} = $self->{entry}->get_value($_) || "";
         }
     }
     PE_OK;
