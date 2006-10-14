@@ -12,7 +12,7 @@ use warnings;
 use MIME::Base64;
 use CGI;
 
-our $VERSION = '0.11';
+our $VERSION = '0.111';
 
 our @ISA = qw(CGI Exporter);
 

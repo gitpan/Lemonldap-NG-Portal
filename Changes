@@ -13,3 +13,5 @@ Revision history for Perl extension Lemonldap::NG::Portal.
 0.11  Sat Oct 14 15:20:45 2006
 	- (little) bug corrections
 
+0.111 Sat Oct 14 16:09:25 2006
+	- error in pod
