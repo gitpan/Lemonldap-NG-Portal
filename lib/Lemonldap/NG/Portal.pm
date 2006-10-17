@@ -12,7 +12,7 @@ use warnings;
 use MIME::Base64;
 use CGI;
 
-our $VERSION = '0.111';
+our $VERSION = '0.2';
 
 our @ISA = qw(CGI Exporter);
 
@@ -131,11 +131,12 @@ sub header {
 }
 
 sub redirect {
+    my $self = shift;
     if ( $_[0]->{cookie} ) {
-        SUPER::redirect( @_, -cookie => $_[0]->{cookie} );
+        $self->SUPER::redirect( @_, -cookie => $_[0]->{cookie} );
     }
     else {
-        SUPER::redirect(@_);
+        $self->SUPER::redirect(@_);
     }
 }
 
@@ -293,9 +294,7 @@ sub autoRedirect {
         print $self->SUPER::redirect(
             -uri           => $u,
             -cookie        => $self->{cookie},
-            -type          => 'text/html',
-            -cache_control => 'private',
-            -nph           => 1,
+	    -status        => '302 Moved Temporary'
         );
         print << "EOF";
 <html>
