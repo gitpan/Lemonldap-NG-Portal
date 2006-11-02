@@ -1,5 +1,12 @@
 Revision history for Perl extension Lemonldap::NG::Portal.
 
+0.4   Thu Nov 2 16:00:25 2006
+	- New documentation
+	- Portal.pm becomes Portal/Simple.pm
+
+0.3   Mon Oct 30 22:45:15 2006
+	- SharedConf.pm : all parameters are stored in the database
+
 0.2   Tue Oct 17 15:55:32 2006
 	- Little correction since CGI.pm has change
 	- First release running with Apache2

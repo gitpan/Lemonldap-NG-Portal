@@ -4,7 +4,7 @@ use ExtUtils::MakeMaker;
 # the contents of the Makefile that is written.
 WriteMakefile(
     NAME              => 'Lemonldap::NG::Portal',
-    VERSION_FROM      => 'lib/Lemonldap/NG/Portal.pm', # finds $VERSION
+    VERSION           => '0.4', # finds $VERSION
     PREREQ_PM         => {
         'Apache::Session'  => 0,
 	'Net::LDAP'        => 0,
@@ -12,6 +12,6 @@ WriteMakefile(
 	'CGI'              => 3.08,
 	},
     ($] >= 5.005 ?     ## Add these new keywords supported since 5.005
-      (ABSTRACT_FROM  => 'lib/Lemonldap/NG/Portal.pm', # retrieve abstract from module
+      (ABSTRACT_FROM  => 'lib/Lemonldap/NG/Portal.pod', # retrieve abstract from module
        AUTHOR         => 'Xavier Guimard <x.guimard@free.fr>') : ()),
 );

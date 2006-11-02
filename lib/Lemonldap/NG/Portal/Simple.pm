@@ -1,4 +1,4 @@
-package Lemonldap::NG::Portal;
+package Lemonldap::NG::Portal::Simple;
 
 use 5.008004;
 use strict;
@@ -12,7 +12,7 @@ use warnings;
 use MIME::Base64;
 use CGI;
 
-our $VERSION = '0.2';
+our $VERSION = '0.4';
 
 our @ISA = qw(CGI Exporter);
 
@@ -32,12 +32,11 @@ sub PE_BADCERTIFICATE      { 10 }
 our %EXPORT_TAGS = (
     'all' => [
         qw( PE_OK PE_SESSIONEXPIRED PE_FORMEMPTY PE_WRONGMANAGERACCOUNT PE_USERNOTFOUND PE_BADCREDENTIALS
-          PE_LDAPCONNECTFAILED PE_LDAPERROR PE_APACHESESSIONERROR PE_FIRSTACCESS PE_BADCERTIFICATE import
-	  )
+          PE_LDAPCONNECTFAILED PE_LDAPERROR PE_APACHESESSIONERROR PE_FIRSTACCESS PE_BADCERTIFICATE import)
     ],
     'constants' => [
         qw( PE_OK PE_SESSIONEXPIRED PE_FORMEMPTY PE_WRONGMANAGERACCOUNT PE_USERNOTFOUND PE_BADCREDENTIALS
-	  PE_LDAPCONNECTFAILED PE_LDAPERROR PE_APACHESESSIONERROR PE_FIRSTACCESS PE_BADCERTIFICATE )
+          PE_LDAPCONNECTFAILED PE_LDAPERROR PE_APACHESESSIONERROR PE_FIRSTACCESS PE_BADCERTIFICATE )
     ],
 );
 
@@ -49,6 +48,28 @@ our @EXPORT =
 
 sub new {
     my $class = shift;
+    my $self  = $class->SUPER::new();
+    $self->getConf(@_) or die "Unable to get configuration";
+    die("You've to indicate a an Apache::Session storage module !")
+      unless ( $self->{globalStorage} );
+    eval "require " . $self->{globalStorage};
+    die( "Module " . $self->{globalStorage} . " not found in \@INC" ) if ($@);
+    die("You've to indicate a domain for cookies") unless ( $self->{domain} );
+    $self->{domain} =~ s/^([^\.])/.$1/;
+    $self->{ldapServer}    ||= 'localhost';
+    $self->{ldapPort}      ||= 389;
+    $self->{securedCookie} ||= 0;
+    $self->{cookieName}    ||= "lemon";
+
+    if ( $self->{authentication} eq "SSL" ) {
+        require Lemonldap::NG::Portal::AuthSSL;
+        %$self = ( %$self, %$Lemonldap::NG::Portal::AuthSSL::OVERRIDE );
+    }
+    return $self;
+}
+
+sub getConf {
+    my ($self) = shift;
     my %args;
     if ( ref( $_[0] ) ) {
         %args = %{ $_[0] };
@@ -56,59 +77,66 @@ sub new {
     else {
         %args = @_;
     }
-    my $self = $class->SUPER::new();
     %$self = ( %$self, %args );
-    die("You've to indicate a an Apache::Session storage module !")
-      unless ( $self->{storageModule} );
-    eval "require " . $self->{storageModule};
-    die( "Module " . $self->{storageModule} . " not found in \@INC" ) if ($@);
-    $self->{domain} =~ s/^([^\.])/.$1/;
-    $self->{ldapServer}    ||= 'localhost';
-    $self->{ldapPort}      ||= 389;
-    $self->{cookie_secure} ||= 0;
-    $self->{cookie_name}   ||= "lemon";
-    return $self;
+    1;
 }
 
 sub error {
-    my $self    = shift;
-    my @message = (
-        'Everything is OK',
-        'Your connection has expired; You must to be authentified once again',
-        'User and password fields must be filled',
-        'Wrong directory manager account or password',
-        'User not found in directory',
-        'Wrong credentials',
-        'Unable to connect to LDAP server',
-        'Abnormal error from LDAP server',
-        'Apache::Session module failed',
-        'Authentication required',
-    );
+    my $self = shift;
+    my $lang = shift;
+    my @message;
+    if ( $lang eq "fr" ) {
+        @message = (
+            'Tout est bon',
+            'Votre session a expiré, vous devez vous réauthentifier',
+            'login ou mot de passe non renseigné',
+            "Compte ou mot de passe LDAP de l'application incorrect",
+            'Utilisateur inexistant',
+            'mot de passe ou login incorrect',
+            'Connexion impossible au serveur LDAP',
+            'Erreur anormale du serveur LDAP',
+            'Erreur du module Apache::Session choisi',
+            'Authentification exigée',
+        );
+    }
+    else {
+        @message = (
+            'Everything is OK',
+'Your connection has expired; You must to be authentified once again',
+            'User and password fields must be filled',
+            'Wrong directory manager account or password',
+            'User not found in directory',
+            'Wrong credentials',
+            'Unable to connect to LDAP server',
+            'Abnormal error from LDAP server',
+            'Apache::Session module failed',
+            'Authentication required',
+        );
+    }
     return $message[ $self->{error} ];
 }
 
 sub process {
     my ($self) = @_;
     $self->{error} = PE_OK;
-    foreach my $sub 
-        qw(controlUrlOrigin extractFormInfo formateParams formateFilter
-        connectLDAP bind search setSessionInfo setGroups authenticate store unbind
-        buildCookie log autoRedirect)
-    {
-        if ( $self->{$sub} ) {
+    foreach my $sub
+      qw(controlUrlOrigin extractFormInfo formateParams formateFilter
+      connectLDAP bind search setSessionInfo setGroups authenticate store unbind
+      buildCookie log autoRedirect) {
+        if ( $self->{$sub} )
+        {
             last if ( $self->{error} = &{ $self->{$sub} }($self) );
         }
         else {
             last if ( $self->{error} = $self->$sub );
         }
-    }
-    return ( $self->{error} ? 0 : 1 );
+      } return ( $self->{error} ? 0 : 1 );
 }
 
 sub _bind {
     my ( $ldap, $dn, $password ) = @_;
     my $mesg;
-    if ( $dn and $password ) {    #named bind
+    if ( $dn and $password ) {    # named bind
         $mesg = $ldap->bind( $dn, password => $password );
     }
     else {                        # anonymous bind
@@ -148,17 +176,13 @@ sub controlUrlOrigin {
     PE_OK;
 }
 
-# TODO: control existing sessions and TimeOut
+# TODO: delete existing sessions
 sub controlExistingSession {
-    my $self = shift;
-
-    return PE_SESSIONEXPIRED if ( $self->param('op') eq 't' );
     PE_OK;
 }
 
 sub extractFormInfo {
     my $self = shift;
-    return PE_OK if ( $self->{id} );
     return PE_FIRSTACCESS
       unless ( $self->param('user') );
     return PE_FORMEMPTY
@@ -208,7 +232,7 @@ sub search {
         filter => $self->{filter},
     );
     if ( $mesg->code() != 0 ) {
-	print STDERR $mesg->error."\n";
+        print STDERR $mesg->error . "\n";
         return PE_LDAPERROR;
     }
     return PE_USERNOTFOUND unless ( $self->{entry} = $mesg->entry(0) );
@@ -219,19 +243,19 @@ sub search {
 sub setSessionInfo {
     my ($self) = @_;
     $self->{sessionInfo}->{dn} = $self->{dn};
-    unless ( $self->{exported_vars} ) {
+    unless ( $self->{exportedVars} ) {
         foreach (qw(uid cn mail)) {
             $self->{sessionInfo}->{$_} = $self->{entry}->get_value($_) || "";
         }
     }
-    elsif ( ref( $self->{exported_vars} ) eq 'HASH' ) {
-        foreach ( keys %{ $self->{exported_vars} } ) {
+    elsif ( ref( $self->{exportedVars} ) eq 'HASH' ) {
+        foreach ( keys %{ $self->{exportedVars} } ) {
             $self->{sessionInfo}->{$_} =
-              $self->{entry}->get_value( $self->{exported_vars}->{$_} ) || "";
+              $self->{entry}->get_value( $self->{exportedVars}->{$_} ) || "";
         }
     }
     else {
-        foreach ( @{ $self->{exported_vars} } ) {
+        foreach ( @{ $self->{exportedVars} } ) {
             $self->{sessionInfo}->{$_} = $self->{entry}->get_value($_) || "";
         }
     }
@@ -263,9 +287,9 @@ sub authenticate {
 sub store {
     my ($self) = @_;
     my %h;
-
-    # TODO: reuse old session
-    eval { tie %h, $self->{storageModule}, undef, $self->{storageOptions}; };
+    eval {
+        tie %h, $self->{globalStorage}, undef, $self->{globalStorageOptions};
+    };
     return PE_APACHESESSIONERROR if ($@);
     $self->{id} = $h{_session_id};
     $h{$_} = $self->{sessionInfo}->{$_}
@@ -278,11 +302,11 @@ sub store {
 sub buildCookie {
     my $self = shift;
     $self->{cookie} = $self->cookie(
-        -name   => $self->{cookie_name},
+        -name   => $self->{cookieName},
         -value  => $self->{id},
         -domain => $self->{domain},
         -path   => "/",
-        -secure => $self->{cookie_secure},
+        -secure => $self->{securedCookie},
         @_,
     );
     PE_OK;
@@ -292,9 +316,9 @@ sub autoRedirect {
     my $self = shift;
     if ( my $u = $self->{urldc} ) {
         print $self->SUPER::redirect(
-            -uri           => $u,
-            -cookie        => $self->{cookie},
-	    -status        => '302 Moved Temporary'
+            -uri    => $u,
+            -cookie => $self->{cookie},
+            -status => '302 Moved Temporary'
         );
         print << "EOF";
 <html>
@@ -325,15 +349,15 @@ __END__
 
 =head1 NAME
 
-Lemonldap::NG::Portal - Perl extension for building Lemonldap compatible portals
+Lemonldap::NG::Portal::Simple - Base module for building Lemonldap::NG compatible portals
 
 =head1 SYNOPSIS
 
-  use Lemonldap::NG::Portal;
-  my $portal = new Lemonldap::NG::Portal(
+  use Lemonldap::NG::Portal::Simple;
+  my $portal = new Lemonldap::NG::Portal::Simple(
 	 domain         => 'gendarmerie.defense.gouv.fr',
-         storageModule  => 'Apache::Session::MySQL',
-	 storageOptions => {
+         globalStorage  => 'Apache::Session::MySQL',
+	 globalStorageOptions => {
 	   DataSource   => 'dbi:mysql:database=dbname;host=127.0.0.1',
 	   UserName     => 'db_user',
 	   Password     => 'db_password',
@@ -343,8 +367,8 @@ Lemonldap::NG::Portal - Perl extension for building Lemonldap compatible portals
 	   LockPassword     => 'db_password',
 	 },
 	 ldapServer     => 'ldap.domaine.com',
-	 cookie_secure  => 1,
-	 exported_vars  => ["uid","cn","mail","appli"],
+	 securedCookie  => 1,
+	 exportedVars  => ["uid","cn","mail","appli"],
     );
 
   if($portal->process()) {
@@ -373,26 +397,9 @@ Lemonldap::NG::Portal - Perl extension for building Lemonldap compatible portals
 
 =head1 DESCRIPTION
 
-Lemonldap is a simple Web-SSO based on L<Apache::Session> modules. It simplifies
-the build of a protected area with a few changes in the application (they just
-have to read some headers for accounting).
-
-It manages both authentication and authorization and provides headers for
-accounting. So you can have a full AAA protection for your web space. There are
-two ways to build a cross domain authentication:
-
-=over
-
-=item * Cross domain authentication itself (L<Lemonldap::Portal::Cda> I<(not yet implemented in Lemonldap::NG)>)
-
-=item * B<Liberty Alliance> (See L<Lemonldap::ServiceProvider> and
-L<Lemonldap::IdentityProvider>)
-
-=back
-
-This library is a way to build Lemonldap compatible portals. You can use it
-either by inheritance or by writing anonymous methods like in the example
-above.
+Lemonldap::NG::Portal::Simple is the base module for building Lemonldap::NG
+compatible portals. You can use it either by inheritance or by writing
+anonymous methods like in the example above.
 
 See L<Lemonldap::NG::Portal::SharedConf::DBI> for a complete example of use of
 Lemonldap::Portal::* libraries.
@@ -403,12 +410,14 @@ Lemonldap::Portal::* libraries.
 
 =head3 Args
 
-=over 5
+=over
 
 =item * ldapServer: server used to retrive session informations and to valid
 credentials (localhost by default).
 
 =item * ldapPort: tcp port used by ldap server.
+
+=item * ldapBase: base of the ldap directory.
 
 =item * managerDn: dn to used to connect to ldap server. By default, anonymous
 bind is used.
@@ -416,19 +425,26 @@ bind is used.
 =item * managerPassword: password to used to connect to ldap server. By
 default, anonymous bind is used.
 
-=item * ldapBase: base of the ldap directory.
+=item * securedCookie: set it to 1 if you want to protect user cookies
 
-=item * cookie_secure: set it to 1 if you want to protect user cookies
-
-=item * coolie_name: name of the cookie used by Lemonldap (lemon by default)
+=item * cookieName: name of the cookie used by Lemonldap (lemon by default)
 
 =item * domain: cookie domain. You may have to give it else the SSO will work
 only on your server.
 
-=item * storageModule: required: L<Apache::Session> library to used to store
+=item * globalStorage: required: L<Apache::Session> library to used to store
 session informations
 
-=item * storageOptions: parameters to bind to L<Apache::Session> module
+=item * globalStorageOptions: parameters to bind to L<Apache::Session> module
+
+=item * authentication: sheme to authenticate users (default: "ldap"). It can
+be set to:
+
+=over
+
+=item * B<SSL>: See L<Lemonldap::NG::Portal::AuthSsl>.
+
+=back
 
 =back
 
@@ -478,8 +494,12 @@ Retrives the LDAP entry corresponding to the user using $self->{filter}.
 =head3 setSessionInfo
 
 Prepares variables to store in central cache (stored temporarily in
-$self->{sessionInfo}). It use exported_vars entry (passed to the new sub) if
-defined to know what to store else it stores uid, cn and mail attributes.
+C<$self->{sessionInfo}>). It use C<exportedVars> entry (passed to the new sub)
+if defined to know what to store else it stores uid, cn and mail attributes.
+
+=head3 setGroups
+
+Does nothing by default.
 
 =head3 authenticate
 
@@ -490,7 +510,7 @@ with search() and the password.
 
 Stores the informations collected by setSessionInfo into the central cache.
 The portal connects the cache using the L<Apache::Session> module passed by
-the storageModule parameters (see constructor).
+the globalStorage parameters (see constructor).
 
 =head3 unbind
 
@@ -560,98 +580,6 @@ find the user distinguished name (dn) was refused by the server
 
 =back
 
-=head2 AUTHENTICATION-AUTHORIZATION-ACCOUNTING
-
-This section presents Lemonldap characteristics from the point-of-vue of
-AAA.
-
-=head3 B<Authentication>
-
-If a user isn't authenticated and attemps to connect to an area protected by a
-Lemonldap compatible handler, he is redirected to the portal. The portal
-authenticates user with a ldap bind by default, but you can also use another
-authentication sheme like using x509 user certificates (see
-L<Lemonldap::NG::Portal::AuthSsl> for more).
-
-Lemonldap use session cookies generated by L<Apache::Session> so as secure as a
-128-bit random cookie. You may use the C<cookie_secure> options of
-L<Lemonldap::NG::Portal> to avoid session hijacking.
-
-You have to manage life of sessions by yourself since Lemonldap knows nothing
-about the L<Apache::Session> module you've choose, but it's very easy using a
-simple cron script because L<Lemonldap::NG::Portal> stores the start time in the
-C<_utime> field.
-
-=head3 B<Authorization>
-
-Authorization is controled only by handlers because the portal knows nothing
-about the way the user will choose. L<Lemonldap::NG::Portal> is designed to help
-you to store all the user datas you wants to use to manage authorization.
-
-When initializing an handler, you have to describe what you want to protect and
-who can connect to. This is done by the C<locationRules> parameters of C<init>
-method. It is a reference to a hash who contains entries where:
-
-=over 4
-
-=item * B<keys> are regular expression who are compiled by C<init> using
-C<qr()> B<or> the keyword C<default> who points to the default police.
-
-=item * B<values> are conditional expressions B<or> the keyword C<accept> B<or>
-the keyword C<deny>:
-
-=over
-
-=item * Conditional expressions are converted into subroutines. You can use the
-variables stored in the global store by calling them C<$E<lt>varnameE<gt>>.
-
-Exemple:
-
-  '^/rh/.*$' => '$ou =~ /brh/'
-
-=item * Keyword B<deny> denies any access while keyword B<accept> allows all
-authenticated users.
-
-Exemple:
-
-  'default'  => 'accept'
-
-=back
-
-=back
-
-=head3 B<Accounting>
-
-=head4 I<Logging portal access>
-
-L<Lemonldap::NG::Portal> doesn't log anything by default, but it's easy to overload
-C<log> method for normal portal access or using C<error> method to know what
-was wrong if C<process> method has failed.
-
-=head4 I<Logging application access>
-
-Because an handler knows nothing about the protected application, it can't do
-more than logging URL. As Apache does this fine, L<Lemonldap::NG::Handler> gives it
-the name to used in logs. The C<whatToTrace> parameters indicates which
-variable Apache has to use (C<$uid> by default).
-
-The real accounting has to be done by the application itself which knows the
-result of SQL transaction for example.
-
-Lemonldap can export http headers either using a proxy or protecting directly
-the application. By default, the C<User-Auth> field is used but you can change
-it using the C<exportedHeaders> parameters of the C<init> method. It is a
-reference to a hash where:
-
-=over
-
-=item * B<keys> are the names of the choosen headers
-
-=item * B<values> are perl expressions where you can use user datas stored in
-the global store by calling them C<$E<lt>varnameE<gt>>.
-
-=back
-
 =head1 SEE ALSO
 
 L<Lemonldap::NG::Handler>, L<Lemonldap::NG::Portal::SharedConf::DBI>, L<CGI>
@@ -667,10 +595,5 @@ Copyright (C) 2005 by Xavier Guimard E<lt>x.guimard@free.frE<gt>
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.4 or,
 at your option, any later version of Perl 5 you may have available.
-
-Lemonldap was originaly written by Eric german who decided to publish him in
-2003 under the terms of the GNU General Public License version 2.
-Lemonldap::NG is a complete rewrite of Lemonldap and is able to have different
-policies in a same Apache virtual host.
 
 =cut
