@@ -1,4 +1,4 @@
-package Lemonldap::NG::Portal::AuthSsl;
+package Lemonldap::NG::Portal::AuthSSL;
 
 use strict;
 use Lemonldap::NG::Portal::Simple;
@@ -30,7 +30,7 @@ __END__
 
 =head1 NAME
 
-Lemonldap::NG::Portal::AuthSsl - Perl extension for building Lemonldap::NG
+Lemonldap::NG::Portal::AuthSSL - Perl extension for building Lemonldap::NG
 compatible portals with SSL authentication.
 
 =head1 SYNOPSIS

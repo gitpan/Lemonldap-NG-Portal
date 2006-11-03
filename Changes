@@ -1,5 +1,9 @@
 Revision history for Perl extension Lemonldap::NG::Portal.
 
+0.41  Fri Nov 3 8:19:36 2006
+	- Correction in documentation
+	- rename AuthSsl.pm to AuthSSL.pm
+
 0.4   Thu Nov 2 16:00:25 2006
 	- New documentation
 	- Portal.pm becomes Portal/Simple.pm

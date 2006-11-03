@@ -4,7 +4,7 @@ use ExtUtils::MakeMaker;
 # the contents of the Makefile that is written.
 WriteMakefile(
     NAME              => 'Lemonldap::NG::Portal',
-    VERSION           => '0.4', # finds $VERSION
+    VERSION           => '0.41', # finds $VERSION
     PREREQ_PM         => {
         'Apache::Session'  => 0,
 	'Net::LDAP'        => 0,

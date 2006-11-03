@@ -1,14 +1,14 @@
 Changes
-Makefile.PL
-MANIFEST
-README
-t/Lemonldap-NG-Portal-Simple.t
-t/Lemonldap-NG-Portal-Ssl.t
-t/Lemonldap-NG-Portal-SharedConf.t
-t/Lemonldap-NG-Portal-SharedConf-DBI.t
 lib/Lemonldap/NG/Portal.pod
-lib/Lemonldap/NG/Portal/Simple.pm
-lib/Lemonldap/NG/Portal/AuthSsl.pm
+lib/Lemonldap/NG/Portal/AuthSSL.pm
 lib/Lemonldap/NG/Portal/SharedConf.pm
 lib/Lemonldap/NG/Portal/SharedConf/DBI.pm
-META.yml                                 Module meta-data (added by MakeMaker)
+lib/Lemonldap/NG/Portal/Simple.pm
+Makefile.PL
+MANIFEST
+META.yml			Module meta-data (added by MakeMaker)
+README
+t/Lemonldap-NG-Portal-AuthSSL.t
+t/Lemonldap-NG-Portal-SharedConf-DBI.t
+t/Lemonldap-NG-Portal-SharedConf.t
+t/Lemonldap-NG-Portal-Simple.t
