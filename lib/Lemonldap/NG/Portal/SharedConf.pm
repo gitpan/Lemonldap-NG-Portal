@@ -153,7 +153,8 @@ compatible portals using a central configuration database.
     print '<input type="hidden" name="url" value="'.$portal->param('url').'">';
     # Next, login and password
     print 'Login : <input name="user"><br>';
-    print 'Password : <input name="pasword" type="password" autocomplete="off">';
+    print 'Password : <input name="password" type="password" autocomplete="off">';
+    print '<input type="submit" value="go" />';
     print '</form>';
   }
 

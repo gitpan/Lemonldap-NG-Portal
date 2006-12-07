@@ -1,5 +1,5 @@
 Changes
-lib/Lemonldap/NG/Portal.pod
+lib/Lemonldap/NG/Portal.pm
 lib/Lemonldap/NG/Portal/AuthSSL.pm
 lib/Lemonldap/NG/Portal/SharedConf.pm
 lib/Lemonldap/NG/Portal/SharedConf/DBI.pm

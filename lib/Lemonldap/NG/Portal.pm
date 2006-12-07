@@ -1,3 +1,12 @@
+package Lemonldap::NG::Portal;
+
+print STDERR "See Lemonldap::NG::Portal(3) to know which Lemonldap::NG::Portal::* module to use.";
+our $VERSION = "0.42";
+
+1;
+
+__END__
+
 =pod
 
 =head1 NAME
@@ -36,7 +45,7 @@ system.
       print '<input type="hidden" name="url" value="'.$portal->param('url').'">';
       # Next, login and password
       print 'Login : <input name="user"><br>';
-      print 'Password : <input name="pasword" type="password" autocomplete="off"><br>';
+      print 'Password : <input name="password" type="password" autocomplete="off"><br>';
       print '<input type=submit value="OK">';
       print '</form>';
   }
@@ -107,7 +116,7 @@ configuration database):
 
 User groups (stored in configuration database with L<Lemonldap::NG::Manager>):
 
-  groupRules => {
+  groups => {
       group1 => '{ $departmentUID eq "unit1" or $login = "xavier.guimard" }',
       ...
   },

@@ -1,12 +1,13 @@
 # http://module-build.sourceforge.net/META-spec.html
 #XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
 name:         Lemonldap-NG-Portal
-version:      0.41
-version_from: 
+version:      0.42
+version_from: lib/Lemonldap/NG/Portal.pm
 installdirs:  site
 requires:
     Apache::Session:               0
     CGI:                           3.08
+    DBI:                           0
     MIME::Base64:                  0
     Net::LDAP:                     0
 
