@@ -2,13 +2,25 @@ package Lemonldap::NG::Portal::SharedConf;
 
 use strict;
 use Lemonldap::NG::Portal::Simple qw(:all);
+use Lemonldap::NG::Manager::Conf;
 
 *EXPORT_OK   = *Lemonldap::NG::Portal::Simple::EXPORT_OK;
 *EXPORT_TAGS = *Lemonldap::NG::Portal::Simple::EXPORT_TAGS;
 *EXPORT      = *Lemonldap::NG::Portal::Simple::EXPORT;
 
-our $VERSION = "0.2";
+our $VERSION = "0.3";
 our @ISA     = qw(Lemonldap::NG::Portal::Simple);
+
+sub getConf {
+    my $self = shift;
+    $self->SUPER::getConf(@_);
+    $self->{lmConf} = Lemonldap::NG::Manager::Conf->new( $self->{configStorage} ) unless $self->{lmConf};
+    return 0 unless (ref($self->{lmConf}));
+    my $tmp = $self->{lmConf}->getConf;
+    return 0 unless $tmp;
+    $self->{$_} = $tmp->{$_} foreach(keys %$tmp);
+    1;
+}
 
 sub setGroups {
     my $self = shift;

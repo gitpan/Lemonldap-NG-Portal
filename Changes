@@ -1,5 +1,8 @@
 Revision history for Perl extension Lemonldap::NG::Portal.
 
+0.5   Tue Dec 19 19:11:15
+	- config is now shared with Lemonldap::NG::Manager::Conf
+	
 0.42  Thu Dec 7 12:23:52 2006
 	- remove html code written after redirection because of a Firefox-2 bug
 	- move Portal.pod to Portal.pm because CPAN does not index correctly

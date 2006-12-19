@@ -1,7 +1,7 @@
 package Lemonldap::NG::Portal;
 
 print STDERR "See Lemonldap::NG::Portal(3) to know which Lemonldap::NG::Portal::* module to use.";
-our $VERSION = "0.42";
+our $VERSION = "0.5";
 
 1;
 
@@ -18,9 +18,9 @@ system.
 
   use Lemonldap::NG::Portal::SharedConf::DBI;
   my $portal = new Lemonldap::NG::Portal::SharedConf::DBI (
-        dbiChain      => "dbi:mysql:database=sso_sessions;host=128.101.20.41",
-        dbiUser       => "sso_consult",
-        dbiPassword   => "pass;sso_consult!",
+        dbiChain      => "dbi:mysql:database=lmSessions;host=1.2.3.4",
+        dbiUser       => "lemon",
+        dbiPassword   => "pass",
         );
 
 

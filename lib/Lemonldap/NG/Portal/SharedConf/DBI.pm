@@ -12,41 +12,20 @@ use MIME::Base64;
 *EXPORT_TAGS = *Lemonldap::NG::Portal::SharedConf::EXPORT_TAGS;
 *EXPORT      = *Lemonldap::NG::Portal::SharedConf::EXPORT;
 
-our $VERSION = '0.2';
+our $VERSION = '0.3';
 
 our @ISA = qw(Lemonldap::NG::Portal::SharedConf);
 
-our ( $dbh, $cfgNum ) = ( undef, 0 );
-
 sub getConf {
-    my $self = shift;
+    my($self, $args) = @_;
+    $self->{configStorage} = {
+	type        => "DBI",
+	dbiChain    => $self->{dbiChain},
+	dbiUser     => $self->{dbiUser},
+	dbiPassword => $self->{dbiPassword},
+	dbiTable    => $self->{dbiTable},
+    };
     $self->SUPER::getConf(@_);
-    our $cfgNum = 0;
-    $self->{dbiTable} ||= "lmConfig";
-    die "No DBI chain found" unless ( $self->{dbiChain} );
-    $dbh = DBI->connect_cached( $self->{dbiChain}, $self->{dbiUser}, $self->{dbiPassword}, { RaiseError => 1 } );
-    my $sth = $dbh->prepare("SELECT max(cfgNum) from lmConfig");
-    $sth->execute();
-    my $row = $sth->fetchrow_arrayref or return 0;
-
-    if ( $cfgNum != $row->[0] ) {
-        $cfgNum = $row->[0];
-        my $sth =
-          $dbh->prepare( "select groups, globalStorage, globalStorageOptions, "
-              . "exportedVars, domain, ldapServer, ldapPort, securedCookie, "
-              . "cookieName, authentication from "
-              . $self->{dbiTable}
-              . " where(cfgNum=$cfgNum)" );
-        $sth->execute();
-        $row = $sth->fetchrow_hashref;
-        foreach (qw(groups globalStorageOptions exportedVars)) {
-            $self->{$_} = thaw( decode_base64( $row->{$_} ) ) if ( $row->{$_} );
-        }
-        foreach (qw(globalStorage domain ldapServer ldapPort securedCookie cookieName authentication)) {
-            $self->{$_} = $row->{$_} if ( $row->{$_} );
-        }
-    }
-    return 1;
 }
 
 1;
@@ -109,7 +88,7 @@ constructor C<new()>:
 =over
 
 =item * B<dbiChain>: the string to use to connect to the database. Ex:
-"dbi:mysql:database:sso_config:host:127.0.0.1",
+"dbi:mysql:database:lmSessions:host:127.0.0.1",
 
 =item * B<dbiUser>: the name of the user to use to connect to the database if
 needed,
