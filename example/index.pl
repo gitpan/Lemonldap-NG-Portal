@@ -18,6 +18,7 @@ if($portal->process()) {
 else {
     print $portal->header;
     print $portal->start_html;
+    print 'Error: '.$portal->error.'<br>';
     print '<form method="POST">';
     print '<input type="hidden" name="url" value="'.$portal->param('url').'">';
     print 'Login : <input name="user"><br>';

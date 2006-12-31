@@ -12,18 +12,18 @@ use MIME::Base64;
 *EXPORT_TAGS = *Lemonldap::NG::Portal::SharedConf::EXPORT_TAGS;
 *EXPORT      = *Lemonldap::NG::Portal::SharedConf::EXPORT;
 
-our $VERSION = '0.3';
+our $VERSION = '0.31';
 
 our @ISA = qw(Lemonldap::NG::Portal::SharedConf);
 
 sub getConf {
     my($self, $args) = @_;
     $self->{configStorage} = {
-	type        => "DBI",
-	dbiChain    => $self->{dbiChain},
-	dbiUser     => $self->{dbiUser},
-	dbiPassword => $self->{dbiPassword},
-	dbiTable    => $self->{dbiTable},
+        type        => "DBI",
+        dbiChain    => $self->{dbiChain},
+        dbiUser     => $self->{dbiUser},
+        dbiPassword => $self->{dbiPassword},
+        dbiTable    => $self->{dbiTable},
     };
     $self->SUPER::getConf(@_);
 }
@@ -33,18 +33,20 @@ __END__
 
 =head1 NAME
 
-Lemonldap::NG::Portal::SharedConf::DBI - Module for building Lemonldap::NG
-compatible portals using a central configuration database using L<DBI>.
+Lemonldap::NG::Portal::SharedConf::DBI - This module is deprecated. See
+L<Lemonldap::NG::Portal::SharedConf>.
 
 =head1 SYNOPSIS
 
-  use Lemonldap::NG::Portal::SharedConf::DBI;
-  my $portal = new Lemonldap::NG::Portal::SharedConf::DBI(
-	 dbiChain    => "dbi:mysql:database=lemonldap;host=127.0.0.1",
-	 dbiUser     => "lemonldap",
-	 dbiPassword => "password",
-	 dbiTable    => "lmConfig",
-    );
+  use Lemonldap::NG::Portal::SharedConf;
+  my $portal = new Lemonldap::NG::Portal::SharedConf( {
+        configStorage => {
+          dbiChain    => "dbi:mysql:database=lemonldap;host=127.0.0.1",
+          dbiUser     => "lemonldap",
+          dbiPassword => "password",
+          dbiTable    => "lmConfig",
+        },
+     } );
 
   if($portal->process()) {
     # Write here the menu with CGI methods. This page is displayed ONLY IF
@@ -73,39 +75,13 @@ compatible portals using a central configuration database using L<DBI>.
 
 =head1 DESCRIPTION
 
-Lemonldap::NG::Portal::SharedConf::DBI is an implementation of
-L<Lemonldap::NG::Portal::SharedConf> system.
-
-=head1 METHODS
-
-Same as L<Lemonldap::NG::Portal::SharedConf>.
-
-=head2 Arguments
-
-Lemonldap::NG::Portal::SharedConf::DBI introduces 4 new arguments to the
-constructor C<new()>:
-
-=over
-
-=item * B<dbiChain>: the string to use to connect to the database. Ex:
-"dbi:mysql:database:lmSessions:host:127.0.0.1",
-
-=item * B<dbiUser>: the name of the user to use to connect to the database if
-needed,
-
-=item * B<dbiPassword>: the password to use to connect to the database if needed,
-
-=item * B<dbiTable>: the table where to find configuration (default: C<lmConfig>).
-
-=back
-
-=head1 EXPORT
-
-Same as L<Lemonldap::NG::Portal::SharedConf>.
+Lemonldap::NG::Portal::SharedConf::DBI is written for compatibility with old
+versions of Lemonldap::NG. See now L<Lemonldap::NG::Portal::SharedConf>.
 
 =head1 SEE ALSO
 
-L<Lemonldap::NG::Portal>, L<Lemonldap::NG::Handler>, L<Lemonldap::NG::Manager>
+L<Lemonldap::NG::Portal::SharedConf>, L<Lemonldap::NG::Portal>,
+L<Lemonldap::NG::Handler>, L<Lemonldap::NG::Manager>
 
 =head1 AUTHOR
 

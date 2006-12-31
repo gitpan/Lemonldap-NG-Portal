@@ -3,7 +3,7 @@ package Lemonldap::NG::Portal::AuthSSL;
 use strict;
 use Lemonldap::NG::Portal::Simple;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 # Authentication is made here before searching the LDAP Directory
 our $OVERRIDE = {

@@ -1,7 +1,7 @@
 package Lemonldap::NG::Portal;
 
 print STDERR "See Lemonldap::NG::Portal(3) to know which Lemonldap::NG::Portal::* module to use.";
-our $VERSION = "0.5";
+our $VERSION = "0.51";
 
 1;
 
@@ -16,11 +16,14 @@ system.
 
 =head1 SYNOPSIS
 
-  use Lemonldap::NG::Portal::SharedConf::DBI;
-  my $portal = new Lemonldap::NG::Portal::SharedConf::DBI (
-        dbiChain      => "dbi:mysql:database=lmSessions;host=1.2.3.4",
-        dbiUser       => "lemon",
-        dbiPassword   => "pass",
+  use Lemonldap::NG::Portal::SharedConf;
+  my $portal = new Lemonldap::NG::Portal::SharedConf (
+        configStorage => {
+	    type          => 'DBI',
+            dbiChain      => "dbi:mysql:database=lmSessions;host=1.2.3.4",
+            dbiUser       => "lemon",
+            dbiPassword   => "pass",
+          },
         );
 
 
@@ -261,17 +264,13 @@ scheme to use X509 authentication,
 
 =item * L<Lemonldap::NG::Portal::SharedConf>: this module provide the ability
 to read portal configuration from a central database. It inherits from
-L<Lemonldap::NG::Portal::Simple>,
-
-=item * L<Lemonldap::NG::Portal::SharedConf::DBI>: this module inherits from
-L<Lemonldap::NG::Portal::SharedConf> and read portal configuration from a
-central database using DBI.
+L<Lemonldap::NG::Portal::Simple>. It's the more used module.
 
 =back
 
 =head1 SEE ALSO
 
-L<Lemonldap::NG::Portal::SharedConf::DBI>,
+L<Lemonldap::NG::Portal::SharedConf>,
 L<Lemonldap::NG::Handler>, L<Lemonldap::NG::Manager>
 
 =head1 AUTHOR

@@ -10,7 +10,7 @@ use warnings;
 use MIME::Base64;
 use CGI;
 
-our $VERSION = '0.4';
+our $VERSION = '0.41';
 
 our @ISA = qw(CGI Exporter);
 
@@ -395,7 +395,7 @@ Lemonldap::NG::Portal::Simple is the base module for building Lemonldap::NG
 compatible portals. You can use it either by inheritance or by writing
 anonymous methods like in the example above.
 
-See L<Lemonldap::NG::Portal::SharedConf::DBI> for a complete example of use of
+See L<Lemonldap::NG::Portal::SharedConf> for a complete example of use of
 Lemonldap::Portal::* libraries.
 
 =head1 METHODS
@@ -576,7 +576,7 @@ find the user distinguished name (dn) was refused by the server
 
 =head1 SEE ALSO
 
-L<Lemonldap::NG::Handler>, L<Lemonldap::NG::Portal::SharedConf::DBI>, L<CGI>
+L<Lemonldap::NG::Handler>, L<Lemonldap::NG::Portal::SharedConf>, L<CGI>
 
 =head1 AUTHOR
 

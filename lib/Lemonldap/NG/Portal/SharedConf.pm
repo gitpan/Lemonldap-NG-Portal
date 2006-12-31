@@ -3,22 +3,27 @@ package Lemonldap::NG::Portal::SharedConf;
 use strict;
 use Lemonldap::NG::Portal::Simple qw(:all);
 use Lemonldap::NG::Manager::Conf;
+use Safe;
 
 *EXPORT_OK   = *Lemonldap::NG::Portal::Simple::EXPORT_OK;
 *EXPORT_TAGS = *Lemonldap::NG::Portal::Simple::EXPORT_TAGS;
 *EXPORT      = *Lemonldap::NG::Portal::Simple::EXPORT;
 
-our $VERSION = "0.3";
+our $VERSION = "0.4";
 our @ISA     = qw(Lemonldap::NG::Portal::Simple);
+
+# Secure jail
+our $safe = new Safe;
 
 sub getConf {
     my $self = shift;
     $self->SUPER::getConf(@_);
-    $self->{lmConf} = Lemonldap::NG::Manager::Conf->new( $self->{configStorage} ) unless $self->{lmConf};
-    return 0 unless (ref($self->{lmConf}));
+    $self->{lmConf} = Lemonldap::NG::Manager::Conf->new( $self->{configStorage} )
+      unless $self->{lmConf};
+    return 0 unless ( ref( $self->{lmConf} ) );
     my $tmp = $self->{lmConf}->getConf;
     return 0 unless $tmp;
-    $self->{$_} = $tmp->{$_} foreach(keys %$tmp);
+    $self->{$_} = $tmp->{$_} foreach ( keys %$tmp );
     1;
 }
 
@@ -55,28 +60,17 @@ sub setGroups {
     PE_OK;
 }
 
-#sub getConf {
-
-# MUST BE WRITTEN and contain
-# my $self = shift;
-# $self->SUPER::new(@_);
-# See Lemonldap::NG::Portal::SharedConf::DBI for example
-#
-# return true or false
-#}
-
 sub scanexpr {
     my $self = shift;
     local $_ = shift;
-    my $r;
+    my $result;
 
     # Perl expressions
-    if (s/^{(.*)}$/$1/) {
+    if ( s/^{(.*)}$/$1/ or $_ !~ /^\(.*\)$/ ) {
         s/\$(\w+)/\$self->{sessionInfo}->{$1}/g;
-        eval "\$r=($_);";
-        die "Incorrect Perl expression: $_ ($@)" if $@;
-        return "1"                               if $r;
-        return "0";
+	$safe->share ( '$self', '$result' );
+        $result = $safe->reval($_);
+        return $result ? "1" : "0";
     }
 
     # Simple LDAP expression
@@ -85,14 +79,12 @@ sub scanexpr {
     }
 
     # Node
-    die "Incorrect expression $_" unless /^\(.*\)$/;
-    my @r;
     my $brackets  = 0;
     my $exprCount = 0;
     my $tmp;
     my $subexpr;
     my $esc = 0;
-    $r = "";
+    $result = "";
     my $cond = substr $_, 1, 1;
     my $or = ( $cond eq '|' );
 
@@ -116,15 +108,15 @@ sub scanexpr {
             }
             else {
                 $exprCount++;
-                $r .= $subexpr;
+                $result .= $subexpr;
             }
             $subexpr = '';
         }
     }
     die "Incorrect expression" if $brackets;
-    return $r if ( $r eq "0" or $r eq "1" );
-    return $r if ( $exprCount == 1 );
-    return "($cond$r)";
+    return $result if ( $result eq "0" or $result eq "1" );
+    return $result if ( $exprCount == 1 );
+    return "($cond$result)";
 }
 
 1;
@@ -137,13 +129,16 @@ compatible portals using a central configuration database.
 
 =head1 SYNOPSIS
 
-  use Lemonldap::NG::Portal::SharedConf::DBI;
-  my $portal = new Lemonldap::NG::Portal::SharedConf::DBI(
-	 dbiChain    => "dbi:mysql:...",
-	 dbiUser     => "lemonldap",
-	 dbiPassword => "password",
-	 dbiTable    => "lmConfig",
-    );
+  use Lemonldap::NG::Portal::SharedConf;
+  my $portal = new Lemonldap::NG::Portal::SharedConf( {
+         configStorage => {
+             type        => 'DBI',
+             dbiChain    => "dbi:mysql:...",
+             dbiUser     => "lemonldap",
+             dbiPassword => "password",
+             dbiTable    => "lmConfig",
+         },
+    } );
 
   if($portal->process()) {
     # Write here the menu with CGI methods. This page is displayed ONLY IF
@@ -176,7 +171,7 @@ Lemonldap::NG::Portal::SharedConf is the base module for building Lemonldap::NG
 compatible portals using a central database configuration. You have to use by
 inheritance.
 
-See L<Lemonldap::NG::Portal::SharedConf::DBI> for a complete example.
+See L<Lemonldap::NG::Portal::SharedConf> for a complete example.
 
 =head1 METHODS
 
@@ -204,7 +199,7 @@ Same as L<Lemonldap::NG::Portal::Simple>.
 
 =head1 SEE ALSO
 
-L<Lemonldap::NG::Portal>, L<Lemonldap::NG::Portal::SharedConf::DBI>,
+L<Lemonldap::NG::Portal>, L<Lemonldap::NG::Portal::SharedConf>,
 L<Lemonldap::NG::Handler>, L<Lemonldap::NG::Manager>
 
 =head1 AUTHOR
