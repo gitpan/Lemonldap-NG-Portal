@@ -9,16 +9,24 @@ use Safe;
 *EXPORT_TAGS = *Lemonldap::NG::Portal::Simple::EXPORT_TAGS;
 *EXPORT      = *Lemonldap::NG::Portal::Simple::EXPORT;
 
-our $VERSION = "0.4";
+our $VERSION = "0.42";
 our @ISA     = qw(Lemonldap::NG::Portal::Simple);
 
 # Secure jail
 our $safe = new Safe;
 
+##################
+# OVERLOADED SUB #
+##################
+
+# getConf: all parameters returned by the Lemonldap::NG::Manager::Conf object
+#          are copied in $self
+#          See Lemonldap::NG::Manager::Conf(3) for more
 sub getConf {
     my $self = shift;
     $self->SUPER::getConf(@_);
-    $self->{lmConf} = Lemonldap::NG::Manager::Conf->new( $self->{configStorage} )
+    $self->{lmConf} =
+      Lemonldap::NG::Manager::Conf->new( $self->{configStorage} )
       unless $self->{lmConf};
     return 0 unless ( ref( $self->{lmConf} ) );
     my $tmp = $self->{lmConf}->getConf;
@@ -27,10 +35,24 @@ sub getConf {
     1;
 }
 
-sub setGroups {
-    my $self = shift;
+# Here is implemented the 'macro' mechanism.
+our $self; # Safe cannot share a variable declared with my
+sub setMacros {
+    local $self = shift;
     die __PACKAGE__ . ": Unable to get configuration"
       unless ( $self->getConf(@_) );
+    while ( my($n, $e) = each ( %{ $self->{macros} } ) ) {
+        $e =~ s/\$(\w+)/\$self->{sessionInfo}->{$1}/g;
+        $safe->share( '$self', '&encode_base64' );
+        $self->{sessionInfo}->{$n} = $safe->reval($e);
+    }
+    PE_OK;
+}
+
+# Here is implemented the 'groups' mechanism. See Lemonldap::NG::Portal for
+# more.
+sub setGroups {
+    local $self = shift;
     my $groups;
     foreach ( keys %{ $self->{groups} } ) {
         my $filter = $self->scanexpr( $self->{groups}->{$_} );
@@ -60,6 +82,7 @@ sub setGroups {
     PE_OK;
 }
 
+# Internal sub used to replace Perl expressions in 'groups' rules.
 sub scanexpr {
     my $self = shift;
     local $_ = shift;
@@ -68,7 +91,7 @@ sub scanexpr {
     # Perl expressions
     if ( s/^{(.*)}$/$1/ or $_ !~ /^\(.*\)$/ ) {
         s/\$(\w+)/\$self->{sessionInfo}->{$1}/g;
-	$safe->share ( '$self', '$result' );
+        $safe->share( '$self', '&encode_base64'  );
         $result = $safe->reval($_);
         return $result ? "1" : "0";
     }

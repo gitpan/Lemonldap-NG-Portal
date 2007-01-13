@@ -10,7 +10,7 @@ use warnings;
 use MIME::Base64;
 use CGI;
 
-our $VERSION = '0.41';
+our $VERSION = '0.5';
 
 our @ISA = qw(CGI Exporter);
 
@@ -27,6 +27,7 @@ sub PE_APACHESESSIONERROR  { 8 }
 sub PE_FIRSTACCESS         { 9 }
 sub PE_BADCERTIFICATE      { 10 }
 
+# EXPORTER PARAMETERS
 our %EXPORT_TAGS = (
     'all' => [
         qw( PE_OK PE_SESSIONEXPIRED PE_FORMEMPTY PE_WRONGMANAGERACCOUNT PE_USERNOTFOUND PE_BADCREDENTIALS
@@ -40,9 +41,12 @@ our %EXPORT_TAGS = (
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
-our @EXPORT = qw( PE_OK PE_SESSIONEXPIRED PE_FORMEMPTY PE_WRONGMANAGERACCOUNT PE_USERNOTFOUND PE_BADCREDENTIALS
+# TODO: remove this... and test !
+our @EXPORT =
+  qw( PE_OK PE_SESSIONEXPIRED PE_FORMEMPTY PE_WRONGMANAGERACCOUNT PE_USERNOTFOUND PE_BADCREDENTIALS
   PE_LDAPCONNECTFAILED PE_LDAPERROR PE_APACHESESSIONERROR PE_FIRSTACCESS PE_BADCERTIFICATE import );
 
+# CONSTRUCTOR
 sub new {
     my $class = shift;
     my $self  = $class->SUPER::new();
@@ -60,11 +64,14 @@ sub new {
 
     if ( $self->{authentication} eq "SSL" ) {
         require Lemonldap::NG::Portal::AuthSSL;
-        %$self = ( %$self, %$Lemonldap::NG::Portal::AuthSSL::OVERRIDE );
+	# $Lemonldap::NG::Portal::AuthSSL::OVERRIDE does not overload $self
+	# variables: if the administrator has defined a sub, we respect it
+        %$self = ( %$Lemonldap::NG::Portal::AuthSSL::OVERRIDE, %$self );
     }
     return $self;
 }
 
+# getConf basic, copy all parameters in $self. Overloaded in SharedConf.pm
 sub getConf {
     my ($self) = shift;
     my %args;
@@ -78,6 +85,7 @@ sub getConf {
     1;
 }
 
+# TODO: create an _i18n.pm like in Lemonldap::NG::Manager
 sub error {
     my $self = shift;
     my $lang = shift;
@@ -99,7 +107,7 @@ sub error {
     else {
         @message = (
             'Everything is OK',
-            'Your connection has expired; You must to be authentified once again',
+'Your connection has expired; You must to be authentified once again',
             'User and password fields must be filled',
             'Wrong directory manager account or password',
             'User not found in directory',
@@ -113,22 +121,8 @@ sub error {
     return $message[ $self->{error} ];
 }
 
-sub process {
-    my ($self) = @_;
-    $self->{error} = PE_OK;
-    foreach my $sub qw(controlUrlOrigin extractFormInfo formateParams formateFilter
-      connectLDAP bind search setSessionInfo setGroups authenticate store unbind
-      buildCookie log autoRedirect) {
-        if ( $self->{$sub} )
-        {
-            last if ( $self->{error} = &{ $self->{$sub} }($self) );
-        }
-        else {
-            last if ( $self->{error} = $self->$sub );
-        }
-      } return ( $self->{error} ? 0 : 1 );
-}
-
+# Private sub used to bind to LDAP server both with Lemonldap account and user
+# credentials if LDAP authentication is used
 sub _bind {
     my ( $ldap, $dn, $password ) = @_;
     my $mesg;
@@ -144,6 +138,7 @@ sub _bind {
     return 1;
 }
 
+# CGI.pm overload to add Lemonldap::NG cookie
 sub header {
     my $self = shift;
     if ( $self->{cookie} ) {
@@ -154,6 +149,7 @@ sub header {
     }
 }
 
+# CGI.pm overload to add Lemonldap::NG cookie
 sub redirect {
     my $self = shift;
     if ( $_[0]->{cookie} ) {
@@ -164,6 +160,28 @@ sub redirect {
     }
 }
 
+###############################################################
+# MAIN subroutine: call all steps until one returns something #
+#                  different than PE_OK                       #
+###############################################################
+sub process {
+    my ($self) = @_;
+    $self->{error} = PE_OK;
+    foreach my $sub
+      qw(controlUrlOrigin extractFormInfo formateParams formateFilter
+      connectLDAP bind search setSessionInfo setMacros setGroups authenticate
+      store unbind buildCookie log autoRedirect) {
+        if ( $self->{$sub} )
+        {
+            last if ( $self->{error} = &{ $self->{$sub} }($self) );
+        }
+        else {
+            last if ( $self->{error} = $self->$sub );
+        }
+      } return ( $self->{error} ? 0 : 1 );
+}
+
+# 1. If the user was redirected here, we have to load 'url' parameter
 sub controlUrlOrigin {
     my $self = shift;
     if ( $self->param('url') ) {
@@ -172,11 +190,18 @@ sub controlUrlOrigin {
     PE_OK;
 }
 
-# TODO: delete existing sessions
+# 2. Control existing sessions
+# TODO: what to do with existing sessions ?
+#       - delete and create a new session
+#       - re-authentication (actual scheme)
+#       - nothing: user is authenticated and process
+#                  returns true
 sub controlExistingSession {
     PE_OK;
 }
 
+# 3. In ldap authentication scheme, we load here user and password from HTML
+#    form
 sub extractFormInfo {
     my $self = shift;
     return PE_FIRSTACCESS
@@ -187,16 +212,21 @@ sub extractFormInfo {
     PE_OK;
 }
 
+# Unused. You can overload if you have to modify user and password before
+# authentication
 sub formateParams() {
     PE_OK;
 }
 
+# 4. By default, the user is searched in the LDAP server with its UID. To use
+#    it with Active Directory, overload it to use CN instead of UID.
 sub formateFilter {
     my $self = shift;
     $self->{filter} = "(&(uid=" . $self->{user} . ")(objectClass=person))";
     PE_OK;
 }
 
+# 5. First LDAP connexion used to find user DN with the filter defined before.
 sub connectLDAP {
     my $self = shift;
     return PE_LDAPCONNECTFAILED
@@ -211,14 +241,17 @@ sub connectLDAP {
     PE_OK;
 }
 
+# 6. LDAP bind with Lemonldap account or anonymous unless defined
 sub bind {
     my $self = shift;
     $self->connectLDAP unless ( $self->{ldap} );
     return PE_WRONGMANAGERACCOUNT
-      unless ( &_bind( $self->{ldap}, $self->{managerDn}, $self->{managerPassword} ) );
+      unless (
+        &_bind( $self->{ldap}, $self->{managerDn}, $self->{managerPassword} ) );
     PE_OK;
 }
 
+# 7. Search the DN
 sub search {
     my $self = shift;
     my $mesg = $self->{ldap}->search(
@@ -235,31 +268,42 @@ sub search {
     PE_OK;
 }
 
+# 8. Load all parameters included in exportedVars parameter.
+#    Multi-value parameters are loaded in a single string with
+#    '; ' separator
 sub setSessionInfo {
     my ($self) = @_;
     $self->{sessionInfo}->{dn} = $self->{dn};
     unless ( $self->{exportedVars} ) {
         foreach (qw(uid cn mail)) {
-            $self->{sessionInfo}->{$_} = $self->{entry}->get_value($_) || "";
+            $self->{sessionInfo}->{$_} = join( '; ', $self->{entry}->get_value($_) || ("") );
         }
     }
     elsif ( ref( $self->{exportedVars} ) eq 'HASH' ) {
         foreach ( keys %{ $self->{exportedVars} } ) {
-            $self->{sessionInfo}->{$_} = $self->{entry}->get_value( $self->{exportedVars}->{$_} ) || "";
+            $self->{sessionInfo}->{$_} = join( '; ', $self->{entry}->get_value( $self->{exportedVars}->{$_} ) || ("") );
         }
     }
     else {
         foreach ( @{ $self->{exportedVars} } ) {
-            $self->{sessionInfo}->{$_} = $self->{entry}->get_value($_) || "";
+            $self->{sessionInfo}->{$_} = join( '; ', $self->{entry}->get_value($_) || ("") );
         }
     }
     PE_OK;
 }
 
+# 9. Unused here, but overloaded in SharedConf.pm
+sub setMacros {
+    PE_OK;
+}
+
+# 10. Unused here, but overloaded in SharedConf.pm
 sub setGroups {
     PE_OK;
 }
 
+# 11. Now, LDAP will not be used by Lemonldap except for LDAP
+#     authentication scheme
 sub unbind {
     my $self = shift;
     $self->{ldap}->unbind if $self->{ldap};
@@ -267,6 +311,7 @@ sub unbind {
     PE_OK;
 }
 
+# 12. Default authentication: LDAP bind with user credentials
 sub authenticate {
     my $self = shift;
     return PE_OK if ( $self->{id} );
@@ -278,18 +323,24 @@ sub authenticate {
     PE_OK;
 }
 
+# 13. Now, the user is authenticated. It's time to store his parameters with
+#     Apache::Session::* module
 sub store {
     my ($self) = @_;
     my %h;
-    eval { tie %h, $self->{globalStorage}, undef, $self->{globalStorageOptions}; };
+    eval {
+        tie %h, $self->{globalStorage}, undef, $self->{globalStorageOptions};
+    };
     return PE_APACHESESSIONERROR if ($@);
     $self->{id} = $h{_session_id};
-    $h{$_} = $self->{sessionInfo}->{$_} foreach ( keys %{ $self->{sessionInfo} } );
+    $h{$_} = $self->{sessionInfo}->{$_}
+      foreach ( keys %{ $self->{sessionInfo} } );
     $h{_utime} = time();
     untie %h;
     PE_OK;
 }
 
+# 14. If all is done, we build the Lemonldap::NG cookie
 sub buildCookie {
     my $self = shift;
     $self->{cookie} = $self->cookie(
@@ -303,6 +354,22 @@ sub buildCookie {
     PE_OK;
 }
 
+# 15. By default, nothing is logged. Users actions are logged on applications.
+#     It's easy to override this in the contructor :
+#       my $portal = new Lemonldap::NG::Portal ( {
+#                    ...
+#                    log => sub {use Sys::Syslog; syslog;
+#                                openlog("Portal $$", 'ndelay', 'auth');
+#                                syslog('notice', 'User '.$self->{user}.' is authenticated');
+#                               },
+#                   ...
+#                 } );
+sub log {
+    PE_OK;
+}
+
+# 16. If the user was redirected to the portal, we will now redirect him
+#     to the requested URL
 sub autoRedirect {
     my $self = shift;
     if ( my $u = $self->{urldc} ) {
@@ -329,10 +396,6 @@ sub autoRedirect {
         #EOF
         exit;
     }
-    PE_OK;
-}
-
-sub log {
     PE_OK;
 }
 
@@ -514,13 +577,13 @@ Disconnects from the LDAP server.
 
 Creates the Lemonldap cookie.
 
-=head3 autoRedirect
-
-Redirects the user to the url stored by controlUrlOrigin().
-
 =head3 log
 
 Does nothing. To be overloaded if wanted.
+
+=head3 autoRedirect
+
+Redirects the user to the url stored by controlUrlOrigin().
 
 =head2 Other methods
 

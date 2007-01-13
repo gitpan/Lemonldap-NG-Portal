@@ -17,7 +17,7 @@ our $VERSION = '0.31';
 our @ISA = qw(Lemonldap::NG::Portal::SharedConf);
 
 sub getConf {
-    my($self, $args) = @_;
+    my ( $self, $args ) = @_;
     $self->{configStorage} = {
         type        => "DBI",
         dbiChain    => $self->{dbiChain},
