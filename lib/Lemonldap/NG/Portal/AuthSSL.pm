@@ -42,23 +42,24 @@ compatible portals with SSL authentication.
 
 =head1 SYNOPSIS
 
-With Lemonldap::NG::Portal::SharedConf::DBI, set authentication field to "SSL".
+With Lemonldap::NG::Portal::SharedConf, set authentication field to "SSL" in
+configuration database.
 
 With Lemonldap::NG::Portal::Simple:
 
   use Lemonldap::NG::Portal::Simple;
   my $portal = new Lemonldap::NG::Portal::Simple(
-	 domain         => 'gendarmerie.defense.gouv.fr',
+         domain         => 'gendarmerie.defense.gouv.fr',
          globalStorage  => 'Apache::Session::MySQL',
-	 globalStorageOptions => {
-	   DataSource   => 'dbi:mysql:database',
-	   UserName     => 'db_user',
-	   Password     => 'db_password',
-	   TableName    => 'sessions',
-	 },
-	 ldapServer     => 'ldap.domaine.com',
-	 securedCookie  => 1,
-	 authentication => 'SSL',
+         globalStorageOptions => {
+           DataSource   => 'dbi:mysql:database',
+           UserName     => 'db_user',
+           Password     => 'db_password',
+           TableName    => 'sessions',
+         },
+         ldapServer     => 'ldap.domaine.com',
+         securedCookie  => 1,
+         authentication => 'SSL',
     );
 
   if($portal->process()) {
@@ -104,7 +105,7 @@ Xavier Guimard, E<lt>x.guimard@free.frE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2005 by Xavier Guimard E<lt>x.guimard@free.frE<gt>
+Copyright (C) 2005-2007 by Xavier Guimard E<lt>x.guimard@free.frE<gt>
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.4 or,

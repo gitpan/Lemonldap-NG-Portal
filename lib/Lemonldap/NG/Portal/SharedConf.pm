@@ -24,14 +24,22 @@ our $safe = new Safe;
 #          See Lemonldap::NG::Manager::Conf(3) for more
 sub getConf {
     my $self = shift;
-    $self->SUPER::getConf(@_);
+    my %args;
+    if ( ref( $_[0] ) ) {
+        %args = %{ $_[0] };
+    }
+    else {
+        %args = @_;
+    }
+    %$self = ( %$self, %args );
     $self->{lmConf} =
       Lemonldap::NG::Manager::Conf->new( $self->{configStorage} )
       unless $self->{lmConf};
     return 0 unless ( ref( $self->{lmConf} ) );
     my $tmp = $self->{lmConf}->getConf;
     return 0 unless $tmp;
-    $self->{$_} = $tmp->{$_} foreach ( keys %$tmp );
+    # Local configuration prepends global
+    $self->{$_} = $args{$_} || $tmp->{$_} foreach ( keys %$tmp );
     1;
 }
 
@@ -231,7 +239,7 @@ Xavier Guimard, E<lt>x.guimard@free.frE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2005 by Xavier Guimard E<lt>x.guimard@free.frE<gt>
+Copyright (C) 2005-2007 by Xavier Guimard E<lt>x.guimard@free.frE<gt>
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.4 or,

@@ -1,7 +1,10 @@
 Changes
 example/index.pl
+example/slavePortal.pl
 lib/Lemonldap/NG/Portal.pm
+lib/Lemonldap/NG/Portal/AuthLA.pm
 lib/Lemonldap/NG/Portal/AuthSSL.pm
+lib/Lemonldap/NG/Portal/CDA.pm
 lib/Lemonldap/NG/Portal/SharedConf.pm
 lib/Lemonldap/NG/Portal/SharedConf/DBI.pm
 lib/Lemonldap/NG/Portal/Simple.pm
@@ -10,6 +13,7 @@ MANIFEST
 META.yml			Module meta-data (added by MakeMaker)
 README
 t/Lemonldap-NG-Portal-AuthSSL.t
+t/Lemonldap-NG-Portal-CDA.t
 t/Lemonldap-NG-Portal-SharedConf-DBI.t
 t/Lemonldap-NG-Portal-SharedConf.t
 t/Lemonldap-NG-Portal-Simple.t

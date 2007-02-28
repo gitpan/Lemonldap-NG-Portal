@@ -9,12 +9,14 @@ use Net::LDAP;
 use warnings;
 use MIME::Base64;
 use CGI;
+use CGI::Cookie;
 
-our $VERSION = '0.5';
+our $VERSION = '0.62';
 
 our @ISA = qw(CGI Exporter);
 
 # Constants
+sub PE_DONE                { -1 }
 sub PE_OK                  { 0 }
 sub PE_SESSIONEXPIRED      { 1 }
 sub PE_FORMEMPTY           { 2 }
@@ -30,20 +32,19 @@ sub PE_BADCERTIFICATE      { 10 }
 # EXPORTER PARAMETERS
 our %EXPORT_TAGS = (
     'all' => [
-        qw( PE_OK PE_SESSIONEXPIRED PE_FORMEMPTY PE_WRONGMANAGERACCOUNT PE_USERNOTFOUND PE_BADCREDENTIALS
+        qw( PE_DONE PE_OK PE_SESSIONEXPIRED PE_FORMEMPTY PE_WRONGMANAGERACCOUNT PE_USERNOTFOUND PE_BADCREDENTIALS
           PE_LDAPCONNECTFAILED PE_LDAPERROR PE_APACHESESSIONERROR PE_FIRSTACCESS PE_BADCERTIFICATE import )
     ],
     'constants' => [
-        qw( PE_OK PE_SESSIONEXPIRED PE_FORMEMPTY PE_WRONGMANAGERACCOUNT PE_USERNOTFOUND PE_BADCREDENTIALS
+        qw( PE_DONE PE_OK PE_SESSIONEXPIRED PE_FORMEMPTY PE_WRONGMANAGERACCOUNT PE_USERNOTFOUND PE_BADCREDENTIALS
           PE_LDAPCONNECTFAILED PE_LDAPERROR PE_APACHESESSIONERROR PE_FIRSTACCESS PE_BADCERTIFICATE )
     ],
 );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
-# TODO: remove this... and test !
 our @EXPORT =
-  qw( PE_OK PE_SESSIONEXPIRED PE_FORMEMPTY PE_WRONGMANAGERACCOUNT PE_USERNOTFOUND PE_BADCREDENTIALS
+  qw( PE_DONE PE_OK PE_SESSIONEXPIRED PE_FORMEMPTY PE_WRONGMANAGERACCOUNT PE_USERNOTFOUND PE_BADCREDENTIALS
   PE_LDAPCONNECTFAILED PE_LDAPERROR PE_APACHESESSIONERROR PE_FIRSTACCESS PE_BADCERTIFICATE import );
 
 # CONSTRUCTOR
@@ -60,12 +61,12 @@ sub new {
     $self->{ldapServer}    ||= 'localhost';
     $self->{ldapPort}      ||= 389;
     $self->{securedCookie} ||= 0;
-    $self->{cookieName}    ||= "lemon";
+    $self->{cookieName}    ||= "lemonldap";
 
     if ( $self->{authentication} eq "SSL" ) {
         require Lemonldap::NG::Portal::AuthSSL;
-	# $Lemonldap::NG::Portal::AuthSSL::OVERRIDE does not overload $self
-	# variables: if the administrator has defined a sub, we respect it
+        # $Lemonldap::NG::Portal::AuthSSL::OVERRIDE does not overload $self
+        # variables: if the administrator has defined a sub, we respect it
         %$self = ( %$Lemonldap::NG::Portal::AuthSSL::OVERRIDE, %$self );
     }
     return $self;
@@ -178,7 +179,8 @@ sub process {
         else {
             last if ( $self->{error} = $self->$sub );
         }
-      } return ( $self->{error} ? 0 : 1 );
+      }
+      return ( ( $self->{error} > 0 ) ? 0 : 1 );
 }
 
 # 1. If the user was redirected here, we have to load 'url' parameter
@@ -191,12 +193,54 @@ sub controlUrlOrigin {
 }
 
 # 2. Control existing sessions
-# TODO: what to do with existing sessions ?
-#       - delete and create a new session
+# what to do with existing sessions ?
+#       - delete and create a new session (default)
 #       - re-authentication (actual scheme)
 #       - nothing: user is authenticated and process
 #                  returns true
 sub controlExistingSession {
+    my $self = shift;
+    my %cookies = fetch CGI::Cookie;
+    # Test if Lemonldap::NG cookie is available
+    if ( my $id = $cookies{$self->{cookieName}}) {
+        my $h;
+        # Trying to recover session from global session storage
+        eval {
+            tie $h, $self->{globalStorage}, $id, $self->{globalStorageOptions};
+        };
+        if ( $@ or not tied($h) ) {
+            # Session not available (expired ?)
+            print STDERR "Session $id isn't yet available ($ENV{REMOTE_ADDR})";
+            return PE_OK;
+        }
+        # A session has been find => calling &existingSession
+        my $r;
+        if ( $self->{existingSession} ) {
+            $r = &{ $self->{existingSession} }($self, $id, \$h)
+        }
+        else {
+            $r = $self->existingSession($id, \$h);
+        }
+        if ( $r == PE_DONE) {
+            for my $sub qw(log autoRedirect) {
+                if ( $self->{$sub} ) {
+                    last if ( $self->{error} = &{ $self->{$sub} }($self) );
+                }
+                else {
+                    last if ( $self->{error} = $self->$sub );
+                }
+            }
+            return $self->{error} || PE_DONE;
+        }
+        else {
+            return $r;
+        }
+    }
+    PE_OK;
+}
+
+sub existingSession {
+    my ($self, $id, $datas) = @_;
     PE_OK;
 }
 
@@ -385,12 +429,12 @@ sub autoRedirect {
         #<head>
         #<script language="Javascript">
         #function redirect() {
-        #	document.location.href='$u';
+        #        document.location.href='$u';
         #}
         #</script>
         #</head>
         #<body onload="redirect();">
-        #	<h2>The document has moved <a href="$u">HERE</a></h2>
+        #        <h2>The document has moved <a href="$u">HERE</a></h2>
         #</body>
         #</html>
         #EOF
@@ -411,20 +455,20 @@ Lemonldap::NG::Portal::Simple - Base module for building Lemonldap::NG compatibl
 
   use Lemonldap::NG::Portal::Simple;
   my $portal = new Lemonldap::NG::Portal::Simple(
-	 domain         => 'gendarmerie.defense.gouv.fr',
+         domain         => 'gendarmerie.defense.gouv.fr',
          globalStorage  => 'Apache::Session::MySQL',
-	 globalStorageOptions => {
-	   DataSource   => 'dbi:mysql:database=dbname;host=127.0.0.1',
-	   UserName     => 'db_user',
-	   Password     => 'db_password',
-	   TableName    => 'sessions',
-	   LockDataSource   => 'dbi:mysql:database=dbname;host=127.0.0.1',
-	   LockUserName     => 'db_user',
-	   LockPassword     => 'db_password',
-	 },
-	 ldapServer     => 'ldap.domaine.com',
-	 securedCookie  => 1,
-	 exportedVars  => ["uid","cn","mail","appli"],
+         globalStorageOptions => {
+           DataSource   => 'dbi:mysql:database=dbname;host=127.0.0.1',
+           UserName     => 'db_user',
+           Password     => 'db_password',
+           TableName    => 'sessions',
+           LockDataSource   => 'dbi:mysql:database=dbname;host=127.0.0.1',
+           LockUserName     => 'db_user',
+           LockPassword     => 'db_password',
+         },
+         ldapServer     => 'ldap.domaine.com',
+         securedCookie  => 1,
+         exportedVars  => ["uid","cn","mail","appli"],
     );
 
   if($portal->process()) {
@@ -518,7 +562,16 @@ used to redirect the user after authentication.
 
 =head3 controlExistingSession
 
-Controls if a previous session is always available.
+Controls if a previous session is always available. If true, it call the sub
+C<existingSession> with two parameters: id and a scalar tied on Apache::Session
+module choosed to store sessions. See bellow
+
+=head3 existingSession
+
+This sub is called only if a previous session exists and is available. By
+defaults, it returns PE_OK so user is re-authenticated. You can overload it:
+for example if existingSession just returns PE_DONE: authenticated users are
+not re-authenticated and C<>process> returns true.
 
 =head3 extractFormInfo
 
@@ -647,7 +700,7 @@ Xavier Guimard, E<lt>x.guimard@free.frE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2005 by Xavier Guimard E<lt>x.guimard@free.frE<gt>
+Copyright (C) 2005-2007 by Xavier Guimard E<lt>x.guimard@free.frE<gt>
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.4 or,

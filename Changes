@@ -1,5 +1,18 @@
 Revision history for Perl extension Lemonldap::NG::Portal.
 
+0.62  Wed Feb 28 23:22:14
+	- Adding cross-domain-authentication mechanism
+	- local configuration overrides global configuration
+
+0.61  Sun Feb 11 9:10:12
+	- Existing sessions are now checked
+
+0.6   Sat Jan 6 20:17:15
+	- Use Safe->reval instead of eval
+	- Perl expressions in 'groups' has not to be enclosed in {} if no LDAP
+	  filter is used
+	- Corrections in documentation
+
 0.5   Tue Dec 19 19:11:15
 	- config is now shared with Lemonldap::NG::Manager::Conf
 	

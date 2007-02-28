@@ -2,14 +2,16 @@
 
 use Lemonldap::NG::Portal::SharedConf;
 
-my $portal = Lemonldap::NG::Portal::SharedConf->new ( {
-	configStorage => {
-		type    => 'File',
-		dirName => '__DIR__/conf/',
-	}
-});
+my $portal = Lemonldap::NG::Portal::SharedConf->new(
+    {
+        configStorage => {
+            type    => 'File',
+            dirName => '__DIR__/conf/',
+        }
+    }
+);
 
-if($portal->process()) {
+if ( $portal->process() ) {
     print $portal->header;
     print $portal->start_html;
     print "<h1>Your well authenticated !</h1>";
@@ -18,9 +20,10 @@ if($portal->process()) {
 else {
     print $portal->header;
     print $portal->start_html;
-    print 'Error: '.$portal->error.'<br>';
+    print 'Error: ' . $portal->error . '<br>';
     print '<form method="POST">';
-    print '<input type="hidden" name="url" value="'.$portal->param('url').'">';
+    print '<input type="hidden" name="url" value="'
+      . $portal->param('url') . '">';
     print 'Login : <input name="user"><br>';
     print 'Password : <input name="password" type="password" autocomplete="off"><br>';
     print '<input type=submit value="OK">';
