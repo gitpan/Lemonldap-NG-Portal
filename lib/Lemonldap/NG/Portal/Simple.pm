@@ -10,8 +10,9 @@ use warnings;
 use MIME::Base64;
 use CGI;
 use CGI::Cookie;
+use Lemonldap::NG::Portal::_i18n;
 
-our $VERSION = '0.62';
+our $VERSION = '0.63';
 
 our @ISA = qw(CGI Exporter);
 
@@ -63,11 +64,11 @@ sub new {
     $self->{securedCookie} ||= 0;
     $self->{cookieName}    ||= "lemonldap";
 
-    if ( $self->{authentication} eq "SSL" ) {
-        require Lemonldap::NG::Portal::AuthSSL;
+    if ( $self->{authentication} ne "ldap" ) {
+        require "Lemonldap::NG::Portal::Auth".$self->{authentication};
         # $Lemonldap::NG::Portal::AuthSSL::OVERRIDE does not overload $self
         # variables: if the administrator has defined a sub, we respect it
-        %$self = ( %$Lemonldap::NG::Portal::AuthSSL::OVERRIDE, %$self );
+        %$self = ( %${"Lemonldap::NG::Portal::Auth".$self->{authentication}."::OVERRIDE"}, %$self );
     }
     return $self;
 }
@@ -86,40 +87,10 @@ sub getConf {
     1;
 }
 
-# TODO: create an _i18n.pm like in Lemonldap::NG::Manager
+# error calls i18n.pm to dysplay error in the wanted language
 sub error {
     my $self = shift;
-    my $lang = shift;
-    my @message;
-    if ( $lang eq "fr" ) {
-        @message = (
-            'Tout est bon',
-            'Votre session a expiré, vous devez vous réauthentifier',
-            'login ou mot de passe non renseigné',
-            "Compte ou mot de passe LDAP de l'application incorrect",
-            'Utilisateur inexistant',
-            'mot de passe ou login incorrect',
-            'Connexion impossible au serveur LDAP',
-            'Erreur anormale du serveur LDAP',
-            'Erreur du module Apache::Session choisi',
-            'Authentification exigée',
-        );
-    }
-    else {
-        @message = (
-            'Everything is OK',
-'Your connection has expired; You must to be authentified once again',
-            'User and password fields must be filled',
-            'Wrong directory manager account or password',
-            'User not found in directory',
-            'Wrong credentials',
-            'Unable to connect to LDAP server',
-            'Abnormal error from LDAP server',
-            'Apache::Session module failed',
-            'Authentication required',
-        );
-    }
-    return $message[ $self->{error} ];
+    return &Lemonldap::NG::Portal::_i18n::error( $self->{error}, $ENV{HTTP_ACCEPT_LANGUAGE} );
 }
 
 # Private sub used to bind to LDAP server both with Lemonldap account and user

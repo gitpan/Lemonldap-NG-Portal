@@ -1,5 +1,9 @@
 Revision history for Perl extension Lemonldap::NG::Portal.
 
+0.63  Thu Feb 2 20:44:43
+	- Adding CAS authentication compatibility system
+	- New i18n system for errors
+
 0.62  Wed Feb 28 23:22:14
 	- Adding cross-domain-authentication mechanism
 	- local configuration overrides global configuration
