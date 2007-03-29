@@ -9,9 +9,9 @@ use Test::More tests => 1;
 # SOAP::Lite is not required, so Lemonldap::NG::Manager::Conf::SOAP may
 # not run.
 SKIP: {
-    eval { require AuthCAS };
-    skip "AuthCAS is not installed, so Lemonldap::NG::Portal::AuthCAS will not be useable", 1 if($@);
-    use_ok('Lemonldap::NG::Portal::AuthCAS');
+    eval { require lasso };
+    skip "lasso is not installed, so Lemonldap::NG::Portal::AuthLA will not be useable", 1 if($@);
+    use_ok('Lemonldap::NG::Portal::AuthLA');
 }
 
 #########################

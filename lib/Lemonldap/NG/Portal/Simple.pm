@@ -10,9 +10,10 @@ use warnings;
 use MIME::Base64;
 use CGI;
 use CGI::Cookie;
+require POSIX;
 use Lemonldap::NG::Portal::_i18n;
 
-our $VERSION = '0.63';
+our $VERSION = '0.7';
 
 our @ISA = qw(CGI Exporter);
 
@@ -64,7 +65,7 @@ sub new {
     $self->{securedCookie} ||= 0;
     $self->{cookieName}    ||= "lemonldap";
 
-    if ( $self->{authentication} ne "ldap" ) {
+    if ( $self->{authentication} and $self->{authentication} ne "ldap" ) {
         require "Lemonldap::NG::Portal::Auth".$self->{authentication};
         # $Lemonldap::NG::Portal::AuthSSL::OVERRIDE does not overload $self
         # variables: if the administrator has defined a sub, we respect it
@@ -140,9 +141,9 @@ sub process {
     my ($self) = @_;
     $self->{error} = PE_OK;
     foreach my $sub
-      qw(controlUrlOrigin extractFormInfo formateParams formateFilter
-      connectLDAP bind search setSessionInfo setMacros setGroups authenticate
-      store unbind buildCookie log autoRedirect) {
+      qw(controlUrlOrigin controlExistingSession extractFormInfo formateParams
+      formateFilter connectLDAP bind search setSessionInfo setMacros setGroups
+      authenticate store unbind buildCookie log autoRedirect) {
         if ( $self->{$sub} )
         {
             last if ( $self->{error} = &{ $self->{$sub} }($self) );
@@ -173,24 +174,37 @@ sub controlExistingSession {
     my $self = shift;
     my %cookies = fetch CGI::Cookie;
     # Test if Lemonldap::NG cookie is available
-    if ( my $id = $cookies{$self->{cookieName}}) {
-        my $h;
+    if ( $cookies{$self->{cookieName}} and my $id = $cookies{$self->{cookieName}}->value ) {
+        my %h;
         # Trying to recover session from global session storage
         eval {
-            tie $h, $self->{globalStorage}, $id, $self->{globalStorageOptions};
+            tie %h, $self->{globalStorage}, $id, $self->{globalStorageOptions};
         };
-        if ( $@ or not tied($h) ) {
+        if ( $@ or not tied(%h) ) {
             # Session not available (expired ?)
-            print STDERR "Session $id isn't yet available ($ENV{REMOTE_ADDR})";
+            print STDERR "Session $id isn't yet available ($ENV{REMOTE_ADDR})\n";
             return PE_OK;
         }
+
+        # Logout if required
+        # TODO: logout documentation
+        if($self->param('logout')) {
+            # Delete session in global storage
+            tied(%h)->delete;
+            # Delete cookie
+            $self->{id} = "";
+            $self->buildCookie();
+            return PE_FIRSTACCESS;
+        }
         # A session has been find => calling &existingSession
-        my $r;
+        my($r, $datas);
+        %$datas = %h;
+        untie(%h);
         if ( $self->{existingSession} ) {
-            $r = &{ $self->{existingSession} }($self, $id, \$h)
+            $r = &{ $self->{existingSession} }($self, $id, $datas)
         }
         else {
-            $r = $self->existingSession($id, \$h);
+            $r = $self->existingSession($id, $datas);
         }
         if ( $r == PE_DONE) {
             for my $sub qw(log autoRedirect) {
@@ -289,19 +303,20 @@ sub search {
 sub setSessionInfo {
     my ($self) = @_;
     $self->{sessionInfo}->{dn} = $self->{dn};
+    $self->{sessionInfo}->{startTime} = &POSIX::strftime("%Y%m%d%H%M%S",localtime());
     unless ( $self->{exportedVars} ) {
         foreach (qw(uid cn mail)) {
-            $self->{sessionInfo}->{$_} = join( '; ', $self->{entry}->get_value($_) || ("") );
+            $self->{sessionInfo}->{$_} = join( '; ', $self->{entry}->get_value($_) ) || "";
         }
     }
     elsif ( ref( $self->{exportedVars} ) eq 'HASH' ) {
         foreach ( keys %{ $self->{exportedVars} } ) {
-            $self->{sessionInfo}->{$_} = join( '; ', $self->{entry}->get_value( $self->{exportedVars}->{$_} ) || ("") );
+            $self->{sessionInfo}->{$_} = join( '; ', $self->{entry}->get_value( $self->{exportedVars}->{$_} ) ) || "";
         }
     }
     else {
         foreach ( @{ $self->{exportedVars} } ) {
-            $self->{sessionInfo}->{$_} = join( '; ', $self->{entry}->get_value($_) || ("") );
+            $self->{sessionInfo}->{$_} = join( '; ', $self->{entry}->get_value($_) ) || "";
         }
     }
     PE_OK;
@@ -663,7 +678,8 @@ find the user distinguished name (dn) was refused by the server
 
 =head1 SEE ALSO
 
-L<Lemonldap::NG::Handler>, L<Lemonldap::NG::Portal::SharedConf>, L<CGI>
+L<Lemonldap::NG::Handler>, L<Lemonldap::NG::Portal::SharedConf>, L<CGI>,
+http://wiki.lemonldap.objectweb.org/xwiki/bin/view/NG/Presentation
 
 =head1 AUTHOR
 

@@ -15,6 +15,7 @@ if ( $portal->process() ) {
     print $portal->header;
     print $portal->start_html;
     print "<h1>Your well authenticated !</h1>";
+    print "Click <a href=\"$ENV{SCRIPT_NAME}?logout=1\">here</a> to logout";
     print $portal->end_html;
 }
 else {

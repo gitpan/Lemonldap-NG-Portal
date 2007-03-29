@@ -2,7 +2,7 @@ package Lemonldap::NG::Portal;
 
 print STDERR
 "See Lemonldap::NG::Portal(3) to know which Lemonldap::NG::Portal::* module to use.";
-our $VERSION = "0.64";
+our $VERSION = "0.7";
 
 1;
 
@@ -37,6 +37,9 @@ system.
   
       # or redirect the user to the menu
       print $portal->redirect( -uri => 'https://portal/menu');
+      
+      # You can also add a "Logout" link:
+      print "<a href=\"$ENV{SCRIPT_NAME}?logout=1\">";
   }
   else {
       # Write here the html form used to authenticate with CGI methods.
@@ -252,6 +255,26 @@ So the number of request to the central storage is limited to 1 per user each
 Lemonldap::NG is very fast, but you can increase performance using a
 L<Cache::Cache> module that does not use disk access.
 
+=head2 Logout system
+
+Lemonldap::NG provides a single logout system: you can use it by adding a link
+to the portal with "logout=1" parameter (See Synopsis) and/or by configuring
+Handler to intercept some URL (See L<Lemonldap::NG::Handler>). The logout
+system:
+
+=over
+
+=item * delete session in the global session storage,
+
+=item * replace Lemonldap::NG cookie by '',
+
+=item * delete handler caches only if logout action was started from a
+protected application and only in the current Apache server. So in other
+servers, session is still in cache for 10 minutes maximum if the user was
+connected on it in the last 10 minutes.
+
+=back
+
 =head1 USING LEMONLDAP::NG::PORTAL FOR DEVELOPMENT
 
 Lemonldap::NG::Portal provides different modules:
@@ -272,7 +295,8 @@ L<Lemonldap::NG::Portal::Simple>. It's the more used module.
 =head1 SEE ALSO
 
 L<Lemonldap::NG::Portal::SharedConf>, L<Lemonldap::NG::Portal::Simple>
-L<Lemonldap::NG::Handler>, L<Lemonldap::NG::Manager>
+L<Lemonldap::NG::Handler>, L<Lemonldap::NG::Manager>,
+http://wiki.lemonldap.objectweb.org/xwiki/bin/view/NG/Presentation
 
 =head1 AUTHOR
 

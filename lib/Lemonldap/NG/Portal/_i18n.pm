@@ -14,7 +14,7 @@ sub error {
             return &{"error_$_"}->[$error];
         }
     }
-    return &error_en->{$error};
+    return &error_en->[$error];
 }
 
 *error_fr_fr = *error_fr;

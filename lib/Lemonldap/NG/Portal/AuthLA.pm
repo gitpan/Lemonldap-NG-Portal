@@ -24,48 +24,148 @@ our @ISA = qw(Lemonldap::NG::Portal::SharedConf);
 # Overloaded methods
 #==============================================================================
 
+# Main process as described in Portal::Simple module
+
+# 1. Retrieve source URL
+# Not overloaded
+
+# 2. Control existing sessions
+# Not overloaded
+
+# 3. Retrieve user credentials
+# Test here if the user was authenticated by IdP
 sub extractFormInfo {
-# extraction des données du XML s'il est présent, sinon
-# on appelle la routine normale. Si on est pas en LA,
-# toutes les routines suivantes doivent lancer le
-# procédé normal ($self->SUPER::extractFormInfo)
+	my $self = shift;
+	&_lasso_init();
+	my $libertyFilesDir = $self->{libertyFilesDir} ;
+	my $server = &_lasso_create_server($libertyFilesDir);
+	my $login = &_lasso_create_authnrequest($server);
+
+	print STDERR $server->dump();
+	print STDERR $login->dump();
+
+	return PE_OK;
 }
 
+# 4. LDAP format filter for attributes reading
+# We must retrive user DN in SAML response
+# Or use WSF to retrieve attributes
 sub formateFilter {
-    # If user is authenticated with LA, it's OK
-    return PE_OK;
+	my $self = shift;
+
+	# Get DN in SAML response (TODO)
+	my $dn = "uid=clement,ou=personnes,dc=linagora,dc=com";
+
+	# Explode DN to build RDN
+	my @rdn = split /,/ , $dn;
+	
+	$self->{filter}="(".shift(@rdn).")";
+
+	return PE_OK;
 }
 
-sub connectLDAP {
-    # If user is authenticated with LA, abort LDAP connection
-    return PE_OK;
+# 5. LDAP connection
+# Overload only if WSF is used to retrieve attributes
+#sub connectLDAP {
+#    return PE_OK;
+#}
+
+# 6. LDAP bind (with Directory Manager or anonymous)
+# Overload only if WSF is used to retrieve attributes
+#sub bind {
+#    return PE_OK;
+#}
+
+
+# 7. Search the DN
+# Overload only if WSF is used to retrieve attributes
+#sub search {
+#	return PE_OK;
+#}
+
+# 8. Load parameters 
+# Overload only if WSF is used to retrieve attributes
+#sub setSessionInfo {
+#	# Use WSF to get "exprotedVars"
+#	return PE_OK;
+#}
+
+# 9. Set macros
+# Not overloaded
+
+# 10. Set groups
+# Not overloaded
+
+# 11. LDAP unbind
+# Overload only if WSF is used to retrieve attributes
+#sub unbind {
+#    return PE_OK;
+#}
+
+# 12. Authentication
+# Authentication is done by IdP, so we disable this step
+sub authenticate {
+	return PE_OK;
 }
 
-sub bind {
-    # No need to bind
-    return PE_OK;
+# 13. Store parameters in session
+# Not overloaded
+
+# 14. Build cookie
+# Not overloaded
+
+# 15. Log
+# Not overloaded
+
+# 16. Redirection
+# Not overloaded
+
+#==============================================================================
+# Liberty Alliance methods
+#==============================================================================
+# Lasso intialisation
+sub _lasso_init {
+	lasso::init;
 }
 
-sub search {
-# vérifie la chaîne de confiance LA
+# Create server object
+sub _lasso_create_server {
+
+	# TODO: file names in global configuration
+	
+	my $libertyFilesDir = shift;	
+
+	my $server = lasso::Server->new(
+		"$libertyFilesDir/lemonldapng-metadata.xml",
+		"private-key.pem",
+		undef, undef);
+	
+	$server->addProvider(
+		$lasso::PROVIDER_ROLE_IDP,
+		"$libertyFilesDir/idp-http-authentic.demo.interldap.org-liberty-metadata-metadata.xml",
+		"$libertyFilesDir/idp-http-authentic.demo.interldap.org-liberty-metadata-publickey.pem",
+		undef);
+
+	return $server;
 }
 
-sub setSessionInfo {
-    # We have to get user information here
-    # Use disco service with attribute provider ?
+# Create AuthnRequest
+sub _lasso_create_authnrequest {
+
+	my $server = shift;
+
+	my $login = lasso::Login->new($server);
+
+	return $login;
 }
 
-sub unbind {
-    # No need to unbind
-    return PE_OK;
-}
 
 1;
 __END__
 
 =head1 NAME
 
-Lemonldap::NG::Portal::SharedConf::LA - Provide Liberty Alliance Authentication
+Lemonldap::NG::Portal::AuthLA - Provide Liberty Alliance Authentication
 
 =head1 SYNOPSIS
 
@@ -74,15 +174,16 @@ Lemonldap::NG::Portal::SharedConf::LA - Provide Liberty Alliance Authentication
 =head1 SEE ALSO
 
 L<Lemonldap::NG::Portal::SharedConf>, L<Lemonldap::NG::Portal>,
-L<Lemonldap::NG::Handler>, L<Lemonldap::NG::Manager>
+L<Lemonldap::NG::Handler>, L<Lemonldap::NG::Manager>,
+http://wiki.lemonldap.objectweb.org/xwiki/bin/view/NG/Presentation
 
 =head1 AUTHOR
 
-Xavier Guimard, E<lt>x.guimard@free.frE<gt>
+Clement Oudot, E<lt>coudot@linagora.comE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2005 by Xavier Guimard E<lt>x.guimard@free.frE<gt>
+Copyright (C) 2007 by Clement Oudot, E<lt>coudot@linagora.comE<gt>
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.4 or,

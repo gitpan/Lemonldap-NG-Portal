@@ -231,7 +231,8 @@ Same as L<Lemonldap::NG::Portal::Simple>.
 =head1 SEE ALSO
 
 L<Lemonldap::NG::Portal>, L<Lemonldap::NG::Portal::SharedConf>,
-L<Lemonldap::NG::Handler>, L<Lemonldap::NG::Manager>
+L<Lemonldap::NG::Handler>, L<Lemonldap::NG::Manager>,
+http://wiki.lemonldap.objectweb.org/xwiki/bin/view/NG/Presentation
 
 =head1 AUTHOR
 

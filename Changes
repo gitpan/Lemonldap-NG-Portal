@@ -1,26 +1,38 @@
 Revision history for Perl extension Lemonldap::NG::Portal.
 
+0.7   Thu Mar 22 23:00:34 2007
+	- $startTime variable
+	- Liberty Alliance service provider Skeleton
+
+0.65  Wed Mar 15 7:38:40 2007
+	- New feature: single logout
+	- bug corrections:
+	  * existingSessions was never called
+	  * Typo in Portal/CDA.pm
+	  * Multi-valued attributes in HTTP headers (Closes: #306792 /
+	    forge.objectweb.org)
+
 0.64  Fri Mar 9 17:49:44
 	- Delete of DBI.pm which is no more in use
 
-0.63  Thu Feb 2 20:44:43
+0.63  Thu Feb 2 20:44:43 2007
 	- Adding CAS authentication compatibility system
 	- New i18n system for errors
 
-0.62  Wed Feb 28 23:22:14
+0.62  Wed Feb 28 23:22:14 2007
 	- Adding cross-domain-authentication mechanism
 	- local configuration overrides global configuration
 
-0.61  Sun Feb 11 9:10:12
+0.61  Sun Feb 11 9:10:12 2007
 	- Existing sessions are now checked
 
-0.6   Sat Jan 6 20:17:15
+0.6   Sat Jan 6 20:17:15 2007
 	- Use Safe->reval instead of eval
 	- Perl expressions in 'groups' has not to be enclosed in {} if no LDAP
 	  filter is used
 	- Corrections in documentation
 
-0.5   Tue Dec 19 19:11:15
+0.5   Tue Dec 19 19:11:15 2006
 	- config is now shared with Lemonldap::NG::Manager::Conf
 	
 0.42  Thu Dec 7 12:23:52 2006
