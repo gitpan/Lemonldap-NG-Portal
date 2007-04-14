@@ -103,6 +103,16 @@ http://wiki.lemonldap.objectweb.org/xwiki/bin/view/NG/Presentation
 
 Xavier Guimard, E<lt>x.guimard@free.frE<gt>
 
+=head1 BUG REPORT
+
+Use OW2 system to report bug or ask for features:
+L<http://forge.objectweb.org/tracker/?group_id=274>
+
+=head1 DOWNLOAD
+
+Lemonldap::NG is available at
+L<http://forge.objectweb.org/project/showfiles.php?group_id=274>
+
 =head1 COPYRIGHT AND LICENSE
 
 Copyright (C) 2007 by Xavier Guimard E<lt>x.guimard@free.frE<gt>

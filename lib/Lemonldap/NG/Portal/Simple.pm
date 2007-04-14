@@ -13,7 +13,7 @@ use CGI::Cookie;
 require POSIX;
 use Lemonldap::NG::Portal::_i18n;
 
-our $VERSION = '0.7';
+our $VERSION = '0.72';
 
 our @ISA = qw(CGI Exporter);
 
@@ -66,10 +66,16 @@ sub new {
     $self->{cookieName}    ||= "lemonldap";
 
     if ( $self->{authentication} and $self->{authentication} ne "ldap" ) {
-        require "Lemonldap::NG::Portal::Auth".$self->{authentication};
         # $Lemonldap::NG::Portal::AuthSSL::OVERRIDE does not overload $self
         # variables: if the administrator has defined a sub, we respect it
-        %$self = ( %${"Lemonldap::NG::Portal::Auth".$self->{authentication}."::OVERRIDE"}, %$self );
+        my $tmp = 'require Lemonldap::NG::Portal::Auth'
+                . $self->{authentication}
+                . '; $tmp = $Lemonldap::NG::Portal::Auth'
+                . $self->{authentication}
+                . '::OVERRIDE;';
+        eval $tmp;
+        die($@) if($@);
+        %$self = ( %$tmp, %$self );
     }
     return $self;
 }
@@ -441,7 +447,7 @@ Lemonldap::NG::Portal::Simple - Base module for building Lemonldap::NG compatibl
 
   use Lemonldap::NG::Portal::Simple;
   my $portal = new Lemonldap::NG::Portal::Simple(
-         domain         => 'gendarmerie.defense.gouv.fr',
+         domain         => 'example.com',
          globalStorage  => 'Apache::Session::MySQL',
          globalStorageOptions => {
            DataSource   => 'dbi:mysql:database=dbname;host=127.0.0.1',
@@ -684,6 +690,16 @@ http://wiki.lemonldap.objectweb.org/xwiki/bin/view/NG/Presentation
 =head1 AUTHOR
 
 Xavier Guimard, E<lt>x.guimard@free.frE<gt>
+
+=head1 BUG REPORT
+
+Use OW2 system to report bug or ask for features:
+L<http://forge.objectweb.org/tracker/?group_id=274>
+
+=head1 DOWNLOAD
+
+Lemonldap::NG is available at
+L<http://forge.objectweb.org/project/showfiles.php?group_id=274>
 
 =head1 COPYRIGHT AND LICENSE
 

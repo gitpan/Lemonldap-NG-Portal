@@ -1,5 +1,9 @@
 Revision history for Perl extension Lemonldap::NG::Portal.
 
+0.72  Sat Apr 14 22:35:45 2007
+	- Bug fix in authentication other than 'ldap'
+	- More tests
+
 0.71  Sun Apr 1 22:20:41 2007
 	- New authentication scheme: AuthApache.pm
 

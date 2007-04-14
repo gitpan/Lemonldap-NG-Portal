@@ -2,7 +2,7 @@ package Lemonldap::NG::Portal;
 
 print STDERR
 "See Lemonldap::NG::Portal(3) to know which Lemonldap::NG::Portal::* module to use.";
-our $VERSION = "0.71";
+our $VERSION = "0.72";
 
 1;
 
@@ -301,6 +301,16 @@ http://wiki.lemonldap.objectweb.org/xwiki/bin/view/NG/Presentation
 =head1 AUTHOR
 
 Xavier Guimard, E<lt>x.guimard@free.frE<gt>
+
+=head1 BUG REPORT
+
+Use OW2 system to report bug or ask for features:
+L<http://forge.objectweb.org/tracker/?group_id=274>
+
+=head1 DOWNLOAD
+
+Lemonldap::NG is available at
+L<http://forge.objectweb.org/project/showfiles.php?group_id=274>
 
 =head1 COPYRIGHT AND LICENSE
 
