@@ -5,7 +5,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 5;
+use Test::More tests => 34;
 BEGIN { use_ok( 'Lemonldap::NG::Portal::Simple', ':all' ) }
 
 #########################
@@ -13,18 +13,12 @@ BEGIN { use_ok( 'Lemonldap::NG::Portal::Simple', ':all' ) }
 # Insert your test code below, the Test::More module is use()ed here so read
 # its man page ( perldoc Test::More ) for help writing this test script.
 
-my $p;
-ok(
-    $p = Lemonldap::NG::Portal::Simple->new(
-        {
-		globalStorage => 'Apache::Session::File',
-		domain => 'example.com',
-        }
-    )
-);
+my $p = bless {}, 'Lemonldap::NG::Portal::Simple';
 
-ok( $p->process == 0 );
-ok( $p->{error} == PE_FIRSTACCESS );
-$p->{id} = 1;
-ok( $p->buildCookie == PE_OK );
+foreach my $i ( 0 .. 10 ) {
+    $p->{error} = $i;
+    ok( $p->error('fr') );
+    ok( $p->error('en') );
+    ok( $p->error('') );
+}
 

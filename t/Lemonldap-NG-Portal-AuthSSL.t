@@ -6,7 +6,7 @@
 # change 'tests => 1' to 'tests => last_test_to_print';
 
 use Test::More tests => 2;
-BEGIN { use_ok('Lemonldap::NG::Portal::Simple') };
+BEGIN { use_ok('Lemonldap::NG::Portal::Simple') }
 
 #########################
 
@@ -14,9 +14,13 @@ BEGIN { use_ok('Lemonldap::NG::Portal::Simple') };
 # its man page ( perldoc Test::More ) for help writing this test script.
 
 my $p;
-ok( $p = Lemonldap::NG::Portal::Simple->new( {
+ok(
+    $p = Lemonldap::NG::Portal::Simple->new(
+        {
 		globalStorage => 'Apache::Session::File',
 		domain => 'example.com',
 		authentication => 'SSL',
-} ) );
+        }
+    )
+);
 

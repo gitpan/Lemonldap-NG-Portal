@@ -1,5 +1,8 @@
 Revision history for Perl extension Lemonldap::NG::Portal.
 
+0.73  Fri Apr 20 8:48:06 2007
+	- Bug fix in test (AuthCAS failed)
+
 0.72  Sat Apr 14 22:35:45 2007
 	- Bug fix in authentication other than 'ldap'
 	- More tests

@@ -5,7 +5,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 2;
+use Test::More tests => 1;
 
 #########################
 
@@ -16,13 +16,18 @@ use Test::More tests => 2;
 # not run.
 SKIP: {
     eval { require AuthCAS };
-    skip "AuthCAS is not installed, so Lemonldap::NG::Portal::AuthCAS will not be useable", 1 if($@);
-    use_ok('Lemonldap::NG::Portal::Simple');
+    skip "AuthCAS is not installed, so Lemonldap::NG::Portal::AuthCAS will not be useable", 1 if ($@);
     my $p;
-    ok( $p = Lemonldap::NG::Portal::Simple->new( {
+    eval { require Lemonldap::NG::Portal::Simple };
+    skip "Problem with Lemonldap::NG::Portal::Simple, Lemonldap::NG::Portal::AuthCAS will not be tested", 1 if ($@);
+    ok(
+        $p = Lemonldap::NG::Portal::Simple->new(
+            {
 		globalStorage => 'Apache::Session::File',
 		domain => 'example.com',
 		authentication => 'CAS',
-    } ) );
+            }
+        )
+    );
 }
 

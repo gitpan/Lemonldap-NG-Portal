@@ -6,7 +6,7 @@
 # change 'tests => 1' to 'tests => last_test_to_print';
 
 use Test::More tests => 3;
-BEGIN { use_ok('Lemonldap::NG::Portal::SharedConf') };
+BEGIN { use_ok('Lemonldap::NG::Portal::SharedConf') }
 
 #########################
 
@@ -14,6 +14,6 @@ BEGIN { use_ok('Lemonldap::NG::Portal::SharedConf') };
 # its man page ( perldoc Test::More ) for help writing this test script.
 
 my $p = bless {}, 'Lemonldap::NG::Portal::SharedConf';
-ok( ! $p->scanexpr ( '1 == 0' ) );
-ok( $p->scanexpr ( '1 == 1' ) );
+ok( !$p->scanexpr('1 == 0') );
+ok( $p->scanexpr('1 == 1') );
 
