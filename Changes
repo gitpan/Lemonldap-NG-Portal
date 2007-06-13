@@ -1,5 +1,9 @@
 Revision history for Perl extension Lemonldap::NG::Portal.
 
+0.74  Mon May 14 7:04:48 2007
+	- Multiple ldap servers can be used
+	- CDA optimization
+
 0.73  Fri Apr 20 8:48:06 2007
 	- Bug fix in test (AuthCAS failed)
 
@@ -22,7 +26,7 @@ Revision history for Perl extension Lemonldap::NG::Portal.
 	  * Multi-valued attributes in HTTP headers (Closes: #306792 /
 	    forge.objectweb.org)
 
-0.64  Fri Mar 9 17:49:44
+0.64  Fri Mar 9 17:49:44 2007
 	- Delete of DBI.pm which is no more in use
 
 0.63  Thu Feb 2 20:44:43 2007

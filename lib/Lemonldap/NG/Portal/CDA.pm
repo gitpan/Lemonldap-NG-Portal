@@ -28,7 +28,7 @@ sub autoRedirect {
     my $self = shift;
     my $tmp  = $self->{domain};
     $self->{urldc} .= "?" . $self->{cookieName} . "=" . $self->{id}
-      if ( $self->{urldc} !~ /$tmp$/oi );
+      if ( $self->{urldc} and $self->{urldc} !~ m#https?://[^/]*$tmp/#oi );
     return $self->SUPER::autoRedirect(@_);
 }
 

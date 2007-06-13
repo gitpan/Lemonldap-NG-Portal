@@ -1,0 +1,88 @@
+#!/usr/bin/perl
+
+# Cleaner for Lemonldap::NG : removes old sessions from Apache::Session
+#
+# This module is written to be used by cron to clean old sessions from
+# Apache::Session.
+#
+# WARNING: only Apache::Session::File and Apache::Session::MySQL can be used
+#          here
+
+BEGIN {
+
+    sub Apache::Session::get_all_sessions {
+        return 0;
+    }
+
+    sub Apache::Session::MySQL::get_all_sessions {
+        my $class = shift;
+        my $args  = shift;
+        my $dbh =
+          DBI->connect( $args->{DataSource}, $args->{UserName},
+            $args->{Password} )
+          or die("$!$@");
+        my $sth = $dbh->prepare('SELECT id from sessions');
+        $sth->execute;
+        my @res;
+        while ( my @row = $sth->fetchrow_array ) {
+            push @res, @row;
+        }
+        return @res;
+    }
+
+    sub Apache::Session::File::get_all_sessions {
+        my $class = shift;
+        my $args  = shift;
+        $args->{Directory} ||= '/tmp';
+        unless ( opendir DIR, $args->{Directory} ) {
+            die "Cannot open directory $args->{Directory}\n";
+        }
+        my @t =
+          grep { -f "$args->{Directory}/$_" and /^[A-Za-z0-9@\-]+$/ }
+          readdir(DIR);
+        closedir DIR;
+        return @t;
+    }
+}
+
+use Lemonldap::NG::Manager::Conf;
+use Lemonldap::NG::Manager::Conf::Constants;
+use strict;
+use DBI;
+
+my $lmconf = Lemonldap::NG::Manager::Conf->new(
+    {
+        type    => 'File',
+        dirName => '__CONFDIR__',
+    }
+);
+
+my $conf = $lmconf->getConf or die "Unable to get configuration ($!)";
+
+my $tmp = $conf->{globalStorage};
+
+eval "use $tmp";
+die $@ if ($@);
+
+$conf->{globalStorageOptions}->{timeout} ||= 7200;
+
+my @t = $tmp->get_all_sessions( $conf->{globalStorageOptions} );
+
+for my $id (@t) {
+    my %h;
+    eval { tie %h, $tmp, $id, $conf->{globalStorageOptions} };
+    if ($@) {
+        next;
+    }
+    else {
+        if ( time - $h{_utime} > $conf->{globalStorageOptions}->{timeout} ) {
+            tied(%h)->delete;
+        }
+        else {
+            untie %h;
+        }
+    }
+}
+
+1;
+

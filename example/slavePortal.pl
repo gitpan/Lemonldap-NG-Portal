@@ -80,7 +80,7 @@ my $portal = Lemonldap::NG::Portal::CDA->new(
         authenticate => sub { PE_OK },
 
         # If no Lemonldap::NG protected application is in the same domaine than
-        # the portal, it is recommended to not set a lemonldap cookie in the
+        # the portal, it is recommended to not set a lemonldap::NG cookie in the
         # other domain :
         #     Lemonldap::NG::Handler protect its cookie from remote application
         #     (to avoid developers to spoof an identity), but the master SSO

@@ -13,7 +13,7 @@ use CGI::Cookie;
 require POSIX;
 use Lemonldap::NG::Portal::_i18n;
 
-our $VERSION = '0.72';
+our $VERSION = '0.74';
 
 our @ISA = qw(CGI Exporter);
 
@@ -100,7 +100,7 @@ sub error {
     return &Lemonldap::NG::Portal::_i18n::error( $self->{error}, $ENV{HTTP_ACCEPT_LANGUAGE} );
 }
 
-# Private sub used to bind to LDAP server both with Lemonldap account and user
+# Private sub used to bind to LDAP server both with Lemonldap::NG account and user
 # credentials if LDAP authentication is used
 sub _bind {
     my ( $ldap, $dn, $password ) = @_;
@@ -193,7 +193,6 @@ sub controlExistingSession {
         }
 
         # Logout if required
-        # TODO: logout documentation
         if($self->param('logout')) {
             # Delete session in global storage
             tied(%h)->delete;
@@ -202,6 +201,7 @@ sub controlExistingSession {
             $self->buildCookie();
             return PE_FIRSTACCESS;
         }
+        $self->{id} = $id;
         # A session has been find => calling &existingSession
         my($r, $datas);
         %$datas = %h;
@@ -264,19 +264,19 @@ sub formateFilter {
 # 5. First LDAP connexion used to find user DN with the filter defined before.
 sub connectLDAP {
     my $self = shift;
-    return PE_LDAPCONNECTFAILED
-      unless (
-        $self->{ldap}
-        or $self->{ldap} = Net::LDAP->new(
-            $self->{ldapServer},
+    return PE_OK if ( $self->{ldap} );
+    foreach my $server ( split /[\s,]+/, $self->{ldapServer} ) {
+        last if $self->{ldap} = Net::LDAP->new(
+            $server,
             port    => $self->{ldapPort},
             onerror => undef,
-        )
-      );
+        );
+    }
+    return PE_LDAPCONNECTFAILED unless ( $self->{ldap} );
     PE_OK;
 }
 
-# 6. LDAP bind with Lemonldap account or anonymous unless defined
+# 6. LDAP bind with Lemonldap::NG account or anonymous unless defined
 sub bind {
     my $self = shift;
     $self->connectLDAP unless ( $self->{ldap} );
@@ -338,7 +338,7 @@ sub setGroups {
     PE_OK;
 }
 
-# 11. Now, LDAP will not be used by Lemonldap except for LDAP
+# 11. Now, LDAP will not be used by Lemonldap::NG except for LDAP
 #     authentication scheme
 sub unbind {
     my $self = shift;
@@ -367,7 +367,10 @@ sub store {
     eval {
         tie %h, $self->{globalStorage}, undef, $self->{globalStorageOptions};
     };
-    return PE_APACHESESSIONERROR if ($@);
+    if ( $@ ) {
+        print STDERR "$@\n";
+        return PE_APACHESESSIONERROR;
+    }
     $self->{id} = $h{_session_id};
     $h{$_} = $self->{sessionInfo}->{$_}
       foreach ( keys %{ $self->{sessionInfo} } );
@@ -458,7 +461,7 @@ Lemonldap::NG::Portal::Simple - Base module for building Lemonldap::NG compatibl
            LockUserName     => 'db_user',
            LockPassword     => 'db_password',
          },
-         ldapServer     => 'ldap.domaine.com',
+         ldapServer     => 'ldap.domaine.com,ldap-backup.domaine.com',
          securedCookie  => 1,
          exportedVars  => ["uid","cn","mail","appli"],
     );
@@ -505,8 +508,9 @@ Lemonldap::Portal::* libraries.
 
 =over
 
-=item * ldapServer: server used to retrive session informations and to valid
-credentials (localhost by default).
+=item * ldapServer: server(s) used to retrive session informations and to valid
+credentials (localhost by default). More than one server can be set here
+separated by commas. The servers will be tested in the specifies order.
 
 =item * ldapPort: tcp port used by ldap server.
 
@@ -520,7 +524,7 @@ default, anonymous bind is used.
 
 =item * securedCookie: set it to 1 if you want to protect user cookies
 
-=item * cookieName: name of the cookie used by Lemonldap (lemon by default)
+=item * cookieName: name of the cookie used by Lemonldap::NG (lemon by default)
 
 =item * domain: cookie domain. You may have to give it else the SSO will work
 only on your server.
@@ -543,13 +547,13 @@ be set to:
 
 =head2 Methods that can be overloaded
 
-All the functions above can be overloaded to adapt Lemonldap to your
+All the functions above can be overloaded to adapt Lemonldap::NG to your
 environment. They MUST return one of the exported constants (see above)
 and are called in this order by process().
 
 =head3 controlUrlOrigin
 
-If the user was redirected by a Lemonldap NG handler, stores the url that will be
+If the user was redirected by a Lemonldap::NG handler, stores the url that will be
 used to redirect the user after authentication.
 
 =head3 controlExistingSession
@@ -620,7 +624,7 @@ Disconnects from the LDAP server.
 
 =head3 buildCookie
 
-Creates the Lemonldap cookie.
+Creates the Lemonldap::NG cookie.
 
 =head3 log
 
@@ -647,11 +651,11 @@ Non-object method used to bind to the ldap server.
 
 =head3 header
 
-Overloads the CGI::header method to add Lemonldap cookie.
+Overloads the CGI::header method to add Lemonldap::NG cookie.
 
 =head3 redirect
 
-Overloads the CGI::redirect method to add Lemonldap cookie.
+Overloads the CGI::redirect method to add Lemonldap::NG cookie.
 
 =head2 EXPORT
 
