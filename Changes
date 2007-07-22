@@ -1,5 +1,15 @@
 Revision history for Perl extension Lemonldap::NG::Portal.
 
+0.76  Sat Jul 21 15:21:57 2007
+	- LDAP+TLS support (thanks to Baptiste Grenier)
+	- New logout system: URL can now be declared in Manager interface
+
+0.75  Tue Jul 3 20:42:09 2007
+	- Security fix: authentication could be replayed with another uid
+
+0.741 Tue Jul 3 7:21:16 2007
+	- Little bug in redirect sub
+
 0.74  Mon May 14 7:04:48 2007
 	- Multiple ldap servers can be used
 	- CDA optimization

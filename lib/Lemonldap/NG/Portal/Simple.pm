@@ -13,7 +13,7 @@ use CGI::Cookie;
 require POSIX;
 use Lemonldap::NG::Portal::_i18n;
 
-our $VERSION = '0.74';
+our $VERSION = '0.76';
 
 our @ISA = qw(CGI Exporter);
 
@@ -199,6 +199,14 @@ sub controlExistingSession {
             # Delete cookie
             $self->{id} = "";
             $self->buildCookie();
+            if( $self->{urldc} ) {
+                if( $self->{autoRedirect} ) {
+                    &{ $self->{autoRedirect} }($self);
+                }
+                else {
+                    $self->autoRedirect();
+                }
+            }
             return PE_FIRSTACCESS;
         }
         $self->{id} = $id;
@@ -265,7 +273,17 @@ sub formateFilter {
 sub connectLDAP {
     my $self = shift;
     return PE_OK if ( $self->{ldap} );
+    my $useTls = 0;
+    my $tlsParam;
     foreach my $server ( split /[\s,]+/, $self->{ldapServer} ) {
+        if ( $server =~ m{^ldap\+tls://([^/]+)/?\??(.*)$} ) {
+            $useTls   = 1;
+            $server   = $1;
+            $tlsParam = $2 || "";
+        }
+        else {
+            $useTls = 0;
+        }
         last if $self->{ldap} = Net::LDAP->new(
             $server,
             port    => $self->{ldapPort},
@@ -273,6 +291,13 @@ sub connectLDAP {
         );
     }
     return PE_LDAPCONNECTFAILED unless ( $self->{ldap} );
+    if ($useTls) {
+      my %h = split( /[&=]/, $tlsParam );
+      $h{cafile} = $self->{caFile} if( $self->{caFile} );
+      $h{capath} = $self->{caPath} if( $self->{caPath} );
+      my $mesg = $self->{ldap}->start_tls(%h);
+      $mesg->code && return PE_LDAPCONNECTFAILED;
+    }
     PE_OK;
 }
 
@@ -350,7 +375,6 @@ sub unbind {
 # 12. Default authentication: LDAP bind with user credentials
 sub authenticate {
     my $self = shift;
-    return PE_OK if ( $self->{id} );
     $self->unbind();
     my $err;
     return $err unless ( ( $err = $self->connectLDAP ) == PE_OK );
@@ -511,6 +535,11 @@ Lemonldap::Portal::* libraries.
 =item * ldapServer: server(s) used to retrive session informations and to valid
 credentials (localhost by default). More than one server can be set here
 separated by commas. The servers will be tested in the specifies order.
+To use TLS, set "ldap+tls://server" and to use LDAPS, set "ldaps://server"
+instead of server name. If you use TLS, you can set any of the
+Net::LDAP->start_tls() sub like this:
+  "ldap/tls://server/verify=none&capath=/etc/ssl"
+You can also use caFile and caPath parameters.
 
 =item * ldapPort: tcp port used by ldap server.
 
@@ -522,15 +551,15 @@ bind is used.
 =item * managerPassword: password to used to connect to ldap server. By
 default, anonymous bind is used.
 
-=item * securedCookie: set it to 1 if you want to protect user cookies
+=item * securedCookie: set it to 1 if you want to protect user cookies.
 
-=item * cookieName: name of the cookie used by Lemonldap::NG (lemon by default)
+=item * cookieName: name of the cookie used by Lemonldap::NG (lemon by default).
 
 =item * domain: cookie domain. You may have to give it else the SSO will work
 only on your server.
 
 =item * globalStorage: required: L<Apache::Session> library to used to store
-session informations
+session informations.
 
 =item * globalStorageOptions: parameters to bind to L<Apache::Session> module
 
@@ -542,6 +571,10 @@ be set to:
 =item * B<SSL>: See L<Lemonldap::NG::Portal::AuthSSL>.
 
 =back
+
+=item * caPath, caFile: if you use ldap+tls you can overwrite cafile or capath
+options with those parameters. This is usefull if you use a shared
+configuration.
 
 =back
 

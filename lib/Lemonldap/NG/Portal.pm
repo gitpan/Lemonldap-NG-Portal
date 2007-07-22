@@ -2,7 +2,7 @@ package Lemonldap::NG::Portal;
 
 print STDERR
 "See Lemonldap::NG::Portal(3) to know which Lemonldap::NG::Portal::* module to use.";
-our $VERSION = "0.74";
+our $VERSION = "0.76";
 
 1;
 
@@ -259,8 +259,8 @@ L<Cache::Cache> module that does not use disk access.
 
 Lemonldap::NG provides a single logout system: you can use it by adding a link
 to the portal with "logout=1" parameter (See Synopsis) and/or by configuring
-Handler to intercept some URL (See L<Lemonldap::NG::Handler>). The logout
-system:
+Handler to intercept some URL directly in the manager interface and/or in
+Apache configuration file (See L<Lemonldap::NG::Handler>). The logout system:
 
 =over
 
