@@ -1,5 +1,9 @@
 Revision history for Perl extension Lemonldap::NG::Portal.
 
+0.77  Mon Jul 30 21:27:08 2007
+	- Little bug fix in javascript
+	- DBI::ping is now called each time to avoid timeout
+
 0.76  Sat Jul 21 15:21:57 2007
 	- LDAP+TLS support (thanks to Baptiste Grenier)
 	- New logout system: URL can now be declared in Manager interface

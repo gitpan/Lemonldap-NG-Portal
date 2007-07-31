@@ -13,7 +13,7 @@ use CGI::Cookie;
 require POSIX;
 use Lemonldap::NG::Portal::_i18n;
 
-our $VERSION = '0.76';
+our $VERSION = '0.77';
 
 our @ISA = qw(CGI Exporter);
 
@@ -131,8 +131,8 @@ sub header {
 # CGI.pm overload to add Lemonldap::NG cookie
 sub redirect {
     my $self = shift;
-    if ( $_[0]->{cookie} ) {
-        $self->SUPER::redirect( @_, -cookie => $_[0]->{cookie} );
+    if ( $self->{cookie} ) {
+        $self->SUPER::redirect( @_, -cookie => $self->{cookie} );
     }
     else {
         $self->SUPER::redirect(@_);
