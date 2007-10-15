@@ -1,0 +1,11 @@
+- 22/O7/2007 - Clement OUDOT :
+  * Remove old skins
+  * Create alternatives for all FederID components, based on specifc colors
+- 20/07/2007 - Clement OUDOT:
+  * Modifiy layout -> template.html
+  * Import DotClear 2 admin theme
+  * Build a first FederID theme based upon DC2 admin
+  * Build a real FederID theme
+- 08/07/2007 - Clement OUDOT :
+  * Import default theme from Authentic project, based on DotClear 2 theme
+  * Create sample test page

@@ -2,7 +2,7 @@ package Lemonldap::NG::Portal;
 
 print STDERR
 "See Lemonldap::NG::Portal(3) to know which Lemonldap::NG::Portal::* module to use.";
-our $VERSION = "0.77";
+our $VERSION = "0.8";
 
 1;
 

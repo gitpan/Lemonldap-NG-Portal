@@ -1,5 +1,8 @@
 Revision history for Perl extension Lemonldap::NG::Portal.
 
+0.8   Mon Oct 15 7:58:25 2007
+	- Integration of the Liberty Alliance module issued from FederID project
+
 0.77  Mon Jul 30 21:27:08 2007
 	- Little bug fix in javascript
 	- DBI::ping is now called each time to avoid timeout

@@ -3,7 +3,7 @@ package Lemonldap::NG::Portal::AuthSSL;
 use strict;
 use Lemonldap::NG::Portal::Simple;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 # Authentication is made by Apache with SSL and here before searching the LDAP
 # Directory.
@@ -14,7 +14,7 @@ our $OVERRIDE = {
     # variable is present. Adapt it if you want
     extractFormInfo => sub {
         my $self = shift;
-        $self->{user} = $self->https('SSL_CLIENT_S_DN_Email');
+        $self->{user} = $self->https( $self->{SSLVar} || 'SSL_CLIENT_S_DN_Email' );
         return PE_BADCREDENTIALS unless ( $self->{user} );
         PE_OK;
     },
@@ -60,6 +60,9 @@ With Lemonldap::NG::Portal::Simple:
          ldapServer     => 'ldap.domaine.com',
          securedCookie  => 1,
          authentication => 'SSL',
+         
+         # SSLVar : default SSL_CLIENT_S_DN_Email the mail address
+         SSLVar         => 'SSL_CLIENT_S_DN_CN',
     );
 
   if($portal->process()) {

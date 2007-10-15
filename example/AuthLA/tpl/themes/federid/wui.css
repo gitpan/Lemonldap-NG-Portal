@@ -1,0 +1,15 @@
+/* CSS for LDAP Content Management (WUI) */
+/* Main color : blue #1335e2 */
+
+@import url(default.css);
+
+h1, h2, h3, h4, h5, h6 { color : #1335e2; }
+
+#page { border-color : #1335e2; }
+
+#footer { border-top : #1335e2; }
+
+.message { border-color : #1335e2; }
+
+hr, pre, code, th, td, fieldset, legend { border-color : #1335e2; }
+

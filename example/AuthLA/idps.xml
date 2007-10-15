@@ -1,0 +1,15 @@
+<laIdpList>
+	<idp name="Identity Provider 1 : Authentic">
+		<url>http://idp1/liberty/metadata</url>
+		<metadata>/path/to/idp1-metadata.xml</metadata>
+		<pubkey>/path/to/idp1-key-public.pem</pubkey>
+		<certificate>/path/to/idp1-key-public.pem</certificate>
+	</idp>
+	<idp name="Identity Provider 2 : Other">
+		<url>http://idp2/liberty/metadata</url>
+		<metadata>/path/to/idp2-metadata.xml</metadata>
+		<pubkey>/path/to/idp2-key-public.pem</pubkey>
+		<certificate>/path/to/idp2-key-public.pem</certificate>
+	</idp>
+</laIdpList>
+

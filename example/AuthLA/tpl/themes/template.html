@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+	<head>
+		<title>Themes for FederID Project</title>
+		<meta name="keywords" lang="en" content="test" />
+		<meta name="description" content="Themes for FederID" />
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta http-equiv="Content-Language" content="en" />
+		<meta http-equiv="Content-Script-Type" content="text/javascript" />
+		<link rel="stylesheet" type="text/css" href="federid/default.css" title="FederID Test"/>
+		<link rel="alternate stylesheet" type="text/css" href="federid/idp.css" title="FederID Test Authentic"/>
+		<link rel="alternate stylesheet" type="text/css" href="federid/wui.css" title="FederID Test WUI"/>
+		<link rel="alternate stylesheet" type="text/css" href="federid/laap.css" title="FederID Test LAAP"/>
+		<link rel="alternate stylesheet" type="text/css" href="federid/sso.css" title="FederID Test SSO"/>
+		<link rel="alternate stylesheet" type="text/css" href="federid-dc2/default.css" title="FederID DC2"/>
+		<link rel="alternate stylesheet" type="text/css" href="dc2/default.css" title="DC2"/>
+		<script type="text/javascript" src="styleswitcher.js"></script>
+        </head>
+        <body>
+                <div id="page">
+                        <div id="top"><h1>&nbsp;</h1></div>
+			<div id="info-box"><h1>Title</h1><p>Other text</p></div>
+                        <div id="main-menu">
+				<h3>Menu 1</h3>
+				<ul>
+					<li class="active"><a href="#" title="Test 1">Item 1 (Active)</a></li>
+					<li><a href="#" title="Test 2">Item 2</a></li>
+				</ul>
+				<h3>Logos</h3>
+				<a href="http://www.federid.org"><img src="bouton_federid.png" alt="FederID"/></a>
+				<a href="http://www.interldap.org"><img src="bouton_interldap.png" alt="InterLDAP"/></a>
+				<a href="http://authentic.labs.libre-entreprise.org"><img src="bouton_authentic.png" alt="Authentic"/></a>
+				<a href="http://lemonldap.objectweb.or/"><img src="bouton_lemonldap::ng.png" alt="LemonLDAP::NG"/></a>
+			</div>
+                        <div id="content">
+				<h2>H2 Title in content div</h2>
+				<hr />
+                                <p>Some text in content div</p>
+				<h3>FederID special themes</h3>
+				<p><a href="#" onclick="setActiveStyleSheet('FederID Test'); return false;">Change style to FederID Test</a></p>
+				<p><a href="#" onclick="setActiveStyleSheet('FederID Test Authentic'); return false;">Change style to FederID Test Authentic</a></p>
+				<p><a href="#" onclick="setActiveStyleSheet('FederID Test WUI'); return false;">Change style to FederID Test WUI</a></p>
+				<p><a href="#" onclick="setActiveStyleSheet('FederID Test LAAP'); return false;">Change style to FederID Test LAAP</a></p>
+				<p><a href="#" onclick="setActiveStyleSheet('FederID Test SSO'); return false;">Change style to FederID Test SSO</a></p>
+				<h3>Old themes</h3>
+				<p><a href="#" onclick="setActiveStyleSheet('DC2'); return false;">Change style to DC2</a></p>
+				<p><a href="#" onclick="setActiveStyleSheet('FederID DC2'); return false;">Change style to FederID DC2</a></p>
+				<h3>Div and messages</h3>
+				<div class="error"><p>Error</p></div>
+				<div class="message"><p>Info</p></div>
+				<h3>A table</h3>
+				<table>
+					<tr><th>Title 1</th><th>Title 2</th></tr>
+					<tr class="line"><td>Content 1</td><td>Content 2</td></tr>
+					<tr class="line"><td>Content 3</td><td>Content 4</td></tr>
+				</table>
+				<h3>A form</h3>
+				<form action="#" method="post">
+				<fieldset><legend>Identification</legend>
+				<label class="required">Login</label><input type="text" name="login" />
+				<label class="required">Password</label><input type="password" name="password" />
+				</fieldset>
+				
+				<fieldset><legend>Informations</legend>
+				<label>Country</label>
+					<select name="c"><optgroup label="Europa"><option>France</option><option>Germany</option></optgroup>
+					<optgroup label="Asia"><option>China</option><option>Japan</option></optgroup></select>
+				<label>Yes or No ?</label>
+				<input type="radio" value="yes" name="choice" checked="checked"/>Yes
+				<input type="radio" value="no" name="choice" />No
+				<label>Check it baby !</label>
+				<input type="checkbox" value="1" name="check" />1
+				<input type="checkbox" value="2" name="check" />2
+				<label>Describe your holidays</label>
+				<textarea name="holidays" rows="10" cols="50"></textarea>
+				</fieldset>
+
+				<fieldset><legend>Submit</legend>
+				<input type="submit" name="submit" value="I'm sure !" />
+				<input type="reset" name="reset" value="No, reset please !" />
+				</fieldset>
+				</form>
+
+				<h3>Texts</h3>
+				<pre>Text in "pre"</pre>
+				<code>Text in "code"</code>
+                        </div>
+                        <div id="footer"><p>Some text in footer with <a href="#" title="A link">a link</a></p></div>
+                </div>
+        </body>
+</html>

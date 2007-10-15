@@ -1,0 +1,13 @@
+================================================================================
+ README
+================================================================================
+
+These are the themes for FederID project. The goal is to provide to all FederID
+components the same Look 'n Feel.
+
+Each theme has its own directory (eg. default/) and can have alternatives.
+
+A sample page test (template.html) must be modified to allow switching between
+the themes that are created.
+
+You can use this page locally to test your theme.

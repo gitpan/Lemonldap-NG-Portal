@@ -1,0 +1,252 @@
+body {
+	font: 62.5%/1.5em "DejaVu Sans","Lucida Grande","Lucida Sans Unicode",Arial,sans-serif;
+	color : #000;
+	background : #fff url(page-bg.png) repeat-y top left;
+	margin : 0;
+	padding : 0;
+}
+
+a img,:link img,:visited img { border:none }
+
+a, a:link, a:visited {
+	color : #06c;
+	text-decoration : none;
+	border-bottom : 1px dotted #f90;
+}
+a:hover, a:active, a:focus {
+	
+}
+
+h1, h2, h3, h4, h5, h6, p {
+	margin-top : 0;
+	margin-bottom: 0.6em;
+}
+
+h2 {
+	font-family : Arial,Helvetica,sans-serif;
+	color : #069;
+	font-size : 1.4em;
+}
+
+h3 {
+	color : #333;
+	font-size : 1.2em;
+}
+
+p, div.p {
+	margin : 0 0 1em 0;
+}
+
+hr {
+	height : 1px;
+	border-width : 1px 0 0 0;
+	border-color : #999;
+	border-style : solid;
+}
+
+pre, code {
+	font: 100% "Andale Mono","Courier New",monospace;
+}
+
+/* LAYOUT
+-------------------------------------------------------- */
+/* General font-size */
+#top, #info-box, #content, #main-menu, #footer {
+	font-size: 1.1em;
+}
+
+#top {
+	margin : 0;
+	padding : 0;
+	background : transparent url(head-bg.png) repeat-x;
+}
+
+#top h1 {
+        padding : 0;
+        margin : 0;
+        height : 58px;
+        text-indent : -1000px;
+        background : transparent url(head-logo.png) no-repeat 0 0;
+}
+
+#info-box {
+	position : absolute;
+	right : 20px;
+	top : 6px;
+	margin : 0;
+	padding : 3px 3px 4px 15px;
+}
+
+#main-menu {
+	width : 135px;
+	float : left;
+	margin-top : 0;
+	margin-bottom : 10px;
+}
+#main-menu h3 {
+	margin : 0;
+	padding : 0 0 0 5px;
+}
+#main-menu ul {
+	margin : 0 0 1em 0;
+	padding : 0;
+	list-style : none;
+}
+#main-menu li {
+	display : block;
+	margin : 0.5em 0 0 5px;
+	padding : 2px 0 1px 20px;
+	background-repeat: no-repeat;
+	background-position: 0 0;
+}
+#main-menu a {
+	font-weight : bold;
+}
+#main-menu .active a {
+	border-bottom-style: solid;
+}
+
+#content {
+        margin-left : 155px;
+        margin-bottom : 10px;
+        padding-top : 1px;
+        margin-right : 15px;
+}
+
+#footer {
+	clear : both;
+	padding : 3px 5px 0 25px;
+}
+#footer a {
+	border: none;
+}
+
+/* CLASSES
+-------------------------------------------------------- */
+.error {
+	border : 2px solid #c00;
+	padding : 0.5em 0.5em 0.5em 40px;
+	margin-bottom : 1em;
+	background : transparent url(msg-error.png) no-repeat 5px 50%;
+}
+
+
+.message {
+	font-weight : bold;
+	color : #f60;
+	padding : 0.5em 0.5em 0.5em 40px;
+	border : 1px solid #ccc;
+	background : transparent url(msg-std.png) no-repeat 5px 50%;
+}
+
+/* TABLES
+-------------------------------------------------------- */
+table {
+	font-size : 1em;
+	border-collapse : collapse;
+	margin : 0 0 1em 0;
+}
+tr.line:hover {
+	background : #ddd;
+}
+th, td {
+	border-width : 0 0 1px 0;
+	border-style : solid;
+	border-color : #ccc;
+	padding : 2px 5px;
+	vertical-align : top;
+}
+th {
+	text-align : left;
+	border-bottom-color : #666;
+}
+
+/* FORMS
+-------------------------------------------------------- */
+form {
+	display : block;
+	margin : 0;
+	padding : 0;
+}
+
+fieldset {
+	display : block;
+	margin : 0 0 1em 0;
+	padding : 1em 0.5em;
+	border-width : 1px 0;
+	border-style: solid;
+	border-color: #ccc;
+	background: #fbfbfb;
+}
+legend {
+	font-weight : bold;
+	padding: 0.2em 0.6em;
+	border-width: 1px;
+	border-style: solid;
+	border-color: #ccc;
+	background: #fbfbfb;
+}
+optgroup {
+	font-weight : bold;
+	font-style : normal;
+}
+option {
+	font-weight : normal;
+}
+
+input, textarea, select {
+	background : #f9f9f9;
+	border-width : 1px;
+	border-style : solid;
+	border-color : #000 #ccc #ccc #000;
+}
+input, textarea, select, option {
+	font: 1em "DejaVu Sans","Lucida Grande","Lucida Sans Unicode",Arial,sans-serif;
+}
+input[type=text], input[type=password], textarea {
+	padding : 2px 0;
+}
+input[type=checkbox], input[type=radio] {
+	border: none;
+}
+textarea {
+	padding : 2px 0;
+}
+input[type=submit], input[type=reset], input[type=button] {
+	padding : 1px 2px;
+	background : #d2e0e6 url(button-normal.png) repeat-x bottom left;
+	border-width : 1px;
+	border-style : outset;
+	border-color : #ccc;
+	 
+}
+input[type=submit]:hover, input[type=reset]:hover, input[type=button]:hover {
+	background-color : #fc3;
+	background-image : url(button-hover.png);
+}
+
+input[type=submit] {
+	font-weight : bold;
+}
+
+input[type=checkbox], input[type=radio] {
+	margin : 0;
+	padding : 0;
+	background : transparent;
+}
+
+label {
+	display : block;
+}
+label input, label select, label span {
+	display : block;
+}
+
+label.required {
+	font-weight : bold;
+}
+label.required:before {
+	content : '* ';
+	color : #c00;
+}
+

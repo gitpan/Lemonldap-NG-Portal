@@ -1,0 +1,265 @@
+/* Default CSS */
+/* Main color : gray */
+/* Link color : cyan and red underlined*/
+
+body {
+	font: 62.5%/1.5em sans-serif;
+	color : #000;
+	background : #fff url(page-bg.png) repeat top left;
+	margin : 0;
+	padding : 0;
+}
+
+a img,:link img,:visited img { border:none }
+
+a, a:link, a:visited {
+	color : navy;
+	text-decoration : none;
+	border-bottom : 1px dotted red;
+}
+a:hover, a:active, a:focus {
+	
+}
+
+h1, h2, h3, h4, h5, h6 {
+	margin-top : 0.5em;
+	margin-bottom : 0.5em;
+	color : gray ;
+}
+
+h1 {font-size : 2em;}
+
+h2 {font-size : 1.8em;}
+
+h3 {font-size : 1.6em;}
+
+hr {
+	border-width : 3px 0 0 0;
+	border-color : gray;
+	border-style : dotted;
+}
+
+pre, code {
+	font: 1.5em monospace;
+	border-left : 5px gray solid;
+	padding: 0 0 0 10px;
+	background: #eeeee6;
+}
+
+/* LAYOUT
+-------------------------------------------------------- */
+/* General font-size */
+#top, #info-box, #content, #main-menu, #footer {
+	font-size: 1.3em;
+}
+
+#page {
+	margin : 0 100px 0 100px;
+	padding : 10px;
+	background : white;
+	border-width : 0 3px 0 3px;
+	border-color : gray;
+	border-style : dotted; 
+}
+
+#top {
+	margin : 0 0 50px 0;
+	padding : 0;
+	background : transparent url(head-bg.png) repeat-y top right;
+}
+
+#top h1 {
+        padding : 0;
+        margin : 0;
+        height : 100px;
+        text-indent : -1000px;
+        background : transparent url(head-logo.png) no-repeat 0 0;
+}
+#info-box {
+	position : absolute;
+	right : 120px;
+	top : 30px; 
+	margin : 0;
+	padding : 0;
+	letter-spacing : 0.2em ;
+        text-align : right;
+}
+
+#main-menu {
+	width : 170px;
+	float : left;
+	margin : 0;
+	padding : 0 10px 10px 10px ;
+	background : transparent url(head-bg.png) repeat-y top right;
+}
+#main-menu h3 {
+	text-align: center;
+}
+#main-menu ul {
+	margin : 0 0 1em 0;
+	padding : 0;
+	list-style : none;
+}
+#main-menu li {
+	display : block;
+	margin : 0.5em 0 0 5px;
+	padding : 2px 0 1px 20px;
+	background-repeat: no-repeat;
+	background-position: 0 0;
+}
+#main-menu a {
+	font-weight : bold;
+}
+#main-menu .active a {
+	border-bottom-style: solid;
+}
+
+#content {
+        margin-left : 200px;
+        margin-right : 10px;
+        margin-bottom : 10px;
+        padding-top : 0;
+}
+
+#footer {
+	clear : both;
+        margin-left : 200px;
+	padding : 10px 0 10px 0 ;
+	border-top : 3px gray dotted;
+	text-align : center;
+}
+#footer a {
+	border: none;
+}
+
+/* CLASSES
+-------------------------------------------------------- */
+.error {
+	border : 2px solid red;
+	padding : 0.5em 0.5em 0.5em 40px;
+	margin-bottom : 1em;
+	background : transparent url(msg-error.png) no-repeat 5px 50%;
+}
+
+
+.message {
+	font-weight : bold;
+	padding : 0.5em 0.5em 0.5em 40px;
+	border : 2px solid gray;
+	background : transparent url(msg-std.png) no-repeat 5px 50%;
+}
+
+/* TABLES
+-------------------------------------------------------- */
+table {
+	font-size : 1em;
+	border-collapse : collapse;
+	margin : 0.5em;
+}
+tr.line:hover {
+	background : #ddd;
+}
+th, td {
+	border-style : dotted;
+	border-color : gray;
+	vertical-align : middle;
+	padding : 0.5em;
+}
+td {
+	border-width : 2px;
+}
+th {
+	text-align : center;
+	border-bottom-color : #666;
+	border-width : 0 0 2px 0;
+}
+
+/* FORMS
+-------------------------------------------------------- */
+form {
+	display : block;
+	margin : 0;
+	padding : 0;
+}
+
+fieldset {
+	display : block;
+	margin : 0 0 1em 0;
+	padding : 1em 0.5em;
+	border-width : 1px 0;
+	border-style : solid;
+	border-color : gray;
+	background : #fbfbfb;
+}
+legend {
+	font-weight : bold;
+	padding : 0.2em 0.6em;
+	border-width : 1px;
+	border-style : solid;
+	border-color : gray;
+	background : #fbfbfb;
+}
+optgroup {
+	font-weight : bold;
+	font-style : normal;
+}
+option {
+	font-weight : normal;
+}
+
+input, textarea, select {
+	background : #f9f9f9;
+	border-width : 1px;
+	border-style : solid;
+	border-color : gray;
+}
+input, textarea, select, option {
+	font : 1em sans-serif;
+}
+input[type=text], input[type=password], textarea {
+	padding : 2px 0;
+}
+
+textarea {
+	padding : 2px 0;
+}
+
+input[type=submit], input[type=reset], input[type=button] {
+	padding : 1px 2px;
+	background : #d2e0e6 url(button-normal.png) repeat-x bottom left;
+	border-width : 1px;
+	border-style : outset;
+	border-color : #ccc;
+	 
+}
+input[type=submit]:hover, input[type=reset]:hover, input[type=button]:hover {
+	background-color : #fc3;
+	background-image : url(button-hover.png);
+}
+
+input[type=submit] {
+	font-weight : bold;
+}
+
+input[type=checkbox], input[type=radio] {
+	margin : 0.2em;
+	padding : 0;
+	background : transparent;
+	border : 1px solid gray;
+}
+
+label {
+	display : block;
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
+}
+
+label.required {
+	font-weight : bold;
+}
+
+label.required:before {
+	content : '* ';
+	color : red;
+}
+
