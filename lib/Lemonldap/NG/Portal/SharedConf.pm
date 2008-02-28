@@ -86,6 +86,19 @@ sub setGroups {
             $groups .= "$_ ";
         }
     }
+    if ( $self->{ldapGroupBase} ) {
+        my $mesg = $self->{ldap}->search(
+            base   => $self->{ldapGroupBase},
+            filter => "(|(member=" . $self->{dn} . ")(uniqueMember=" . $self->{dn} . "))",
+            attrs  => ["cn"],
+        );
+        if ( $mesg->code() == 0 ) {
+            foreach my $entry ($mesg->all_entries) {
+                my @values = $entry->get_value("cn");
+                $groups .= $values[0] . " ";
+            }
+        }
+    }
     $self->{sessionInfo}->{groups} = $groups;
     PE_OK;
 }
@@ -148,6 +161,16 @@ sub scanexpr {
     return $result if ( $result eq "0" or $result eq "1" );
     return $result if ( $exprCount == 1 );
     return "($cond$result)";
+}
+
+# With SharedConf, $locationRules contains a hash table with virtual hosts as
+# keys. So we can use it to know all protected virtual hosts.
+sub getProtectedSites {
+    my $self = shift;
+    my @tab  = ();
+    return ( keys %{ $self->{locationRules} } )
+      if ( ref $self->{locationRules} );
+    return ();
 }
 
 1;
@@ -236,7 +259,8 @@ http://wiki.lemonldap.objectweb.org/xwiki/bin/view/NG/Presentation
 
 =head1 AUTHOR
 
-Xavier Guimard, E<lt>x.guimard@free.frE<gt>
+Xavier Guimard, E<lt>x.guimard@free.frE<gt>,
+Thomas Chemineau, E<lt>thomas.chemineau@linagora.comE<gt>
 
 =head1 BUG REPORT
 
@@ -250,7 +274,8 @@ L<http://forge.objectweb.org/project/showfiles.php?group_id=274>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2005-2007 by Xavier Guimard E<lt>x.guimard@free.frE<gt>
+Copyright (C) 2005-2007 by Xavier Guimard E<lt>x.guimard@free.frE<gt> and
+Thomas Chemineau, E<lt>thomas.chemineau@linagora.comE<gt>
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.4 or,

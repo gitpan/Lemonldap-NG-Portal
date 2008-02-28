@@ -1,5 +1,9 @@
 Revision history for Perl extension Lemonldap::NG::Portal.
 
+0.81 Wed Feb 8 17:44:46 2008
+	- Ldap groups can now be available in $groups
+	- Bug in AuthSSL
+
 0.8   Mon Oct 15 7:58:25 2007
 	- Integration of the Liberty Alliance module issued from FederID project
 

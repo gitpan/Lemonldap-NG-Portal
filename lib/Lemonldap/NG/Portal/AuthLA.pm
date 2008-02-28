@@ -8,20 +8,15 @@
 package Lemonldap::NG::Portal::AuthLA;
 
 use strict;
-use warnings;
 
 use Lemonldap::NG::Portal::SharedConf qw(:all);
 use lasso;
-use CGI qw/:standard/;
 use CGI::Cookie;
-use DBI;
 use HTTP::Request;
 use HTTP::Response;
 use LWP::UserAgent;
 use MIME::Base64;
 use XML::Simple;
-use XML::Parser;
-use XML::XPath;
 use UNIVERSAL qw( isa can VERSION );
 
 *EXPORT_OK   = *Lemonldap::NG::Portal::SharedConf::EXPORT_OK;
@@ -35,16 +30,16 @@ our @ISA     = qw(Lemonldap::NG::Portal::SharedConf);
 # Global Constants
 #===============================================================================
 
-sub PE_LA_FAILED        { 500 }
-sub PE_LA_ARTFAILED     { 501 }
-sub PE_LA_DEFEDFAILED   { 502 }
-sub PE_LA_QUERYEMPTY    { 503 }
-sub PE_LA_SOAPFAILED    { 504 }
-sub PE_LA_SLOFAILED     { 505 }
-sub PE_LA_SSOFAILED     { 506 }
-sub PE_LA_SSOINITFAILED { 507 }
-sub PE_LA_SESSIONERROR  { 508 }
-sub PE_LA_SEPFAILED     { 509 }
+sub PE_LA_FAILED        { 11 }
+sub PE_LA_ARTFAILED     { 12 }
+sub PE_LA_DEFEDFAILED   { 13 }
+sub PE_LA_QUERYEMPTY    { 14 }
+sub PE_LA_SOAPFAILED    { 15 }
+sub PE_LA_SLOFAILED     { 16 }
+sub PE_LA_SSOFAILED     { 17 }
+sub PE_LA_SSOINITFAILED { 18 }
+sub PE_LA_SESSIONERROR  { 19 }
+sub PE_LA_SEPFAILED     { 20 }
 
 sub PC_LA_URLAC  { '/liberty/assertionConsumer.pl' }
 sub PC_LA_URLFT  { '/liberty/federationTermination.pl' }
@@ -91,35 +86,35 @@ sub PC_LA_URLSE  { '/liberty/soapEndpoint.pl' }
 
 sub new {
     my $class = shift;
-    my $this  = $class->SUPER::new(@_);
+    my $self  = $class->SUPER::new(@_);
 
-    $this->{isLibertyProcess} = 1;
-    $this->{laDebug} = 0 unless ( $this->{laDebug} );
+    $self->{isLibertyProcess} = 1;
+    $self->{laDebug} = 0 unless ( $self->{laDebug} );
 
     die('No Liberty Alliance Service Provider data defined')
-      unless ( $this->{laSp} );
+      unless ( $self->{laSp} );
     die('No Liberty Alliance Identity Provider file defined')
-      unless ( $this->{laIdpsFile} );
+      unless ( $self->{laIdpsFile} );
     die('No laStorage configuration defined')
-      unless ( $this->{laStorage} );
+      unless ( $self->{laStorage} );
     die('No laLdapLoginAttribute configuration defined')
-      unless ( $this->{laLdapLoginAttribute} );
+      unless ( $self->{laLdapLoginAttribute} );
     die('No localStorage configuration defined')
-      unless ( $this->{localStorage} and $this->{localStorageOptions} );
+      unless ( $self->{localStorage} and $self->{localStorageOptions} );
 
-    bless( $this, $class );
+    bless( $self, $class );
 
     # Create LassoServer
 
-    $this->{laServer} = lasso::Server->new(
-        $this->{laSp}->{metadata},
-        $this->{laSp}->{privkey},
-        undef,    #$this->{laSp}->{secretkey} ,
-        undef,    #$this->{laSp}->{certificate} ,
+    $self->{laServer} = lasso::Server->new(
+        $self->{laSp}->{metadata},
+        $self->{laSp}->{privkey},
+        undef,    #$self->{laSp}->{secretkey} ,
+        undef,    #$self->{laSp}->{certificate} ,
     );
 
-    $this->_loadXmlIdpFile();
-    return $this;
+    $self->_loadXmlIdpFile();
+    return $self;
 }
 
 #===============================================================================
@@ -131,11 +126,11 @@ sub new {
 #===============================================================================
 
 sub authenticate {
-    my $this = shift;
-    return $this->SUPER::authenticate()
-      unless ( $this->{isLibertyProcess} );
+    my $self = shift;
+    return $self->SUPER::authenticate()
+      unless ( $self->{isLibertyProcess} );
     return PE_BADCREDENTIALS
-      unless ( defined $this->{user} );
+      unless ( defined $self->{user} );
     return PE_OK;
 }
 
@@ -144,14 +139,14 @@ sub authenticate {
 #===============================================================================
 #
 # This function is just override to do nothing.
-# $this->{user} is already fixed in libertySetSessionInfo function.
+# $self->{user} is already fixed in libertySetSessionInfo function.
 #
 #===============================================================================
 
 sub extractFormInfo {
-    my $this = shift;
-    return $this->SUPER::extractFormInfo()
-      unless ( $this->{isLibertyProcess} );
+    my $self = shift;
+    return $self->SUPER::extractFormInfo()
+      unless ( $self->{isLibertyProcess} );
     return PE_OK;
 }
 
@@ -160,17 +155,17 @@ sub extractFormInfo {
 #===============================================================================
 #
 # By default, the user is searched in the LDAP server with its UID. Here,
-# $this->{user} contains nameIdentifier of the user, which is already stored
+# $self->{user} contains nameIdentifier of the user, which is already stored
 # in LDAP directory.
 #
 #===============================================================================
 
 sub formateFilter {
-    my $this = shift;
-    return $this->SUPER::formateFilter()
-      unless ( $this->{isLibertyProcess} );
-    $this->{filter} =
-      "(&(uid=" . $this->{user} . ")(objectClass=inetOrgPerson))";
+    my $self = shift;
+    return $self->SUPER::formateFilter()
+      unless ( $self->{isLibertyProcess} );
+    $self->{filter} =
+      "(&(uid=" . $self->{user} . ")(objectClass=inetOrgPerson))";
     return PE_OK;
 }
 
@@ -184,16 +179,16 @@ sub formateFilter {
 #===============================================================================
 
 sub process {
-    my $this = shift;
-    $this->{error} = PE_OK;
+    my $self = shift;
+    $self->{error} = PE_OK;
 
     # Trace param()
-    # my @params = $this->param() ;
+    # my @params = $self->param() ;
     # foreach( @params ) {
-    # 	$this->_debug("parameter : $_ = " . $this->param($_)) ;
+    # 	$self->_debug("parameter : $_ = " . $self->param($_)) ;
     # }
     # while(my($k,$v) = each(%ENV)) {
-    # 	$this->_debug("env : $k = $v") ;
+    # 	$self->_debug("env : $k = $v") ;
     # }
 
     #--------
@@ -201,88 +196,88 @@ sub process {
     # user was redirected from a protected host.
     #--------
 
-    my $url = $this->url();
+    my $url = $self->url();
     my $urlr = $url . substr( $ENV{'SCRIPT_NAME'}, 1 );
 
-    if ( not $this->param('url')
-        and ( $url eq $this->{portal} or $urlr eq $this->{portal} ) )
+    if ( not $self->param('url')
+        and ( $url eq $self->{portal} or $urlr eq $self->{portal} ) )
     {
 
         # TODO Security tricks :
         # - Check if URL figures in locationRules
-        $this->{error} = PE_DONE;
-        return $this->{error};
+        $self->{error} = PE_DONE;
+        return $self->{error};
     }
 
     #--------
     # Authentication process
     #--------
 
-    my $urldir = $this->url( -absolute => 1 );
+    my $urldir = $self->url( -absolute => 1 );
 
     # assertionCustomer
-    if ( $urldir eq $this->PC_LA_URLAC ) {
+    if ( $urldir eq $self->PC_LA_URLAC ) {
 
-        $this->{error} = $this->_subProcess(
+        $self->{error} = $self->_subProcess(
             qw( libertyAssertionConsumer libertySetSessionInfo ));
 
-        $this->_debug( "Login user = '" . $this->{user} . "'" );
+        $self->_debug( "Login user = '" . $self->{user} . "'" );
 
         # federationTermination
     }
-    elsif ( $urldir eq $this->PC_LA_URLFT ) {
+    elsif ( $urldir eq $self->PC_LA_URLFT ) {
 
-        $this->{error} = $this->_subProcess(
+        $self->{error} = $self->_subProcess(
             qw( libertyFederationTermination log autoRedirect ));
 
         # federationTerminationReturn
     }
-    elsif ( $urldir eq $this->PC_LA_URLFTR ) {
+    elsif ( $urldir eq $self->PC_LA_URLFTR ) {
 
-        $this->{error} = $this->_subProcess(
+        $self->{error} = $self->_subProcess(
             qw( libertyFederationTerminationReturn log
               autoRedirect )
         );
 
         # singleLogout : called when IDP request Logout.
     }
-    elsif ( $urldir eq $this->PC_LA_URLSL ) {
+    elsif ( $urldir eq $self->PC_LA_URLSL ) {
 
-        $this->{error} = $this->_subProcess(
+        $self->{error} = $self->_subProcess(
             qw( libertyRetrieveExistingSession libertySingleLogout
               libertyDeletingExistingSession )
         );
 
-        $this->_debug( "Logout user = '" . $this->{'dn'} . "'" );
+        $self->_debug( "Logout user = '" . $self->{'dn'} . "'" );
 
-        # OK : $this->{urldc} is fixed at the end of this process.
+        # OK : $self->{urldc} is fixed at the end of this process.
 
         # singleLogoutReturn
     }
-    elsif ( $urldir eq $this->PC_LA_URLSLR ) {
+    elsif ( $urldir eq $self->PC_LA_URLSLR ) {
 
-        $this->{error} =
-          $this->_subProcess(qw( libertySingleLogoutReturn log autoRedirect ));
+        $self->{error} =
+          $self->_subProcess(qw( libertySingleLogoutReturn log autoRedirect ));
 
         # soapCall
     }
-    elsif ( $urldir eq $this->PC_LA_URLSC ) {
+    elsif ( $urldir eq $self->PC_LA_URLSC ) {
 
-        $this->{error} = $this->_subProcess(qw( libertySoapCall log ));
+        $self->{error} = $self->_subProcess(qw( libertySoapCall log ));
 
         # soapEndpoint
     }
-    elsif ( $urldir eq $this->PC_LA_URLSE ) {
+    elsif ( $urldir eq $self->PC_LA_URLSE ) {
 
-        $this->{error} =
-          $this->_subProcess(qw( libertySoapEndpoint log autoRedirect ));
+        $self->{error} =
+          $self->_subProcess(qw( libertySoapEndpoint log autoRedirect ));
 
         # Direct access or simple access -> main
         # WARNING : we permit authentication on service.
     }
-    elsif ( not $this->param('user') and not $this->param('password') ) {
+    elsif ( not $self->param('user') and not $self->param('password') and not $self->param('logout')) {
 
-        $this->{error} = $this->_subProcess(
+        $self->{error} = $self->_subProcess(
             qw( libertyRetrieveExistingSession
               libertyExtractFormInfo libertySignOn log
               autoRedirect )
@@ -291,18 +286,17 @@ sub process {
         # Not in liberty authentication process.
     }
     else {
-        $this->{isLibertyProcess} = 0;
+        $self->{isLibertyProcess} = 0;
     }
 
-    # $this->_debug("ERROR = " . $this->{error} . "\n") ;
-
     return 0
-      if ( $this->{error} );
+      if ( $self->{error} );
 
     # Liberty Process OK -> do Lemonldap::NG process.
-    my $err = $this->SUPER::process(@_);
-    $this->_subProcess(qw( log autoRedirect ))
-      if ( $this->{urldc} );
+    my $err = $self->SUPER::process(@_);
+    return $err unless( $err != PE_OK );
+    $err = $self->_subProcess(qw( log autoRedirect ))
+      if ( $self->{urldc} );
     return $err;
 }
 
@@ -322,7 +316,7 @@ sub process {
 #===============================================================================
 
 sub setSessionInfo {
-    my $this = shift;
+    my $self = shift;
 
     # Si configuration fixée à WSF
     # Alors
@@ -331,12 +325,12 @@ sub setSessionInfo {
     # 	Traitement de récupération des informations en appelant la fonction
     # 	SUPER::setSessionInfo.
 
-    # $this->{sessionInfo}->{dn} = "cn=tutu,ou=people,dc=example,dc=com" ;
-    # $this->{sessionInfo}->{cn} = "tutu" ;
-    # $this->{sessionInfo}->{mail} = "tutu@example;com" ;
-    # $this->{sessionInfo}->{uid} = "ttutu" ;
+    # $self->{sessionInfo}->{dn} = "cn=tutu,ou=people,dc=example,dc=com" ;
+    # $self->{sessionInfo}->{cn} = "tutu" ;
+    # $self->{sessionInfo}->{mail} = "tutu@example;com" ;
+    # $self->{sessionInfo}->{uid} = "ttutu" ;
 
-    return $this->SUPER::setSessionInfo;
+    return $self->SUPER::setSessionInfo;
 }
 
 #===============================================================================
@@ -349,43 +343,43 @@ sub setSessionInfo {
 #===============================================================================
 
 sub store {
-    my $this = shift;
+    my $self = shift;
 
-    my $err = $this->SUPER::store();
-    return $err if ( $err or not $this->{isLibertyProcess} );
+    my $err = $self->SUPER::store();
+    return $err if ( $err != PE_OK or not $self->{isLibertyProcess} );
 
     return PE_APACHESESSIONERROR
-      unless ( defined $this->{laStorageOptions}->{Directory}
-        and defined $this->{id} );
+      unless ( defined $self->{laStorageOptions}->{Directory}
+        and defined $self->{id} );
 
-    my $dir = $this->{laStorageOptions}->{Directory};
+    my $dir = $self->{laStorageOptions}->{Directory};
     $dir =~ s/(.*)\/?$/$1/;
 
     # We have to store association.
     # Create a file named by userNameIdentifier from IDP, single, which
     # contains session ID from Apache.
 
-    if ( defined $this->{userNameIdentifier} ) {
+    if ( defined $self->{userNameIdentifier} ) {
 
         #my %h;
         #eval {
-        #	tie %h, $this->{laStorage},
-        #		substr($this->{userNameIdentifier},1),
-        #		$this->{laStorageOptions};
+        #	tie %h, $self->{laStorage},
+        #		substr($self->{userNameIdentifier},1),
+        #		$self->{laStorageOptions};
         #};
         #if ( $@ ) {
-        #	$this->_debug("$@\n");
+        #	$self->_debug("$@\n");
         #	return PE_APACHESESSIONERROR;
         #}
-        #$h{id} = $this->{id} ;
+        #$h{id} = $self->{id} ;
         #$h{_utime} = time();
         #untie %h;
 
-        my $file = $dir . '/' . $this->{userNameIdentifier};
-        $this->_debug("$file already exists : override association")
+        my $file = $dir . '/' . $self->{userNameIdentifier};
+        $self->_debug("$file already exists : override association")
           if ( -e $file );
         open( MYFILE, '> ' . $file );
-        print MYFILE $this->{id};
+        print MYFILE $self->{id};
         close MYFILE;
 
         # In other case, we considere that store action failed.
@@ -393,7 +387,7 @@ sub store {
 
     }
     else {
-        my $file = $dir . '/' . $this->{id};
+        my $file = $dir . '/' . $self->{id};
         unlink $file;
         return PE_APACHESESSIONERROR;
     }
@@ -421,30 +415,11 @@ sub store {
 #===============================================================================
 
 sub getIdpIDs {
-    my $this = shift;
+    my $self = shift;
     my @tab  = ();
 
-    if ( $this->{laIdps} ) {
-        push @tab, $_ foreach ( keys %{ $this->{laIdps} } );
-    }
-
-    return @tab;
-}
-
-#===============================================================================
-# getProtectedURLs
-#===============================================================================
-#
-# Returns all protected URLs
-#
-#===============================================================================
-
-sub getProtectedURLs {
-    my $this = shift;
-    my @tab  = ();
-
-    if ( $this->{locationRules} ) {
-        push @tab, $_ foreach ( keys %{ $this->{locationRules} } );
+    if ( $self->{laIdps} ) {
+        push @tab, $_ foreach ( keys %{ $self->{laIdps} } );
     }
 
     return @tab;
@@ -471,7 +446,7 @@ sub getProtectedURLs {
 #===============================================================================
 
 sub libertyArtefactResolution {
-    my $this = shift;
+    my $self = shift;
 
     my $lassoLogin = undef;
     my $lassoHttpMethod =
@@ -481,28 +456,28 @@ sub libertyArtefactResolution {
 
     # Retrieve or create lassoLogin.
 
-    if ( $this->{laLogin} and defined( $this->{laLogin} ) ) {
-        $lassoLogin = $this->{laLogin};
+    if ( $self->{laLogin} and defined( $self->{laLogin} ) ) {
+        $lassoLogin = $self->{laLogin};
     }
     else {
-        $lassoLogin = lasso::Login->new( $this->{laServer} );
+        $lassoLogin = lasso::Login->new( $self->{laServer} );
     }
 
     # POST
 
     if (    $lassoHttpMethod == $lasso::HTTP_METHOD_POST
-        and $this->param('LARES') )
+        and $self->param('LARES') )
     {
 
-        my $formLares = $this->param('LARES');
+        my $formLares = $self->param('LARES');
 
         if ( my $error = $lassoLogin->processAuthnResponseMsg($formLares) ) {
-            $this->_debug("lassoLogin->initRequest(...) : error = $error");
+            $self->_debug("lassoLogin->initRequest(...) : error = $error");
             return PE_LA_ARTFAILED;
         }
 
         if ( my $error = $lassoLogin->acceptSso() ) {
-            $this->_debug("lassoLogin->acceptSso(...) : error = $error");
+            $self->_debug("lassoLogin->acceptSso(...) : error = $error");
             return PE_LA_SSOFAILED;
         }
 
@@ -516,30 +491,24 @@ sub libertyArtefactResolution {
         # NOTES :
         #   Documentation indicates that $formLareq is QUERY_STRING HTTP
         #   header. We should have
-        #     $formLareq = $this->param('QUERY_STRING').
+        #     $formLareq = $self->param('QUERY_STRING').
         #   But initRequest method on lassoLogin returns -502 error code
         #   (LASSO_PARAM_ERROR_INVALID_VALUE) when QUERY_STRING is like
         #   'SAMLart=...&RelayState=...'. So, $formLareq is rebuild so
         #   that it only contains 'SAMLart=...'.
 
         my $formLareq = $ENV{'QUERY_STRING'};
-        if ( $this->param('SAMLart') ) {
-            $formLareq = 'SAMLart=' . $this->param('SAMLart');
+        if ( $self->param('SAMLart') ) {
+            $formLareq = 'SAMLart=' . $self->param('SAMLart');
         }
 
-        if ( my $error =
-            $lassoLogin->initRequest( $formLareq, $lassoHttpMethod ) )
-        {
-            $this->_debug(
-"libertyArtefactResolution : lassoLogin->initRequest(...) : error = $error"
-            );
+        if ( my $error = $lassoLogin->initRequest( $formLareq, $lassoHttpMethod ) ) {
+            $self->_debug( "libertyArtefactResolution : lassoLogin->initRequest(...) : error = $error");
             return PE_LA_ARTFAILED;
         }
 
         if ( my $error = $lassoLogin->buildRequestMsg() ) {
-            $this->_debug(
-"libertyArtefactResolution : lassoLogin->buildRequestMsg(...) : error = $error"
-            );
+            $self->_debug( "libertyArtefactResolution : lassoLogin->buildRequestMsg(...) : error = $error");
             return PE_LA_ARTFAILED;
         }
 
@@ -547,19 +516,15 @@ sub libertyArtefactResolution {
         # Successed = $soapResponseMsg contains code 200.
 
         my $soapResponseMsg =
-          $this->_soapRequest( $lassoLogin->{msgUrl}, $lassoLogin->{msgBody} );
+          $self->_soapRequest( $lassoLogin->{msgUrl}, $lassoLogin->{msgBody} );
 
         if ( my $error = $lassoLogin->processResponseMsg($soapResponseMsg) ) {
-            $this->_debug(
-"libertyArtefactResolution : lassoLogin->processResponseMsg(...) : error = $error"
-            );
+            $self->_debug( "libertyArtefactResolution : lassoLogin->processResponseMsg(...) : error = $error");
             return PE_LA_SOAPFAILED;
         }
 
         if ( my $error = $lassoLogin->acceptSso() ) {
-            $this->_debug(
-"libertyArtefactResolution : lassoLogin->acceptSso(...) : error = $error"
-            );
+            $self->_debug( "libertyArtefactResolution : lassoLogin->acceptSso(...) : error = $error");
             return PE_LA_SSOFAILED;
         }
 
@@ -569,12 +534,12 @@ sub libertyArtefactResolution {
     }
 
     # Backup $lassoLogin object
-    $this->{laLogin} = $lassoLogin;
+    $self->{laLogin} = $lassoLogin;
 
     # Save RelayState.
 
-    if ( $this->param('RelayState') ) {
-        $this->{urldc} = $this->param('RelayState');
+    if ( $self->param('RelayState') ) {
+        $self->{urldc} = $self->param('RelayState');
     }
 
     return PE_OK;
@@ -589,16 +554,16 @@ sub libertyArtefactResolution {
 #===============================================================================
 
 sub libertyAssertionConsumer {
-    my $this = shift;
+    my $self = shift;
 
-    $this->{laLogin} = lasso::Login->new( $this->{laServer} );
+    $self->{laLogin} = lasso::Login->new( $self->{laServer} );
 
     return PE_LA_SSOFAILED
-      unless ( $this->{laLogin}
-        and defined( $this->{laLogin} )
-        and defined( $this->param('SAMLart') ) );
+      unless ( $self->{laLogin}
+        and defined( $self->{laLogin} )
+        and defined( $self->param('SAMLart') ) );
 
-    return $this->libertyArtefactResolution(@_);
+    return $self->libertyArtefactResolution(@_);
 }
 
 #===============================================================================
@@ -611,13 +576,13 @@ sub libertyAssertionConsumer {
 #===============================================================================
 
 sub libertyDeletingExistingSession {
-    my $this = shift;
+    my $self = shift;
 
     # Deleting local cache session shared by all Lemonldap::NG::Handler.
 
-    if ( $this->{datas} ) {
+    if ( $self->{datas} ) {
         my $refLocalStorage     = undef;
-        my $localStorage        = $this->{localStorage};
+        my $localStorage        = $self->{localStorage};
         my $localStorageOptions = {};
         $localStorageOptions->{namespace}          ||= "lemonldap";
         $localStorageOptions->{default_expires_in} ||= 600;
@@ -629,32 +594,32 @@ sub libertyDeletingExistingSession {
           . $localStorage
           . '($localStorageOptions);';
         if ( defined $refLocalStorage ) {
-            $refLocalStorage->remove( ${ $this->{datas} }{_session_id} );
+            $refLocalStorage->remove( ${ $self->{datas} }{_session_id} );
 
-            #$refLocalStorage->remove(substr($this->{userNameIdentifier},1)) ;
+            #$refLocalStorage->remove(substr($self->{userNameIdentifier},1)) ;
             $refLocalStorage->purge();
-            $this->_debug("Deleting apache session succeed");
+            $self->_debug("Deleting apache session succeed");
         }
         else {
-            $this->_debug("Deleting apache session failed");
+            $self->_debug("Deleting apache session failed");
         }
     }
 
     # Deleting association file, which is created when asserting consumer,
     # in store function.
 
-    if (    $this->{sessionInfo}->{'laNameIdentifier'}
-        and $this->{globalStorageOptions}->{Directory} )
+    if (    $self->{sessionInfo}->{'laNameIdentifier'}
+        and $self->{globalStorageOptions}->{Directory} )
     {
-        my $dir = $this->{globalStorageOptions}->{Directory};
+        my $dir = $self->{globalStorageOptions}->{Directory};
         $dir =~ s/(.*)\/?$/$1/;
-        my $file = $dir . '/' . $this->{sessionInfo}->{'laNameIdentifier'};
+        my $file = $dir . '/' . $self->{sessionInfo}->{'laNameIdentifier'};
 
         if ( not unlink $file ) {
-            $this->_debug("Deleting liberty-apache association file failed");
+            $self->_debug("Deleting liberty-apache association file failed");
         }
         else {
-            $this->_debug("Deleting liberty-apache association file succeed");
+            $self->_debug("Deleting liberty-apache association file succeed");
         }
     }
 
@@ -670,17 +635,17 @@ sub libertyDeletingExistingSession {
 #===============================================================================
 
 sub libertyExtractFormInfo {
-    my $this = shift;
+    my $self = shift;
 
     # If only one IDP -> redirect automatically on this IDP
     my $idp;
-    my @idps = keys %{ $this->{laIdps} };
-    if ( $#idps >= 0 && $this->param('idpChoice') ) {
-        $idp = $this->param('idpChoice');
+    my @idps = keys %{ $self->{laIdps} };
+    if ( $#idps >= 0 && $self->param('idpChoice') ) {
+        $idp = $self->param('idpChoice');
     }
     return PE_FIRSTACCESS
       unless $idp;
-    $this->{idp}->{id} = $idp;
+    $self->{idp}->{id} = $idp;
     return PE_OK;
 }
 
@@ -695,27 +660,27 @@ sub libertyExtractFormInfo {
 #===============================================================================
 
 sub libertyFederationTermination {
-    my $this = shift;
+    my $self = shift;
 
-    $this->_debug("Processing federation termination...");
+    $self->_debug("Processing federation termination...");
 
     my $query = $ENV{'QUERY_STRING'};
     return PE_LA_QUERYEMPTY
       unless $query;
 
     if ( lasso::isLibertyQuery($query) ) {
-        $this->{lassoDefederation} =
-          lasso::Defederation->new( $this->{laServer} );
+        $self->{lassoDefederation} =
+          lasso::Defederation->new( $self->{laServer} );
 
         return PE_LA_DEFEDFAILED
-          unless ( $this->{lassoDefederation}
-            and defined( $this->{lassoDefederation} )
-            and $this->{lassoDefederation}->processNotificationMsg($query) );
+          unless ( $self->{lassoDefederation}
+            and defined( $self->{lassoDefederation} )
+            and $self->{lassoDefederation}->processNotificationMsg($query) );
 
-        $this->_debug("lassoDefederation->processNotificationMsg... OK");
+        $self->_debug("lassoDefederation->processNotificationMsg... OK");
 
         # TODO :
-        #   $this->fedTerm();
+        #   $self->fedTerm();
 
         return PE_OK;
     }
@@ -733,10 +698,10 @@ sub libertyFederationTermination {
 #===============================================================================
 
 sub libertyFederationTerminationReturn {
-    my $this = @_;
+    my $self = @_;
 
-    $this->_debug("The Return of the federation termination...");
-    $this->{urldc} = $this->{portal};
+    $self->_debug("The Return of the federation termination...");
+    $self->{urldc} = $self->{portal};
     return PE_OK;
 }
 
@@ -749,7 +714,7 @@ sub libertyFederationTerminationReturn {
 #===============================================================================
 
 sub libertyRetrieveExistingSession {
-    my $this = shift;
+    my $self = shift;
 
     # To retrieve current Liberty session, there are two ways :
     #   - 1/ We have Lemonldap::NG cookie. Then we have lassoLoginDump ;
@@ -757,21 +722,21 @@ sub libertyRetrieveExistingSession {
     #     Then, we could retrieve apache session from cache files.
 
     return PE_LA_SESSIONERROR
-      unless ( defined $this->{laStorageOptions}->{Directory} );
+      unless ( defined $self->{laStorageOptions}->{Directory} );
 
     # TODO :
     #   Retrieve NameIdentifier by catching and parsing $ENV{'QUERY_STRING'}
 
     # 2/
 
-    if ( $this->param('NameIdentifier') ) {
+    if ( $self->param('NameIdentifier') ) {
 
         # Retrieve apache session id from userNameIdentifier.
         # $id contains apache session id.
 
-        my $dir = $this->{laStorageOptions}->{Directory};
+        my $dir = $self->{laStorageOptions}->{Directory};
         $dir =~ s/(.*)\/?$/$1/;
-        my $file = $dir . '/' . $this->param('NameIdentifier');
+        my $file = $dir . '/' . $self->param('NameIdentifier');
 
         return PE_LA_SESSIONERROR
           unless ( open( MYFILE, $file ) );
@@ -787,7 +752,7 @@ sub libertyRetrieveExistingSession {
         # Trying to recover session from global session storage
         my %h;
         eval {
-            tie %h, $this->{globalStorage}, $id, $this->{globalStorageOptions};
+            tie %h, $self->{globalStorage}, $id, $self->{globalStorageOptions};
         };
         if ( $@ or not tied(%h) ) {
 
@@ -796,25 +761,25 @@ sub libertyRetrieveExistingSession {
               "Session $id isn't yet available ($ENV{REMOTE_ADDR})\n";
             return PE_OK;
         }
-        $this->{id} = $id;
+        $self->{id} = $id;
 
         # A session has been find => calling &existingSession
         my $r;
-        %{ $this->{datas} } = %h;
+        %{ $self->{datas} } = %h;
         untie(%h);
-        if ( $this->{existingSession} ) {
-            $r = &{ $this->{existingSession} }( $this, $id, $this->{datas} );
+        if ( $self->{existingSession} ) {
+            $r = &{ $self->{existingSession} }( $self, $id, $self->{datas} );
         }
         else {
-            $r = $this->existingSession( $id, $this->{datas} );
+            $r = $self->existingSession( $id, $self->{datas} );
         }
 
         # Save datas in sessionInfo.
-        while ( my ( $k, $v ) = each( %{ $this->{datas} } ) ) {
-            $this->{sessionInfo}->{$k} = $v;
+        while ( my ( $k, $v ) = each( %{ $self->{datas} } ) ) {
+            $self->{sessionInfo}->{$k} = $v;
         }
 
-        $this->_debug("No existing liberty session found")
+        $self->_debug("No existing liberty session found")
           unless ( $r == PE_OK );
     }
 
@@ -832,12 +797,12 @@ sub libertyRetrieveExistingSession {
 #===============================================================================
 
 sub libertySetSessionInfo {
-    my $this = shift;
+    my $self = shift;
 
     return PE_LA_FAILED
-      unless ( defined $this->{laLogin} );
+      unless ( defined $self->{laLogin} );
 
-    my $lassoLogin = $this->{laLogin};
+    my $lassoLogin = $self->{laLogin};
 
     # Store identity in LDAP Directory, if identity not exists. Good
     # opportunity to ask user some more informations.
@@ -854,9 +819,9 @@ sub libertySetSessionInfo {
     # We just store informations in cache, then those are saved by
     # store function. Saved nameIdentifier too.
 
-    # $this->{sessionInfo}->{laIdentityDump} = $lassoLogin->{identity}->dump() ;
-    $this->{sessionInfo}->{laSessionDump} = $lassoLogin->{session}->dump();
-    $this->{sessionInfo}->{laNameIdentifier} =
+    # $self->{sessionInfo}->{laIdentityDump} = $lassoLogin->{identity}->dump() ;
+    $self->{sessionInfo}->{laSessionDump} = $lassoLogin->{session}->dump();
+    $self->{sessionInfo}->{laNameIdentifier} =
       $lassoLogin->{nameIdentifier}->{content};
 
     # Get username from assertion and restore it in param('user'). Be
@@ -864,16 +829,16 @@ sub libertySetSessionInfo {
     # The Lemonldap::NG search consists to perform a search with a filter
     # using nameIdentifier, instead of username.
 
-    $this->{userNameIdentifier} = $lassoLogin->{nameIdentifier}->{content};
-    $this->{user}               = $this->{userNameIdentifier};
-    $this->{password}           = 'none';
+    $self->{userNameIdentifier} = $lassoLogin->{nameIdentifier}->{content};
+    $self->{user}               = $self->{userNameIdentifier};
+    $self->{password}           = 'none';
 
     # Try to retrieve uid in SAML response form assertion statement.
     # For the moment, uid have to be unique in LDAP directory.
     my @uidValues =
-      $this->_getAttributeValuesOfSamlAssertion( $lassoLogin->{response},
-        $this->{laLdapLoginAttribute} );
-    $this->{user} = $uidValues[0]
+      $self->_getAttributeValuesOfSamlAssertion( $lassoLogin->{response},
+        $self->{laLdapLoginAttribute} );
+    $self->{user} = $uidValues[0]
       if (@uidValues);
 
     return PE_OK;
@@ -883,15 +848,15 @@ sub libertySetSessionInfo {
 # libertySignOn
 #===============================================================================
 #
-# Init SSO request. If successfull, $this->{urldc} contains Liberty IDP Url
+# Init SSO request. If successfull, $self->{urldc} contains Liberty IDP Url
 # for redirection.
 #
 #===============================================================================
 
 sub libertySignOn {
-    my $this = shift;
+    my $self = shift;
 
-    my $lassoLogin = lasso::Login->new( $this->{laServer} );
+    my $lassoLogin = lasso::Login->new( $self->{laServer} );
 
     return PE_LA_FAILED
       unless ( $lassoLogin and defined($lassoLogin) );
@@ -899,7 +864,7 @@ sub libertySignOn {
     # TODO :
     #   Catching error when retrieving $providerID.
 
-    my $providerID = $this->{LAidps}->{ $this->{idp}->{id} }->{url};
+    my $providerID = $self->{LAidps}->{ $self->{idp}->{id} }->{url};
 
     if (
         my $error = $lassoLogin->initAuthnRequest(
@@ -907,7 +872,7 @@ sub libertySignOn {
         )
       )
     {
-        $this->_debug("lassoLogin->initAuthnRequest(...) : error = $error");
+        $self->_debug("lassoLogin->initAuthnRequest(...) : error = $error");
         return PE_LA_SSOINITFAILED;
     }
 
@@ -920,18 +885,18 @@ sub libertySignOn {
     #$lassoLogin->{request}->{nameIdPolicy} = $lasso::LIB_NAMEID_POLICY_TYPE_FEDERATED ;
     $lassoLogin->{request}->{isPassive} = 0;
 
-    if ( $this->param('url') ) {
-        my $url = decode_base64( $this->param('url') );
+    if ( $self->param('url') ) {
+        my $url = decode_base64( $self->param('url') );
         chomp $url;
         $lassoLogin->{request}->{relayState} = $url;
     }
 
     if ( my $error = $lassoLogin->buildAuthnRequestMsg() ) {
-        $this->_debug("lassoLogin->buildAuthnRequestMsg(..) : error = $error");
+        $self->_debug("lassoLogin->buildAuthnRequestMsg(..) : error = $error");
         return PE_LA_SSOINITFAILED;
     }
 
-    $this->{urldc} = $lassoLogin->{msgUrl};
+    $self->{urldc} = $lassoLogin->{msgUrl};
     return PE_OK;
 }
 
@@ -947,9 +912,9 @@ sub libertySignOn {
 #===============================================================================
 
 sub libertySingleLogout {
-    my $this = shift;
+    my $self = shift;
 
-    my $lassoLogout = lasso::Logout->new( $this->{laServer} );
+    my $lassoLogout = lasso::Logout->new( $self->{laServer} );
     return PE_LA_FAILED
       unless ( $lassoLogout
         and defined($lassoLogout)
@@ -962,20 +927,17 @@ sub libertySingleLogout {
         # it in Lemonldap::NG normal process. Then, we remove our stored liberty
         # association file.
 
-        $this->param( 'logout' => '1' );
+        $self->param( 'logout' => '1' );
 
-        if ( my $error =
-            $lassoLogout->processRequestMsg( $ENV{'QUERY_STRING'} ) )
-        {
-            $this->_debug(
-                "lassoLogout->processRequestMsg(...) : error = $error");
+        if ( my $error = $lassoLogout->processRequestMsg( $ENV{'QUERY_STRING'} ) ) {
+            $self->_debug( "lassoLogout->processRequestMsg(...) : error = $error");
             return PE_LA_SLOFAILED;
         }
 
-        # my $lassoIdentity = lasso::Identity::newFromDump($this->{sessionInfo}->{laIdentityDump}) ;
+        # my $lassoIdentity = lasso::Identity::newFromDump($self->{sessionInfo}->{laIdentityDump}) ;
         # $lassoLogout->{identity} = $lassoIdentity ;
         my $lassoSession =
-          lasso::Session::newFromDump( $this->{sessionInfo}->{laSessionDump} );
+          lasso::Session::newFromDump( $self->{sessionInfo}->{laSessionDump} );
         $lassoLogout->{session} = $lassoSession;
 
         # Logout by soap call could failed with those two errors.
@@ -983,31 +945,29 @@ sub libertySingleLogout {
             if (    $error != $lasso::PROFILE_ERROR_SESSION_NOT_FOUND
                 and $error != $lasso::PROFILE_ERROR_IDENTITY_NOT_FOUND )
             {
-                $this->_debug(
-                    "lassoLogout->validateRequest(...) : error = $error");
+                $self->_debug( "lassoLogout->validateRequest(...) : error = $error");
                 return PE_LA_SLOFAILED;
             }
         }
 
         if ( my $error = $lassoLogout->buildResponseMsg() ) {
-            $this->_debug(
-                "lassoLogout->buildResponseMsg(...) : error = $error");
+            $self->_debug( "lassoLogout->buildResponseMsg(...) : error = $error");
             return PE_LA_SLOFAILED;
         }
 
         # Confirm logout by soap request
         if ( defined $lassoLogout->{msgBody} ) {
-            my $soapResponseMsg = $this->_soapRequest( $lassoLogout->{msgUrl},
+            my $soapResponseMsg = $self->_soapRequest( $lassoLogout->{msgUrl},
                 $lassoLogout->{msgBody} );
         }
     }
 
     # Fixes redirection.
-    $this->{urldc} = $lassoLogout->{msgUrl};
+    $self->{urldc} = $lassoLogout->{msgUrl};
 
-    # If $this->{urldc} empty, then we try to use HTTP referer if it exists
-    $this->{urldc} = $ENV{'HTTP_REFERER'}
-      if ( not $this->{urldc} and $ENV{'HTTP_REFERER'} );
+    # If $self->{urldc} empty, then we try to use HTTP referer if it exists
+    $self->{urldc} = $ENV{'HTTP_REFERER'}
+      if ( not $self->{urldc} and $ENV{'HTTP_REFERER'} );
 
     return PE_OK;
 }
@@ -1029,48 +989,36 @@ sub libertySingleLogout {
 #===============================================================================
 
 sub libertySingleLogoutReturn {
-    my $this = shift;
+    my $self = shift;
 
-    $this->{lassoLogout} = lasso::Logout->new( $this->{laServer} );
+    $self->{lassoLogout} = lasso::Logout->new( $self->{laServer} );
     return PE_LA_SLOFAILED
-      unless ( $this->{lassoLogout} and defined( $this->{lassoLogout} ) );
+      unless ( $self->{lassoLogout} and defined( $self->{lassoLogout} ) );
 
-    $this->_debug("Processing single logout return...");
-
-    my %cookies = fetch CGI::Cookie;
+    $self->_debug("Processing single logout return...");
 
     # Test if Lemonldap::NG cookie is available
-    if ( $cookies{ $this->{cookieName} }
-        and my $id = $cookies{ $this->{cookieName} }->value )
-    {
-
-        $this->{session_nb} = $cookies{ $this->{cookieName} };
-
-        $this->_debug("Cookie: $this->{cookieName} found...");
-        $this->_debug("session number: $this->{session_nb}");
-
+    my %cookies = fetch CGI::Cookie;
+    if ( $cookies{ $self->{cookieName} } and my $id = $cookies{ $self->{cookieName} }->value ) {
+        $self->{session_nb} = $cookies{ $self->{cookieName} };
+        $self->_debug("Cookie: $self->{cookieName} found...");
+        $self->_debug("session number: $self->{session_nb}");
         my $query = $ENV{'QUERY_STRING'};
-        return PE_LA_QUERYEMPTY
-          unless $query;
+        return PE_LA_QUERYEMPTY unless $query;
 
-        $this->_debug("Processing response message...");
-
+        $self->_debug("Processing response message...");
         return PE_LA_SLOFAILED
-          unless ( $this->{lassoLogout}->processResponseMsg($query) );
+          unless ( $self->{lassoLogout}->processResponseMsg($query) );
 
-        $this->_debug("lassoLogout->processResponseMsg... OK");
-
-        $this->delLibertySession();
-
-        $this->_debug("delete liberty session... OK");
-
-        my $formRelayState = $this->param('RelayState');
+        $self->_debug("lassoLogout->processResponseMsg... OK");
+        $self->delLibertySession();
+        $self->_debug("delete liberty session... OK");
+        my $formRelayState = $self->param('RelayState');
         return PE_LA_SLOFAILED
           unless ( $formRelayState and defined($formRelayState) );
 
-        $this->_debug("formRelayState: $formRelayState");
-        $this->{urldc} = $formRelayState . '/logout';
-
+        $self->_debug("formRelayState: $formRelayState");
+        $self->{urldc} = $formRelayState . '/logout';
         return PE_OK;
     }
     return PE_LA_SLOFAILED;
@@ -1087,9 +1035,9 @@ sub libertySingleLogoutReturn {
 #===============================================================================
 
 sub libertySoapCall {
-    my $this = shift;
+    my $self = shift;
 
-    $this->_debug("Soap call processing...");
+    $self->_debug("Soap call processing...");
 
     my $contentType = $ENV{'CONTENT_TYPE'};
     my $soapMsg     = $ENV{'QUERY_STRING'};
@@ -1097,17 +1045,17 @@ sub libertySoapCall {
     return PE_LA_SOAPFAILED
       unless ( $contentType and $soapMsg and $contentType eq 'text/xml' );
 
-    $this->_debug("contentType: $contentType");
-    $this->_debug("soapMsg: $soapMsg");
+    $self->_debug("contentType: $contentType");
+    $self->_debug("soapMsg: $soapMsg");
 
     my $requestType = lasso::getRequestTypeFromSoapMsg($soapMsg);
 
     # Logout request
-    return $this->libertySingleLogout
+    return $self->libertySingleLogout
       if ( $requestType eq $lasso::REQUEST_TYPE_LOGOUT );
 
     # Defederation request
-    return $this->libertyFederationTermination
+    return $self->libertyFederationTermination
       if ( $requestType eq $lasso::REQUEST_TYPE_DEFEDERATION );
 
     return PE_DONE;
@@ -1123,22 +1071,22 @@ sub libertySoapCall {
 #===============================================================================
 
 sub libertySoapEndpoint {
-    my $this = shift;
+    my $self = shift;
 
-    $this->_debug("SoapEndpoint processing...");
+    $self->_debug("SoapEndpoint processing...");
 
-    my $soapRequest = $this->param('POSTDATA');
+    my $soapRequest = $self->param('POSTDATA');
     return PE_LA_SEPFAILED
       unless $soapRequest;
 
     my $soapRequestType = lasso::getRequestTypeFromSoapMsg($soapRequest);
 
-    $this->_debug("RequestType = $soapRequestType");
+    $self->_debug("RequestType = $soapRequestType");
 
     # Logout SOAP request
     if ( $soapRequestType == $lasso::REQUEST_TYPE_LOGOUT ) {
         $ENV{'QUERY_STRING'} = $soapRequest;
-        return $this->libertySingleLogout();
+        return $self->libertySingleLogout();
 
         # Defederation SOAP request
     }
@@ -1173,7 +1121,7 @@ sub libertySoapEndpoint {
 #===============================================================================
 
 sub _getAttributeValuesOfSamlAssertion {
-    my $this          = shift;
+    my $self          = shift;
     my $samlp         = shift;
     my $attributeName = shift;
     my @tab           = ();
@@ -1245,18 +1193,18 @@ sub _getAttributeValuesOfSamlAssertion {
 #===============================================================================
 
 sub _loadXmlIdpFile {
-    my $this = shift;
+    my $self = shift;
     my $file = shift;
 
-    my $xml = XML::Simple::XMLin( $this->{laIdpsFile}, ForceArray => ['idp'] );
-    $this->{laIdps} = $xml->{idp};
+    my $xml = XML::Simple::XMLin( $self->{laIdpsFile}, ForceArray => ['idp'] );
+    $self->{laIdps} = $xml->{idp};
 
     # Adding all IDPs in laIdpsFile in laServer.
     # Have to be done one time -> no choice : in constructor.
 
-    foreach ( keys %{ $this->{laIdps} } ) {
-        my $hash = $this->{laIdps}->{$_};
-        $this->{laServer}->addProvider(
+    foreach ( keys %{ $self->{laIdps} } ) {
+        my $hash = $self->{laIdps}->{$_};
+        $self->{laServer}->addProvider(
             $lasso::PROVIDER_ROLE_IDP, $hash->{'metadata'},
             $hash->{'pubkey'},         $hash->{'certificate'},
         );
@@ -1275,7 +1223,7 @@ sub _loadXmlIdpFile {
 #===============================================================================
 
 sub _soapRequest {
-    my $this = shift;
+    my $self = shift;
     my ( $uri, $body ) = @_;
 
     my $soapHeaders = new HTTP::Headers( Content_Type => "text/xml" );
@@ -1287,31 +1235,6 @@ sub _soapRequest {
 }
 
 #===============================================================================
-# _subProcess
-#===============================================================================
-#
-# Externalise functions' execution.
-#
-#===============================================================================
-
-sub _subProcess {
-    my $this = shift;
-    my @subs = @_;
-    my $err  = undef;
-
-    foreach my $sub (@subs) {
-        if ( $this->{$sub} ) {
-            last if ( $err = &{ $this->{$sub} }($this) );
-        }
-        else {
-            last if ( $err = $this->$sub );
-        }
-    }
-
-    return $err;
-}
-
-#===============================================================================
 # _debug
 #===============================================================================
 #
@@ -1320,7 +1243,7 @@ sub _subProcess {
 #===============================================================================
 
 sub _debug {
-    my $this = shift;
+    my $self = shift;
     my $str  = shift;
     my (
         $package,   $filename, $line,       $subroutine, $hasargs,
@@ -1335,7 +1258,7 @@ sub _debug {
 ################################################################################
 ################################################################################
 ##                                                                            ##
-##                               Documentation                               ##
+##                               Documentation                                ##
 ##                                                                            ##
 ################################################################################
 ################################################################################
@@ -1347,7 +1270,6 @@ __END__
 
 Lemonldap::NG::Portal::AuthLA - Provide Liberty Alliance Authentication for
 FederID project.
-
 
 =head1 SYNOPSIS
 
@@ -1386,7 +1308,7 @@ FederID project.
     # Print protected URLs
     print $portal->header ;
     print "<a href=\"http://$_\"> $_</a><br/>"
-      foreach ($portal->getProtectedURLs) ;
+      foreach ($portal->getProtectedSites) ;
 
   } else {
     print $portal->header ;

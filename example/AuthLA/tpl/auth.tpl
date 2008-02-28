@@ -10,13 +10,13 @@
 </head>
 <body>
 	<div id="page">
-	<div id="top"><h1>&nbsp;</h1></div>
+	<div id="top">&nbsp;</div>
 	<div id="info-box"><h1>FederID WebSSO</h1><p>LemonLDAP::NG Portal - Authentication</p></div>
 	<div id="content">
 
-	<form method="post">
+	<div id="messages"><ul class="message"><li><TMPL_VAR NAME="AUTH_ERROR"></li></ul></div>
 
-	<div class="error"><p><TMPL_VAR NAME="AUTH_ERROR"></p></div>
+	<form method="post" id="acegiForm">
 
 	<input type="hidden" name="url" value="<TMPL_VAR NAME="AUTH_URL">" />
 
@@ -24,29 +24,33 @@
 	<label class="required">Login</label>
 		<TMPL_IF NAME="AUTH_USER">
 		<input type="hidden" name="user" value="<TMPL_VAR NAME="AUTH_USER">" />
-		<TMPL_VAR NAME="AUTH_USER"><br />
+		<TMPL_VAR NAME="AUTH_USER">
 		<TMPL_ELSE>
-		<input name="user" size="30" /><br />
+		<input name="user" size="30" />
 		</TMPL_IF>
 
 		<label class="required">Password</label>
-		<input name="password" type="password" autocomplete="off" size="30" /></td>
+		<input name="password" type="password" autocomplete="off" size="30" />
 	</fieldset>
 
 	<fieldset><legend>Liberty Alliance authentication</legend>
 		<select name="idpChoice">
-			<option value="null">Selection d'un IDP</option>
+			<option value="null">Select your Identity Provider</option>
 			<TMPL_LOOP NAME="AUTH_IDPS">
 			<option value="<TMPL_VAR NAME="IDPNAME">"><TMPL_VAR NAME="IDPNAME"></option>
 			</TMPL_LOOP>
 		</select>
 	</fieldset>
 
-	<fieldset><legend>Submit your choice</legend>
-        	<input type="submit" name="submit" value="Submit" />
-                <input type="reset" name="reset" value="Reset" />
-        </fieldset>
-</form>
+        <input type="submit" name="submit" value="Submit" />
+
+	</form>
+
+	</div>
+
+	<div id="footer"><p>Provided by LemonLDAP::NG</p></div>
+
+	</div>
 
 </body>
 

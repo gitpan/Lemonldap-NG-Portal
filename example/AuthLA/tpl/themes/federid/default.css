@@ -3,45 +3,53 @@
 /* Link color : cyan and red underlined*/
 
 body {
-	font: 62.5%/1.5em sans-serif;
-	color : #000;
-	background : #fff url(page-bg.png) repeat top left;
-	margin : 0;
-	padding : 0;
+	font-family: Arial, Helvetica, Verdana;;
+	font-size: 1em;
+	color: #000;
+	background: #fff url(page-bg.png) repeat top left;
+	margin: 10px 5%;
+	padding: 0;
 }
 
 a img,:link img,:visited img { border:none }
 
 a, a:link, a:visited {
-	color : navy;
-	text-decoration : none;
-	border-bottom : 1px dotted red;
+	color: navy;
+	text-decoration: none;
 }
+
 a:hover, a:active, a:focus {
 	
 }
 
-h1, h2, h3, h4, h5, h6 {
-	margin-top : 0.5em;
-	margin-bottom : 0.5em;
-	color : gray ;
+.ui-tabs-nav a , #main-menu a, .actions a {
+	color: white;
 }
 
-h1 {font-size : 2em;}
+h1, h2, h3, h4, h5, h6 {
+	margin-top: 5px;
+	margin-bottom: 3px;
+	color: gray;
+}
 
-h2 {font-size : 1.8em;}
+h1 {font-size: 2em;}
 
-h3 {font-size : 1.6em;}
+h2 {font-size: 1.6em;}
+
+h3 {font-size: 1.4em;}
+
+h4 {font-size: 1.2em;}
 
 hr {
-	border-width : 3px 0 0 0;
-	border-color : gray;
-	border-style : dotted;
+	border-width: 2px 0 0 0;
+	border-color: gray;
+	border-style: solid;
+	margin: 2px 0;
 }
 
 pre, code {
-	font: 1.5em monospace;
-	border-left : 5px gray solid;
+	font: 10pt monospace;
+	border-left: 5px gray solid;
 	padding: 0 0 0 10px;
 	background: #eeeee6;
 }
@@ -50,159 +58,216 @@ pre, code {
 -------------------------------------------------------- */
 /* General font-size */
 #top, #info-box, #content, #main-menu, #footer {
-	font-size: 1.3em;
+	font-size: 11pt;
 }
 
 #page {
-	margin : 0 100px 0 100px;
-	padding : 10px;
-	background : white;
-	border-width : 0 3px 0 3px;
-	border-color : gray;
-	border-style : dotted; 
+	margin: 0;
+	padding: 10px;
+	background: #E8EAF0;
+	border-width: 4px;
+	border-color: gray;
+	border-style: solid; 
 }
 
 #top {
-	margin : 0 0 50px 0;
-	padding : 0;
-	background : transparent url(head-bg.png) repeat-y top right;
+	margin: 0;
+	padding: 50px;
+        background: transparent url(head-logo.png) no-repeat 10px 0;
 }
 
-#top h1 {
-        padding : 0;
-        margin : 0;
-        height : 100px;
-        text-indent : -1000px;
-        background : transparent url(head-logo.png) no-repeat 0 0;
-}
 #info-box {
-	position : absolute;
-	right : 120px;
-	top : 30px; 
-	margin : 0;
-	padding : 0;
-	letter-spacing : 0.2em ;
-        text-align : right;
+	position: absolute;
+	right: 8%;
+	top: 20px; 
+	margin: 0;
+	padding: 0;
+	letter-spacing: 0.2em ;
+        text-align: right;
 }
 
 #main-menu {
-	width : 170px;
-	float : left;
-	margin : 0;
-	padding : 0 10px 10px 10px ;
-	background : transparent url(head-bg.png) repeat-y top right;
+	width: 170px;
+	float: left;
+	margin: 10px 0 10px 0;
+	padding: 0 10px 10px 10px;
+	border: 1px solid gray;
+	background: #DFDFDF;
 }
+
 #main-menu h3 {
 	text-align: center;
-}
-#main-menu ul {
-	margin : 0 0 1em 0;
-	padding : 0;
-	list-style : none;
-}
-#main-menu li {
-	display : block;
-	margin : 0.5em 0 0 5px;
-	padding : 2px 0 1px 20px;
-	background-repeat: no-repeat;
-	background-position: 0 0;
-}
-#main-menu a {
-	font-weight : bold;
-}
-#main-menu .active a {
-	border-bottom-style: solid;
+	font-weight: bold;
+	padding: 5px;
+	font-size: 12pt;
+	border-top: 2px gray solid;
 }
 
 #content {
-        margin-left : 200px;
-        margin-right : 10px;
-        margin-bottom : 10px;
-        padding-top : 0;
+        margin-left: 210px;
+        margin-right: 210px;
+        margin-bottom: 10px;
+        padding-top: 0;
 }
 
 #footer {
-	clear : both;
-        margin-left : 200px;
-	padding : 10px 0 10px 0 ;
-	border-top : 3px gray dotted;
-	text-align : center;
+	clear: both;
+	padding: 5px 0 20px 0;
+	border-top: 1px gray solid;
+	text-align: center;
+	background: url(bouton_federid.png) no-repeat center bottom;
 }
+
 #footer a {
 	border: none;
 }
 
-/* CLASSES
--------------------------------------------------------- */
-.error {
-	border : 2px solid red;
-	padding : 0.5em 0.5em 0.5em 40px;
-	margin-bottom : 1em;
-	background : transparent url(msg-error.png) no-repeat 5px 50%;
+#messages, #breadcrumb, .errornotice {
+	border: 2px #CDCD6E solid;
+	margin: 5px 0;
+	padding: 5px;
+	background: #FFFF89;
+	width: 50%;
 }
 
+div.content {
+  margin-top: 3px;
+  margin-bottom: 5px;
+}
 
-.message {
-	font-weight : bold;
-	padding : 0.5em 0.5em 0.5em 40px;
-	border : 2px solid gray;
-	background : transparent url(msg-std.png) no-repeat 5px 50%;
+div.buttons, div.submit, div.SubmitWidget widget {
+  padding: 0;
+  margin: 0;
+}
+
+div.buttons br {
+  display: none;
+}
+/* LISTES
+-------------------------------------------------------- */
+ul {
+  list-style: none;
+}
+
+li {
+  list-style: none;
+}
+
+#main-menu ul, .actions ul, .ui-tabs-nav, .message {
+  margin: 0;
+  padding: 0;
+}
+
+#main-menu li, .actions li, .ui-tabs-nav li {
+  padding: 5px;
+  background: gray;
+  border: 1px gray solid;
+  text-align: center;
+  font-size: 10pt;
+  font-weight: bold;
+}
+
+#main-menu li, .actions li, .ui-tabs-nav li {
+  display: block;
+  margin: 5px;
+}
+
+.actions li, .ui-tabs-nav li {
+  display: inline;
+  float: left;
+  margin: 5px 5px 5px 0;
+}
+
+.ui-tabs-nav li.ui-tabs-selected, #main-menu li.active {
+  background: #DFDFDF;
+  border: 1px gray solid;
+}
+
+.ui-tabs-nav li.ui-tabs-selected a, #main-menu li.active a {
+  color: gray;
+}
+
+#main-menu li:hover, .actions li:hover, .ui-tabs-nav li:hover {
+  border: 1px white solid;
+}
+
+ul.message li, .errornotice {
+  font-size: 10pt;
+  font-weight: bold;
+  list-style-type: none;
+  background-image: url(msg-std.png);
+  background-repeat: no-repeat;
+  background-position: 0% 60%;
+  padding: 3px 0 3px 30px;
+}
+
+.ui-tabs-panel {
+  clear: both;
+  padding: 5px 10px;
+  margin: 10px 0;
+  background-color: #E8EAF0;
+  border: 1px grey solid;
+}
+
+.ui-tabs-hide {
+  display: none;
 }
 
 /* TABLES
 -------------------------------------------------------- */
 table {
-	font-size : 1em;
-	border-collapse : collapse;
-	margin : 0.5em;
+	font-size: 1em;
+	border-collapse: collapse;
+	margin: 5px 0;
 }
-tr.line:hover {
-	background : #ddd;
+
+tr:hover {
+	background: #ddd;
 }
+
 th, td {
-	border-style : dotted;
-	border-color : gray;
-	vertical-align : middle;
-	padding : 0.5em;
+	border-style: solid;
+	border-color: gray;
+	vertical-align: middle;
+	padding: 0.5em;
+	border-width: 2px;
 }
-td {
-	border-width : 2px;
-}
+
 th {
-	text-align : center;
-	border-bottom-color : #666;
-	border-width : 0 0 2px 0;
+	text-align: center;
 }
 
 /* FORMS
 -------------------------------------------------------- */
 form {
-	display : block;
-	margin : 0;
-	padding : 0;
+	margin: 0;
+	padding: 0;
 }
 
-fieldset {
-	display : block;
-	margin : 0 0 1em 0;
-	padding : 1em 0.5em;
-	border-width : 1px 0;
-	border-style : solid;
-	border-color : gray;
-	background : #fbfbfb;
+fieldset, #login {
+	margin: 0 0 1em 0;
+	padding: 1em 0.5em;
+	border-width: 1px;
+	border-style: solid;
+	border-color: gray;
+	background: #fff url(page-bg.png) repeat top left;
+	overflow: hidden;
 }
+
 legend {
-	font-weight : bold;
-	padding : 0.2em 0.6em;
-	border-width : 1px;
-	border-style : solid;
-	border-color : gray;
-	background : #fbfbfb;
+	font-weight: bold;
+	padding: 0.2em 0.6em;
+	border-width: 1px;
+	border-style: solid;
+	border-color: gray;
+	background: #E8EAF0;
 }
+
 optgroup {
 	font-weight : bold;
 	font-style : normal;
 }
+
 option {
 	font-weight : normal;
 }
@@ -213,53 +278,113 @@ input, textarea, select {
 	border-style : solid;
 	border-color : gray;
 }
-input, textarea, select, option {
-	font : 1em sans-serif;
-}
+
 input[type=text], input[type=password], textarea {
-	padding : 2px 0;
+	padding: 2px 0;
 }
 
 textarea {
-	padding : 2px 0;
+	padding: 2px 0;
 }
 
 input[type=submit], input[type=reset], input[type=button] {
-	padding : 1px 2px;
-	background : #d2e0e6 url(button-normal.png) repeat-x bottom left;
-	border-width : 1px;
-	border-style : outset;
-	border-color : #ccc;
-	 
+	padding: 1px 2px;
+	background: #d2e0e6 url(button-normal.png) repeat-x bottom left;
+	border-width: 1px;
+	border-style: outset;
+	border-color: #ccc;
+	margin-top: 10px;
 }
+
 input[type=submit]:hover, input[type=reset]:hover, input[type=button]:hover {
-	background-color : #fc3;
-	background-image : url(button-hover.png);
+	background-color: #fc3;
+	background-image: url(button-hover.png);
 }
 
 input[type=submit] {
-	font-weight : bold;
+	font-weight: bold;
 }
 
 input[type=checkbox], input[type=radio] {
-	margin : 0.2em;
-	padding : 0;
-	background : transparent;
-	border : 1px solid gray;
+	margin: 0.2em;
+	padding: 0;
+	background: transparent;
+	border: 1px solid gray;
+}
+
+input[type=hidden] {
+	border: 0;
 }
 
 label {
-	display : block;
 	margin-top: 0.5em;
 	margin-bottom: 0.5em;
 }
 
-label.required {
-	font-weight : bold;
+.required,#login div.title {
+	font-weight: bold;
 }
 
-label.required:before {
-	content : '* ';
-	color : red;
+.required:after, #login div.title:after {
+	content: ' *';
+	color: red;
+}
+
+#login span.required, #login span.required:after {
+	display: none;
+}
+
+form#acegiForm label, form#changepassword label {
+  display: block;
+}
+
+form#acegiForm input, form#changepassword input {
+  display: block;
+  margin-bottom: 10px;
+}
+
+/* Tableaux */
+
+.attributeeditor-table {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.attributeeditor-table td {
+  border: 0;
+}
+
+.attributeeditor-column ul {
+  padding: 0;
+}
+
+.attributeeditor-row input {
+  margin: 0;
+}
+
+.attributeeditor-row label {
+  display: none;
+}
+
+table.ldapentry {
+  border-collapse: collapse;
+  vertical-align: top;
+  text-align: left;
+  margin: 0 5px 10px 5px;
+}
+
+table ul {
+  padding: 0px;
+  margin: 0px
+}
+
+table.ldapentry tr, th, td {
+  vertical-align: top;
+  padding: 5px;
+}
+
+table.ldapentry th {
+  font-weight: bold;
 }
 

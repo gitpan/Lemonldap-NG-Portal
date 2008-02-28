@@ -139,25 +139,37 @@ sub redirect {
     }
 }
 
+# Externalise functions execution
+sub _subProcess {
+    my $self = shift;
+    my @subs = @_;
+    my $err  = undef;
+
+    foreach my $sub (@subs) {
+        if ( $self->{$sub} ) {
+            last if ( $err = &{ $self->{$sub} }($self) );
+        }
+        else {
+            last if ( $err = $self->$sub );
+        }
+    }
+
+    return $err;
+}
+
 ###############################################################
 # MAIN subroutine: call all steps until one returns something #
 #                  different than PE_OK                       #
 ###############################################################
+
 sub process {
     my ($self) = @_;
     $self->{error} = PE_OK;
-    foreach my $sub
+    $self->{error} = $self->_subProcess(
       qw(controlUrlOrigin controlExistingSession extractFormInfo formateParams
       formateFilter connectLDAP bind search setSessionInfo setMacros setGroups
-      authenticate store unbind buildCookie log autoRedirect) {
-        if ( $self->{$sub} )
-        {
-            last if ( $self->{error} = &{ $self->{$sub} }($self) );
-        }
-        else {
-            last if ( $self->{error} = $self->$sub );
-        }
-      }
+      authenticate store unbind buildCookie log autoRedirect)
+      );
       return ( ( $self->{error} > 0 ) ? 0 : 1 );
 }
 

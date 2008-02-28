@@ -3,13 +3,11 @@
 
 @import url(default.css);
 
-h1, h2, h3, h4, h5, h6 { color : #1335e2; }
+h1, h2, h3, #main-menu h3, h4, h5, h6, .ui-tabs-nav li.ui-tabs-selected a, #main-menu li.active a { color : #1335e2; border-color : #1335e2; }
 
 #page { border-color : #1335e2; }
 
-#footer { border-top : #1335e2; }
-
-.message { border-color : #1335e2; }
+#footer { border-color : #1335e2; background: url(bouton_interldap.png) no-repeat center bottom; }
 
 hr, pre, code, th, td, fieldset, legend { border-color : #1335e2; }
 
