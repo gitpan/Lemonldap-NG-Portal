@@ -24,13 +24,14 @@ my $portal = Lemonldap::NG::Portal::AuthLA->new({
 		secretkey	=> "$install_dir/ressources/lemonsp-key-private.pem" ,
 	} ,
 	laIdpsFile => "$install_dir/idps.xml" ,
-	laStorage => "Apache::Session::File",
+	laDebug => 0 ,
+        laLdapLoginAttribute => "uid" ,
+
+	# Liberty Storage Options are now generic CGI::Session options
+	laStorage => "File",
 	laStorageOptions => {
 		Directory	=> "$var_dir/var/assertion" ,
-		LockDirectory	=> "$var_dir/var/lock" ,
 	} ,
-	laDebug => 1 ,
-	laLdapLoginAttribute => "uid" ,
 
 	# Parameters that permit to access lemonldap::NG::Handler local cache
         localStorage            => 'Cache::FileCache' ,

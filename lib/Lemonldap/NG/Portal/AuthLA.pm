@@ -1,8 +1,18 @@
 
 #===============================================================================
 # Liberty Alliance Authentication for LemonLDAP.
+#-------------------------------------------------------------------------------
 #
 # This file is part of the LemonLDAP project and released under GPL.
+#
+#-------------------------------------------------------------------------------
+# CHANGELOGS
+#-------------------------------------------------------------------------------
+# 2008-03-25 - Version 0.3
+# Author(s) : Thomas CHEMINEAU
+#   - Fixe some bugs into logout process from IDP or SP ;
+#   - Add some checks into general algorithm ;
+#
 #===============================================================================
 
 package Lemonldap::NG::Portal::AuthLA;
@@ -12,6 +22,7 @@ use strict;
 use Lemonldap::NG::Portal::SharedConf qw(:all);
 use lasso;
 use CGI::Cookie;
+use CGI::Session;
 use HTTP::Request;
 use HTTP::Response;
 use LWP::UserAgent;
@@ -23,8 +34,8 @@ use UNIVERSAL qw( isa can VERSION );
 *EXPORT_TAGS = *Lemonldap::NG::Portal::SharedConf::EXPORT_TAGS;
 *EXPORT      = *Lemonldap::NG::Portal::SharedConf::EXPORT;
 
-our $VERSION = '0.2';
-our @ISA     = qw(Lemonldap::NG::Portal::SharedConf);
+our $VERSION = '0.3';
+our @ISA     = qw(Lemonldap::NG::Portal::SharedConf) ;
 
 #===============================================================================
 # Global Constants
@@ -57,11 +68,8 @@ sub PC_LA_URLSE  { '/liberty/soapEndpoint.pl' }
 # - category / function : comments
 # ------------------------------------------------------------------------------
 # - association / store : Replace files by hastable or DBI implementation
-# - optimization / libertySignOn : Catching error when retrieving $providerID
-# - optimization / _getAttributeValuesOfSamlAssertion : Checking errors
 # - security / process : Check if URL figures in locationRules
 # - security / libertyFederationTermination : Implementation
-# - security / libertySoapEndpoint : Does Lemonldap::NG do defederation ?
 # - wsf / setSessionInfo : Code for getting informations via wsf protocol
 #
 #===============================================================================
@@ -185,10 +193,10 @@ sub process {
     # Trace param()
     # my @params = $self->param() ;
     # foreach( @params ) {
-    # 	$self->_debug("parameter : $_ = " . $self->param($_)) ;
+    #   $self->_debug("parameter : $_ = " . $self->param($_)) ;
     # }
     # while(my($k,$v) = each(%ENV)) {
-    # 	$self->_debug("env : $k = $v") ;
+    #	$self->_debug("env : $k = $v") ;
     # }
 
     #--------
@@ -202,7 +210,6 @@ sub process {
     if ( not $self->param('url')
         and ( $url eq $self->{portal} or $urlr eq $self->{portal} ) )
     {
-
         # TODO Security tricks :
         # - Check if URL figures in locationRules
         $self->{error} = PE_DONE;
@@ -223,14 +230,14 @@ sub process {
 
         $self->_debug( "Login user = '" . $self->{user} . "'" );
 
-        # federationTermination
+    # federationTermination
     }
     elsif ( $urldir eq $self->PC_LA_URLFT ) {
 
         $self->{error} = $self->_subProcess(
             qw( libertyFederationTermination log autoRedirect ));
 
-        # federationTerminationReturn
+    # federationTerminationReturn
     }
     elsif ( $urldir eq $self->PC_LA_URLFTR ) {
 
@@ -239,7 +246,7 @@ sub process {
               autoRedirect )
         );
 
-        # singleLogout : called when IDP request Logout.
+    # singleLogout : called when IDP request Logout.
     }
     elsif ( $urldir eq $self->PC_LA_URLSL ) {
 
@@ -248,32 +255,31 @@ sub process {
               libertyDeletingExistingSession )
         );
 
-        $self->_debug( "Logout user = '" . $self->{'dn'} . "'" );
-
         # OK : $self->{urldc} is fixed at the end of this process.
+        $self->_debug( "Logout user = '" . $self->{user} . "'" );
 
-        # singleLogoutReturn
+    # singleLogoutReturn
     }
     elsif ( $urldir eq $self->PC_LA_URLSLR ) {
 
         $self->{error} =
-          $self->_subProcess(qw( libertySingleLogoutReturn log autoRedirect ));
+          $self->_subProcess(qw( libertySingleLogoutReturn log ));
 
-        # soapCall
+    # soapCall
     }
     elsif ( $urldir eq $self->PC_LA_URLSC ) {
 
         $self->{error} = $self->_subProcess(qw( libertySoapCall log ));
 
-        # soapEndpoint
+    # soapEndpoint
     }
     elsif ( $urldir eq $self->PC_LA_URLSE ) {
 
         $self->{error} =
-          $self->_subProcess(qw( libertySoapEndpoint log autoRedirect ));
+          $self->_subProcess(qw( libertySoapEndpoint log ));
 
-        # Direct access or simple access -> main
-        # WARNING : we permit authentication on service.
+    # Direct access or simple access -> main
+    # WARNING : we permit authentication on service.
     }
     elsif ( not $self->param('user') and not $self->param('password') and not $self->param('logout')) {
 
@@ -283,7 +289,7 @@ sub process {
               autoRedirect )
         );
 
-        # Not in liberty authentication process.
+    # Not in liberty authentication process.
     }
     else {
         $self->{isLibertyProcess} = 0;
@@ -346,53 +352,14 @@ sub store {
     my $self = shift;
 
     my $err = $self->SUPER::store();
-    return $err if ( $err != PE_OK or not $self->{isLibertyProcess} );
 
-    return PE_APACHESESSIONERROR
-      unless ( defined $self->{laStorageOptions}->{Directory}
-        and defined $self->{id} );
+    return $err
+      if ( $err != PE_OK or not $self->{isLibertyProcess} );
 
-    my $dir = $self->{laStorageOptions}->{Directory};
-    $dir =~ s/(.*)\/?$/$1/;
+    return PE_LA_SESSIONERROR
+      unless defined $self->{userNameIdentifier} ;
 
-    # We have to store association.
-    # Create a file named by userNameIdentifier from IDP, single, which
-    # contains session ID from Apache.
-
-    if ( defined $self->{userNameIdentifier} ) {
-
-        #my %h;
-        #eval {
-        #	tie %h, $self->{laStorage},
-        #		substr($self->{userNameIdentifier},1),
-        #		$self->{laStorageOptions};
-        #};
-        #if ( $@ ) {
-        #	$self->_debug("$@\n");
-        #	return PE_APACHESESSIONERROR;
-        #}
-        #$h{id} = $self->{id} ;
-        #$h{_utime} = time();
-        #untie %h;
-
-        my $file = $dir . '/' . $self->{userNameIdentifier};
-        $self->_debug("$file already exists : override association")
-          if ( -e $file );
-        open( MYFILE, '> ' . $file );
-        print MYFILE $self->{id};
-        close MYFILE;
-
-        # In other case, we considere that store action failed.
-        # So, we have to delete Apache session file.
-
-    }
-    else {
-        my $file = $dir . '/' . $self->{id};
-        unlink $file;
-        return PE_APACHESESSIONERROR;
-    }
-
-    return PE_OK;
+    return $self->_assertionSessionStore($self->{userNameIdentifier}) ;
 }
 
 #===============================================================================
@@ -595,10 +562,7 @@ sub libertyDeletingExistingSession {
           . '($localStorageOptions);';
         if ( defined $refLocalStorage ) {
             $refLocalStorage->remove( ${ $self->{datas} }{_session_id} );
-
-            #$refLocalStorage->remove(substr($self->{userNameIdentifier},1)) ;
             $refLocalStorage->purge();
-            $self->_debug("Deleting apache session succeed");
         }
         else {
             $self->_debug("Deleting apache session failed");
@@ -608,19 +572,11 @@ sub libertyDeletingExistingSession {
     # Deleting association file, which is created when asserting consumer,
     # in store function.
 
-    if (    $self->{sessionInfo}->{'laNameIdentifier'}
-        and $self->{globalStorageOptions}->{Directory} )
+    if ( $self->{sessionInfo}->{'laNameIdentifier'} )
     {
-        my $dir = $self->{globalStorageOptions}->{Directory};
-        $dir =~ s/(.*)\/?$/$1/;
-        my $file = $dir . '/' . $self->{sessionInfo}->{'laNameIdentifier'};
-
-        if ( not unlink $file ) {
-            $self->_debug("Deleting liberty-apache association file failed");
-        }
-        else {
-            $self->_debug("Deleting liberty-apache association file succeed");
-        }
+        return $self->_assertionSessionDelete(
+                $self->{sessionInfo}->{'laNameIdentifier'}
+            ) ;
     }
 
     return PE_OK;
@@ -662,7 +618,7 @@ sub libertyExtractFormInfo {
 sub libertyFederationTermination {
     my $self = shift;
 
-    $self->_debug("Processing federation termination...");
+    # $self->_debug("Processing federation termination...");
 
     my $query = $ENV{'QUERY_STRING'};
     return PE_LA_QUERYEMPTY
@@ -677,7 +633,7 @@ sub libertyFederationTermination {
             and defined( $self->{lassoDefederation} )
             and $self->{lassoDefederation}->processNotificationMsg($query) );
 
-        $self->_debug("lassoDefederation->processNotificationMsg... OK");
+        # $self->_debug("lassoDefederation->processNotificationMsg... OK");
 
         # TODO :
         #   $self->fedTerm();
@@ -700,7 +656,7 @@ sub libertyFederationTermination {
 sub libertyFederationTerminationReturn {
     my $self = @_;
 
-    $self->_debug("The Return of the federation termination...");
+    # $self->_debug("The Return of the federation termination...");
     $self->{urldc} = $self->{portal};
     return PE_OK;
 }
@@ -716,71 +672,74 @@ sub libertyFederationTerminationReturn {
 sub libertyRetrieveExistingSession {
     my $self = shift;
 
-    # To retrieve current Liberty session, there are two ways :
-    #   - 1/ We have Lemonldap::NG cookie. Then we have lassoLoginDump ;
-    #   - 2/ We have a query string that contains the userNameIdentifier.
+    # To retrieve current Liberty session, there is one way :
+    #   - We have a query string that contains the userNameIdentifier.
     #     Then, we could retrieve apache session from cache files.
 
     return PE_LA_SESSIONERROR
       unless ( defined $self->{laStorageOptions}->{Directory} );
 
-    # TODO :
-    #   Retrieve NameIdentifier by catching and parsing $ENV{'QUERY_STRING'}
+    return PE_OK
+      unless ( defined $self->param('NameIdentifier') ) ;
 
-    # 2/
+    # Retrieve the Apache session ID.
+    # It should not return any errors when trying to retrieve assertions.
 
-    if ( $self->param('NameIdentifier') ) {
+    my $err = $self->_assertionSessionRetrieve($self->param('NameIdentifier')) ;
 
-        # Retrieve apache session id from userNameIdentifier.
-        # $id contains apache session id.
+    # return PE_LA_SESSIONERROR
+    #   unless $err == 0 ;
 
-        my $dir = $self->{laStorageOptions}->{Directory};
-        $dir =~ s/(.*)\/?$/$1/;
-        my $file = $dir . '/' . $self->param('NameIdentifier');
+    # We can not rebuild factice cookie for Lemonldap::NG retrieving itself the
+    # session. So, we retrieve here directly the session. This is the
+    # Lemonldap::NG::Simple code of controlExistingSession function.
 
-        return PE_LA_SESSIONERROR
-          unless ( open( MYFILE, $file ) );
+    my %h;
+    eval {
+        tie %h,
+            $self->{globalStorage},
+            $self->{id},
+            $self->{globalStorageOptions} ;
+    };
 
-        my $id = readline(*MYFILE);
-        chomp($id);
-        close(MYFILE);
+    if ( $@ or not tied(%h) ) {
+        print STDERR
+          "Session " . $self->{id} . " isn't yet available ($ENV{REMOTE_ADDR})\n";
+        return PE_OK ;
+    }
 
-        # We can not rebuild factice cookie for Lemonldap::NG retrieving
-        # itself the session. So, we retrieve here directly the session.
-        # Lemonldap::NG::Simple code of controlExistingSession function.
+    %{ $self->{datas} } = %h ;
+    untie(%h);
 
-        # Trying to recover session from global session storage
-        my %h;
-        eval {
-            tie %h, $self->{globalStorage}, $id, $self->{globalStorageOptions};
-        };
-        if ( $@ or not tied(%h) ) {
+    my $r ;
+    if ( $self->{existingSession} ) {
+        $r = &{ $self->{existingSession} }(
+                $self,
+                $self->{id},
+                $self->{datas}
+            );
+    }
+    else {
+        $r = $self->existingSession(
+                $self->{id},
+                $self->{datas}
+            );
+    }
 
-            # Session not available (expired ?)
-            print STDERR
-              "Session $id isn't yet available ($ENV{REMOTE_ADDR})\n";
-            return PE_OK;
-        }
-        $self->{id} = $id;
+    if ($r == PE_OK)
+    {
+        print STDERR "No existing liberty session found\n" ;
+        return PE_OK ;
+    }
 
-        # A session has been find => calling &existingSession
-        my $r;
-        %{ $self->{datas} } = %h;
-        untie(%h);
-        if ( $self->{existingSession} ) {
-            $r = &{ $self->{existingSession} }( $self, $id, $self->{datas} );
-        }
-        else {
-            $r = $self->existingSession( $id, $self->{datas} );
-        }
+    while ( my ( $k, $v ) = each( %{ $self->{datas} } ) )
+    {
+        $self->{sessionInfo}->{$k} = $v ;
+    }
 
-        # Save datas in sessionInfo.
-        while ( my ( $k, $v ) = each( %{ $self->{datas} } ) ) {
-            $self->{sessionInfo}->{$k} = $v;
-        }
-
-        $self->_debug("No existing liberty session found")
-          unless ( $r == PE_OK );
+    if (defined $self->{sessionInfo}->{$self->{laLdapLoginAttribute}})
+    {
+        $self->{user} = $self->{sessionInfo}->{$self->{laLdapLoginAttribute}} ;
     }
 
     return PE_OK;
@@ -810,7 +769,6 @@ sub libertySetSessionInfo {
     return PE_LA_FAILED
       unless (
         defined $lassoLogin->{session}
-
         # and defined $lassoLogin->{identity}
         and $lassoLogin->{nameIdentifier}->{content}
       );
@@ -829,15 +787,18 @@ sub libertySetSessionInfo {
     # The Lemonldap::NG search consists to perform a search with a filter
     # using nameIdentifier, instead of username.
 
-    $self->{userNameIdentifier} = $lassoLogin->{nameIdentifier}->{content};
-    $self->{user}               = $self->{userNameIdentifier};
-    $self->{password}           = 'none';
+    $self->{userNameIdentifier} = $lassoLogin->{nameIdentifier}->{content} ;
+    $self->{password}           = 'none' ;
 
     # Try to retrieve uid in SAML response form assertion statement.
     # For the moment, uid have to be unique in LDAP directory.
+
     my @uidValues =
-      $self->_getAttributeValuesOfSamlAssertion( $lassoLogin->{response},
-        $self->{laLdapLoginAttribute} );
+      $self->_getAttributeValuesOfSamlAssertion(
+        $lassoLogin->{response},
+        $self->{laLdapLoginAttribute}
+      ) ;
+
     $self->{user} = $uidValues[0]
       if (@uidValues);
 
@@ -909,10 +870,14 @@ sub libertySignOn {
 # 	* IDP requiere singleLogout -> IDP request with $ENV{'QUERY_STRING'}
 # 	  specified.
 #
+# This function one optional parameter that specifies if the portal is called
+# through a SOAP call.
+#
 #===============================================================================
 
 sub libertySingleLogout {
-    my $self = shift;
+    my $self = shift ;
+    my $soap = shift ;
 
     my $lassoLogout = lasso::Logout->new( $self->{laServer} );
     return PE_LA_FAILED
@@ -920,7 +885,7 @@ sub libertySingleLogout {
         and defined($lassoLogout)
         and defined $ENV{'QUERY_STRING'} );
 
-    if ( lasso::isLibertyQuery( $ENV{'QUERY_STRING'} ) ) {
+    if ( lasso::isLibertyQuery($ENV{'QUERY_STRING'}) ) {
 
         # We retrieve query string and verify it.
         # If it is OK, we set lemonldap::ng logout parameter, so we can perform
@@ -955,10 +920,11 @@ sub libertySingleLogout {
             return PE_LA_SLOFAILED;
         }
 
-        # Confirm logout by soap request
-        if ( defined $lassoLogout->{msgBody} ) {
+        # Confirm logout by soap request, only if portal is not already called
+        # itself by a SOAP request.
+        if ( defined $lassoLogout->{msgBody} && !$soap ) {
             my $soapResponseMsg = $self->_soapRequest( $lassoLogout->{msgUrl},
-                $lassoLogout->{msgBody} );
+                $lassoLogout->{msgBody} ) ;
         }
     }
 
@@ -991,37 +957,46 @@ sub libertySingleLogout {
 sub libertySingleLogoutReturn {
     my $self = shift;
 
-    $self->{lassoLogout} = lasso::Logout->new( $self->{laServer} );
+    # Original code from Unwind :
+    #
+    # 8<--------
+    #    logout = lasso.Logout(misc.get_lasso_server())
+    #    try:
+    #        logout.processResponseMsg(get_request().get_query())
+    #    except lasso.Error, error:
+    #        if error[0] == lasso.PROFILE_ERROR_INVALID_QUERY:
+    #            raise AccessError()
+    #        if error[0] == lasso.DS_ERROR_INVALID_SIGNATURE:
+    #            return error_page(_('Failed to check single logout request signature.'))
+    #        if hasattr(lasso, 'LOGOUT_ERROR_REQUEST_DENIED') and \
+    #                error[0] == lasso.LOGOUT_ERROR_REQUEST_DENIED:
+    #            # ignore silently
+    #            return redirect(get_request().environ['SCRIPT_NAME'] + '/')
+    #        elif error[0] == lasso.ERROR_UNDEFINED:
+    #            # XXX: unknown status; ignoring for now.
+    #            return redirect(get_request().environ['SCRIPT_NAME'] + '/')
+    #        raise
+    #    return redirect(get_request().environ['SCRIPT_NAME'] + '/')
+    # 8<--------
+    #
+    # Normaly, if we are here, assertion and session should have been removed
+    # in a previous request.
+
+    $self->{lassoLogout} = lasso::Logout->new($self->{laServer}) ;
+
     return PE_LA_SLOFAILED
-      unless ( $self->{lassoLogout} and defined( $self->{lassoLogout} ) );
+      unless $self->{lassoLogout} and defined($self->{lassoLogout}) ;
 
-    $self->_debug("Processing single logout return...");
-
-    # Test if Lemonldap::NG cookie is available
-    my %cookies = fetch CGI::Cookie;
-    if ( $cookies{ $self->{cookieName} } and my $id = $cookies{ $self->{cookieName} }->value ) {
-        $self->{session_nb} = $cookies{ $self->{cookieName} };
-        $self->_debug("Cookie: $self->{cookieName} found...");
-        $self->_debug("session number: $self->{session_nb}");
-        my $query = $ENV{'QUERY_STRING'};
-        return PE_LA_QUERYEMPTY unless $query;
-
-        $self->_debug("Processing response message...");
-        return PE_LA_SLOFAILED
-          unless ( $self->{lassoLogout}->processResponseMsg($query) );
-
-        $self->_debug("lassoLogout->processResponseMsg... OK");
-        $self->delLibertySession();
-        $self->_debug("delete liberty session... OK");
-        my $formRelayState = $self->param('RelayState');
-        return PE_LA_SLOFAILED
-          unless ( $formRelayState and defined($formRelayState) );
-
-        $self->_debug("formRelayState: $formRelayState");
-        $self->{urldc} = $formRelayState . '/logout';
-        return PE_OK;
+    if (my $error = $self->{lassoLogout}->processResponseMsg($ENV{'QUERY_STRING'}))
+    {
+        $self->_debug( "Process response message error = $error" ) ;
+        return PE_LA_SLOFAILED ;
     }
-    return PE_LA_SLOFAILED;
+
+    # Test if Lemonldap::NG cookie is available. If it is the case, the
+    # corresponding session should be previously deleted.
+
+    return PE_OK ;
 }
 
 #===============================================================================
@@ -1045,8 +1020,8 @@ sub libertySoapCall {
     return PE_LA_SOAPFAILED
       unless ( $contentType and $soapMsg and $contentType eq 'text/xml' );
 
-    $self->_debug("contentType: $contentType");
-    $self->_debug("soapMsg: $soapMsg");
+    #$self->_debug("contentType: $contentType");
+    #$self->_debug("soapMsg: $soapMsg");
 
     my $requestType = lasso::getRequestTypeFromSoapMsg($soapMsg);
 
@@ -1073,7 +1048,7 @@ sub libertySoapCall {
 sub libertySoapEndpoint {
     my $self = shift;
 
-    $self->_debug("SoapEndpoint processing...");
+    # $self->_debug("SoapEndpoint processing...");
 
     my $soapRequest = $self->param('POSTDATA');
     return PE_LA_SEPFAILED
@@ -1081,12 +1056,12 @@ sub libertySoapEndpoint {
 
     my $soapRequestType = lasso::getRequestTypeFromSoapMsg($soapRequest);
 
-    $self->_debug("RequestType = $soapRequestType");
+    # $self->_debug("RequestType = $soapRequestType");
 
     # Logout SOAP request
     if ( $soapRequestType == $lasso::REQUEST_TYPE_LOGOUT ) {
         $ENV{'QUERY_STRING'} = $soapRequest;
-        return $self->libertySingleLogout();
+        return $self->libertySingleLogout(1) ;
 
         # Defederation SOAP request
     }
@@ -1111,6 +1086,126 @@ sub libertySoapEndpoint {
 ################################################################################
 
 #===============================================================================
+# _assertionSessionDelete
+#===============================================================================
+#
+# Delete liberty assertion session.
+# This function takes one parameter : the assertion identifier.
+#
+#===============================================================================
+
+sub _assertionSessionDelete {
+    my $self = shift ;
+    my $assertionId = shift ;
+
+    return PE_LA_SESSIONERROR
+      unless (
+        defined $self->{laStorage}
+        and defined $self->{laStorageOptions} ) ;
+
+    my $session = new CGI::Session(
+            "driver:" . $self->{laStorage} . ";id:STATIC" ,
+            $assertionId ,
+            $self->{laStorageOptions}
+        ) ;
+
+    if ( defined $session )
+    {
+        $session->delete() ;
+        $session->flush() ;
+    }
+    else
+    {
+        $self->_debug("Unable to delete assertion file\n") ;
+        return PE_LA_SESSIONERROR ;
+    }
+
+    return PE_OK ;
+}
+
+#===============================================================================
+# _assertionSessionRetrieve
+#===============================================================================
+#
+# Get the Apache Session Identifier from the liberty assertion session. The
+# result will be stored into the $self->{id} parameter, when PE_OK returned.
+# This function takes one parameter : the assertion identifier.
+#
+#===============================================================================
+
+sub _assertionSessionRetrieve {
+    my $self = shift ;
+    my $assertionId = shift ;
+
+    return PE_LA_SESSIONERROR
+      unless (
+        defined $self->{laStorage}
+        and defined $self->{laStorageOptions} ) ;
+
+    my $session = new CGI::Session(
+            "driver:" . $self->{laStorage} . ";id:STATIC" ,
+            $assertionId ,
+            $self->{laStorageOptions}
+        ) ;
+
+    if ( defined $session and defined $session->param('id') )
+    {
+        $self->{id} = $session->param('id') ;
+    }
+    else
+    {
+        $self->_debug("Unable to retrieve assertion file\n") ;
+        return PE_LA_SESSIONERROR ;
+    }
+
+    return PE_OK ;
+}
+
+#===============================================================================
+# _assertionSessionStore
+#===============================================================================
+#
+# Store liberty assertion session.
+# This function takes one parameter : the assertion identifier.
+#
+# We have to store association between Apache Session Identifier and Liberty
+# Session Identifier. There is several solutions. A simple way will be to create
+# a file named by userNameIdentifier from IDP, which contains session ID from
+# Apache. The advanced one, which is used, is to manage simple CGI::Session to
+# store the association.
+#
+#===============================================================================
+
+sub _assertionSessionStore {
+    my $self = shift ;
+    my $assertionId = shift ;
+
+    return PE_LA_SESSIONERROR
+      unless (
+        defined $self->{laStorage}
+        and defined $self->{laStorageOptions} ) ;
+
+    my $session = new CGI::Session(
+            "driver:" . $self->{laStorage} . ";id:STATIC" ,
+            $assertionId ,
+            $self->{laStorageOptions}
+        ) ;
+
+    if ( defined $session and defined $self->{id} )
+    {
+        $session->param('id', $self->{id}) ;
+        $session->flush() ;
+    }
+    else
+    {
+        $self->_debug("Unable to store assertion file\n") ;
+        return PE_LA_SESSIONERROR ;
+    }
+
+    return PE_OK ;
+}
+
+#===============================================================================
 # _getAttributeValuesOfSamlAssertion
 #===============================================================================
 #
@@ -1121,65 +1216,80 @@ sub libertySoapEndpoint {
 #===============================================================================
 
 sub _getAttributeValuesOfSamlAssertion {
-    my $self          = shift;
-    my $samlp         = shift;
-    my $attributeName = shift;
-    my @tab           = ();
+    my $self          = shift ;
+    my $samlp         = shift ;
+    my $attributeName = shift ;
+    my @tab = () ;
 
-    # Search the specific attribute.
+    # This function is in version alpha. The structure of the SAML assertion
+    # depends of the source application. So, we decide to catch possible
+    # exception due to parsing errors. So, if an error occurs, we just return
+    # an empty table. BUT, the error has been logged.
 
-    my $attribute = undef;
-
-    for (
-        my $i = 0 ;
-        not defined $attribute
-        and $i < lasso::NodeList::length( $samlp->{assertion} ) ;
-        $i++
-      )
+    eval
     {
-        my $assertion = lasso::NodeList::getItem( $samlp->{assertion}, $i );
-        my $attributeStatement = $assertion->{attributeStatement};
+        # Search the specific attribute.
+
+        my $attribute = undef ;
 
         for (
-            my $j = 0 ;
+            my $i = 0 ;
             not defined $attribute
-            and $j <
-            lasso::NodeList::length( $attributeStatement->{attribute} ) ;
-            $j++
+            and $i < lasso::NodeList::length( $samlp->{assertion} ) ;
+            $i++
           )
         {
-            my $attr =
-              lasso::NodeList::getItem( $attributeStatement->{attribute}, $j );
+            my $assertion = lasso::NodeList::getItem( $samlp->{assertion}, $i );
+            my $attributeStatement = $assertion->{attributeStatement};
 
-            if ( $attr->{attributeName} eq $attributeName ) {
-                $attribute = $attr;
+            for (
+                my $j = 0 ;
+                not defined $attribute
+                and $j <
+                lasso::NodeList::length( $attributeStatement->{attribute} ) ;
+                $j++
+              )
+            {
+                my $attr =
+                  lasso::NodeList::getItem( $attributeStatement->{attribute}, $j );
+
+                if ( $attr->{attributeName} eq $attributeName ) {
+                    $attribute = $attr;
+                }
             }
         }
-    }
 
-    return @tab
-      unless ( defined $attribute );
+        # Then get values for this attribute.
+        # Values are only lasso::MiscTextNode type.
 
-    # Then get values
-    # Values are only lasso::MiscTextNode type.
+        if (defined $attribute)
+        {
+            for (
+                my $k = 0 ;
+                $k < lasso::NodeList::length( $attribute->{attributeValue} ) ;
+                $k++
+              )
+            {
+                my $attributeValue =
+                  lasso::NodeList::getItem( $attribute->{attributeValue}, $k );
+                my $valueList = $attributeValue->{any};
 
-    for (
-        my $k = 0 ;
-        $k < lasso::NodeList::length( $attribute->{attributeValue} ) ;
-        $k++
-      )
-    {
-        my $attributeValue =
-          lasso::NodeList::getItem( $attribute->{attributeValue}, $k );
-        my $valueList = $attributeValue->{any};
-        for ( my $l = 0 ; $l < lasso::NodeList::length($valueList) ; $l++ ) {
-            my $value = lasso::NodeList::getItem( $valueList, $l );
-            push @tab, $value->{content}
-              if ( isa( $value, "lasso::MiscTextNode" ) );
+                for ( my $l = 0 ; $l < lasso::NodeList::length($valueList) ; $l++ )
+                {
+                    my $value = lasso::NodeList::getItem( $valueList, $l );
+                    push @tab, $value->{content}
+                      if ( isa( $value, "lasso::MiscTextNode" ) );
+                }
+            }
         }
+
+    } ; # end eval
+
+    if ($@) {
+        $self->_debug("SAML parsing errors : could not retrieve values for $attributeName attribute") ;
     }
 
-    return @tab;
+    return @tab ;
 }
 
 #===============================================================================
@@ -1360,8 +1470,8 @@ http://wiki.lemonldap.objectweb.org/xwiki/bin/view/NG/Presentation
 =head1 AUTHOR
 
 Clement Oudot, E<lt>coudot@linagora.comE<gt>
-Mikaël Ates, E<lt>mikael.ates@univ-st-etienne.frE<gt>
-Thomas Chemineau, E<lt>tchemineau@linagora.comE<gt>
+Mikael Ates, E<lt>mikael.ates@univ-st-etienne.frE<gt>
+Thomas Chemineau, E<lt>thomas.chemineau@gmail.comE<gt>
 
 =head1 BUG REPORT
 

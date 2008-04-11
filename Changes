@@ -1,6 +1,11 @@
 Revision history for Perl extension Lemonldap::NG::Portal.
 
-0.81 Wed Feb 8 17:44:46 2008
+0.82  Mon Apr 7 15:01:02 2008
+	- 2 Net::LDAP password policy controls in the portal:
+	  * account locked
+	  * password expired
+
+0.81  Wed Feb 8 17:44:46 2008
 	- Ldap groups can now be available in $groups
 	- Bug in AuthSSL
 

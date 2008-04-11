@@ -13,7 +13,7 @@ use CGI::Cookie;
 require POSIX;
 use Lemonldap::NG::Portal::_i18n;
 
-our $VERSION = '0.77';
+our $VERSION = '0.78';
 
 our @ISA = qw(CGI Exporter);
 
@@ -30,16 +30,20 @@ sub PE_LDAPERROR           { 7 }
 sub PE_APACHESESSIONERROR  { 8 }
 sub PE_FIRSTACCESS         { 9 }
 sub PE_BADCERTIFICATE      { 10 }
+sub PE_PP_ACCOUNT_LOCKED   { 21 }
+sub PE_PP_PASSWORD_EXPIRED { 22 }
 
 # EXPORTER PARAMETERS
 our %EXPORT_TAGS = (
     'all' => [
         qw( PE_DONE PE_OK PE_SESSIONEXPIRED PE_FORMEMPTY PE_WRONGMANAGERACCOUNT PE_USERNOTFOUND PE_BADCREDENTIALS
-          PE_LDAPCONNECTFAILED PE_LDAPERROR PE_APACHESESSIONERROR PE_FIRSTACCESS PE_BADCERTIFICATE import )
+          PE_LDAPCONNECTFAILED PE_LDAPERROR PE_APACHESESSIONERROR PE_FIRSTACCESS PE_BADCERTIFICATE  PE_PP_ACCOUNT_LOCKED
+	  PE_PP_PASSWORD_EXPIRED import )
     ],
     'constants' => [
         qw( PE_DONE PE_OK PE_SESSIONEXPIRED PE_FORMEMPTY PE_WRONGMANAGERACCOUNT PE_USERNOTFOUND PE_BADCREDENTIALS
-          PE_LDAPCONNECTFAILED PE_LDAPERROR PE_APACHESESSIONERROR PE_FIRSTACCESS PE_BADCERTIFICATE )
+          PE_LDAPCONNECTFAILED PE_LDAPERROR PE_APACHESESSIONERROR PE_FIRSTACCESS PE_BADCERTIFICATE PE_PP_ACCOUNT_LOCKED
+	  PE_PP_PASSWORD_EXPIRED )
     ],
 );
 
@@ -47,7 +51,8 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
 our @EXPORT =
   qw( PE_DONE PE_OK PE_SESSIONEXPIRED PE_FORMEMPTY PE_WRONGMANAGERACCOUNT PE_USERNOTFOUND PE_BADCREDENTIALS
-  PE_LDAPCONNECTFAILED PE_LDAPERROR PE_APACHESESSIONERROR PE_FIRSTACCESS PE_BADCERTIFICATE import );
+  PE_LDAPCONNECTFAILED PE_LDAPERROR PE_APACHESESSIONERROR PE_FIRSTACCESS PE_BADCERTIFICATE PE_PP_ACCOUNT_LOCKED
+  PE_PP_PASSWORD_EXPIRED import );
 
 # CONSTRUCTOR
 sub new {
@@ -60,10 +65,11 @@ sub new {
     die( "Module " . $self->{globalStorage} . " not found in \@INC" ) if ($@);
     die("You've to indicate a domain for cookies") unless ( $self->{domain} );
     $self->{domain} =~ s/^([^\.])/.$1/;
-    $self->{ldapServer}    ||= 'localhost';
-    $self->{ldapPort}      ||= 389;
-    $self->{securedCookie} ||= 0;
-    $self->{cookieName}    ||= "lemonldap";
+    $self->{ldapServer}         ||= 'localhost';
+    $self->{ldapPort}           ||= 389;
+    $self->{securedCookie}      ||= 0;
+    $self->{cookieName}         ||= "lemonldap";
+    $self->{ldapPpolicyControl} ||= 0;
 
     if ( $self->{authentication} and $self->{authentication} ne "ldap" ) {
         # $Lemonldap::NG::Portal::AuthSSL::OVERRIDE does not overload $self
@@ -390,8 +396,43 @@ sub authenticate {
     $self->unbind();
     my $err;
     return $err unless ( ( $err = $self->connectLDAP ) == PE_OK );
-    return PE_BADCREDENTIALS
-      unless ( &_bind( $self->{ldap}, $self->{dn}, $self->{password} ) );
+
+    # Check if we use Ppolicy control
+    if ( $self->{ldapPpolicyControl} ) {
+        # require Perl module
+        eval 'require Net::LDAP::Control::PasswordPolicy';
+        die( 'Module Net::LDAP::Control::PasswordPolicy not found in @INC' ) if ($@);
+	eval 'use Net::LDAP::Constant qw( LDAP_CONTROL_PASSWORDPOLICY LDAP_PP_ACCOUNT_LOCKED LDAP_PP_PASSWORD_EXPIRED );';
+	no strict 'subs';
+
+        # Create Control object
+        my $pp = Net::LDAP::Control::PasswordPolicy->new;
+
+	# Bind with user credentials
+	my $mesg = $self->{ldap}->bind( $self->{dn}, password => $self->{password}, control => [ $pp ] );
+
+	# Get bind response
+	return PE_OK if ( $mesg->code == 0 );
+	
+        # Get server control response
+        my ( $resp ) = $mesg->control( LDAP_CONTROL_PASSWORDPOLICY );
+
+	if ( defined $resp ) {
+            my $pp_error = $resp->error;
+                if ( $pp_error ) {
+	            return PE_PP_ACCOUNT_LOCKED  if ( $pp_error == LDAP_PP_ACCOUNT_LOCKED   );
+	            return PE_PP_PASSWORD_EXPIRED if ( $pp_error == LDAP_PP_PASSWORD_EXPIRED );
+                }
+                else {
+                    return PE_BADCREDENTIALS;
+                }
+	}
+        else {
+            return PE_LDAPERROR;
+        } 
+    }
+    else { return PE_BADCREDENTIALS
+      unless ( &_bind( $self->{ldap}, $self->{dn}, $self->{password} ) ); }
     PE_OK;
 }
 

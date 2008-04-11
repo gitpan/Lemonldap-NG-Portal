@@ -2,7 +2,7 @@ package Lemonldap::NG::Portal::_i18n;
 
 use AutoLoader qw(AUTOLOAD);
 use UNIVERSAL qw(can);
-our $VERSION = '0.01';
+our $VERSION = '0.1';
 
 sub error {
     my($error,$lang) = @_;
@@ -44,7 +44,8 @@ __END__
 # * PE_LA_SSOINITFAILED    18
 # * PE_LA_SESSIONERROR     19
 # * PE_LA_SEPFAILED        20
-
+# * PE_PP_ACCOUNT_LOCKED   21
+# * PE_PP_PASSWORD_EXPIRED 22
 
 # Not used in errors:
 # * PE_DONE                -1
@@ -53,53 +54,57 @@ __END__
 =cut
 sub error_fr {
     [
-        'Utilisateur authentifié',
-        'Votre session a expiré, vous devez vous réauthentifier',
-        'login ou mot de passe non renseigné',
+        "Utilisateur authentifié",
+        "Votre session a expiré, vous devez vous réauthentifier",
+        "Identifiant ou mot de passe non renseigné",
         "Compte ou mot de passe LDAP de l'application incorrect",
-        'Utilisateur inexistant',
-        'mot de passe ou login incorrect',
-        'Connexion impossible au serveur LDAP',
-        'Erreur anormale du serveur LDAP',
-        'Erreur du module Apache::Session choisi',
-        'Authentification exigée',
-        'Certificat invalide',
-        "Echec de l'initialisation de Lasso:Login ou Lasso:Logout failed",
-        "Echec de la résolution de l'artefact Liberty-Alliance",
-        "Echec de la défédération Liberty-Alliance",
-        "La requête renvoyée par le fournisseur d'identité Liberty-Alliance est vide",
-        "Un des appels SOAP Liberty-Alliance a échoué",
-        "Un des appels de déconnexion Liberty-Alliance a échoué",
+        "Utilisateur inexistant",
+        "Mot de passe ou identifiant incorrect",
+        "Connexion impossible au serveur LDAP",
+        "Erreur anormale du serveur LDAP",
+        "Erreur du module Apache::Session choisi",
+        "Authentification exigée",
+        "Certificat invalide",
+        "Échec de l'initialisation de Lasso:Login ou Lasso:Logout",
+        "Échec de la résolution de l'artefact Liberty Alliance",
+        "Échec de la défédération Liberty Alliance",
+        "La requête renvoyée par le fournisseur d'identité Liberty Alliance est vide",
+        "Un des appels SOAP Liberty Alliance a échoué",
+        "Un des appels de déconnexion Liberty Alliance a échoué",
         "Aucun artefact SAML trouvé, ou échec de l'auto-acceptation SSO",
         "Initialisation, construction ou requête SSO en échec",
-        "Impossible d'enregistrer l'identifiant de connexion Liberty-Alliance",
-        "Un processus terminal Liberty-Alliance a échoué",
+        "Impossible d'enregistrer l'identifiant de connexion Liberty Alliance",
+        "Un processus terminal Liberty Alliance a échoué",
+        "Votre compte est bloqué",
+        "Votre mot de passe a expiré",
     ];
 }
 
 sub error_en {
     [
-        'Everything is OK',
-        'Your connection has expired; You must to be authentified once again',
-        'User and password fields must be filled',
-        'Wrong directory manager account or password',
-        'User not found in directory',
-        'Wrong credentials',
-        'Unable to connect to LDAP server',
-        'Abnormal error from LDAP server',
-        'Apache::Session module failed',
-        'Authentication required',
-        'Invalid certificate',
-        'Initialization of Lasso:Login or Lasso:Logout failed',
-        'Liberty-Alliance artefact resolution failed',
-        'Liberty-Alliance defederation failed',
-        'Liberty-Alliance query returned by IDP in assertion is empty',
-        'One of Liberty-Alliance soap calls failed',
-        'One of Liberty-Alliance single logout failed',
-        'No SAML artefact found, or auto-accepting SSO failed',
-        'Initializing, building or requesting SSO failed',
-        'Unable to store Liberty-Alliance session id',
-        'A Liberty-Alliance Soap End Point process failed',
+        "Everything is OK",
+        "Your connection has expired; You must to be authentified once again",
+        "User and password fields must be filled",
+        "Wrong directory manager account or password",
+        "User not found in directory",
+        "Wrong credentials",
+        "Unable to connect to LDAP server",
+        "Abnormal error from LDAP server",
+        "Apache::Session module failed",
+        "Authentication required",
+        "Invalid certificate",
+        "Initialization of Lasso:Login or Lasso:Logout failed",
+        "Liberty-Alliance artefact resolution failed",
+        "Liberty-Alliance defederation failed",
+        "Liberty-Alliance query returned by IDP in assertion is empty",
+        "One of Liberty-Alliance soap calls failed",
+        "One of Liberty-Alliance single logout failed",
+        "No SAML artefact found, or auto-accepting SSO failed",
+        "Initializing, building or requesting SSO failed",
+        "Unable to store Liberty-Alliance session id",
+        "A Liberty-Alliance Soap End Point process failed",
+        "Your account is locked",
+        "Your password has expired",
     ];
 }
 

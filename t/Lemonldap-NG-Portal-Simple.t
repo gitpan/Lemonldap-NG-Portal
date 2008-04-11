@@ -5,8 +5,17 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 5;
+use Test::More tests => 6;
+
 BEGIN { use_ok( 'Lemonldap::NG::Portal::Simple', ':all' ) }
+
+SKIP: {
+    eval { require Net::LDAP::Control::PasswordPolicy };
+    skip "Net::LDAP Password Policy Control is not installed (perl-ldap >= 0.35), so Password Policy will not be usable",
+    1
+    if ($@);
+    use_ok('Net::LDAP::Control::PasswordPolicy')
+}
 
 #########################
 

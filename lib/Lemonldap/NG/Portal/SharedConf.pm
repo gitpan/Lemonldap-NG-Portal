@@ -32,24 +32,61 @@ sub getConf {
         %args = @_;
     }
     %$self = ( %$self, %args );
-    $self->{lmConf} =
-      Lemonldap::NG::Manager::Conf->new( $self->{configStorage} )
-      unless $self->{lmConf};
-    return 0 unless ( ref( $self->{lmConf} ) );
-    my $tmp = $self->{lmConf}->getConf;
-    return 0 unless $tmp;
+
+    # For better performance the Portal can use the configuration stored in
+    # the local file system by the handlers. This can be used when
+    # configuration is not local (type DBI or SOAP)
+    my $tmp = 0;
+    if ( $self->{useLocalCachedConf} and $self->{localStorage} ) {
+        $tmp = $self->localGetConf();
+    }
+    unless ($tmp) {
+        $self->{lmConf} =
+          Lemonldap::NG::Manager::Conf->new( $self->{configStorage} )
+          unless $self->{lmConf};
+        return 0 unless ( ref( $self->{lmConf} ) );
+        $tmp = $self->{lmConf}->getConf;
+        return 0 unless $tmp;
+    }
+
     # Local configuration prepends global
     $self->{$_} = $args{$_} || $tmp->{$_} foreach ( keys %$tmp );
     1;
 }
 
+sub localGetConf {
+    my $self = shift;
+    $self->{_refLocalStorage} ||= $self->localStorageObject;
+    return $self->{_refLocalStorage}->get('conf');
+}
+
+sub localStorageObject {
+    my $self = shift;
+    eval "use " . $self->{localStorage};
+    if ($@) {
+        print STDERR "Unable to load " . $self->{localStorage}
+	  . ", local configuration cache is disabled: $@\n";
+        return 0;
+    }
+    my $refLocalStorage;
+    eval '$refLocalStorage = new '
+      . $self->{localStorage}
+      . '($self->{localStorageOptions});';
+    if ($@) {
+        print STDERR "Unable to access to local configuration storage : $@\n";
+        return 0;
+    }
+    return $refLocalStorage;
+}
+
 # Here is implemented the 'macro' mechanism.
-our $self; # Safe cannot share a variable declared with my
+our $self;    # Safe cannot share a variable declared with my
+
 sub setMacros {
     local $self = shift;
     die __PACKAGE__ . ": Unable to get configuration"
       unless ( $self->getConf(@_) );
-    while ( my($n, $e) = each ( %{ $self->{macros} } ) ) {
+    while ( my ( $n, $e ) = each( %{ $self->{macros} } ) ) {
         $e =~ s/\$(\w+)/\$self->{sessionInfo}->{$1}/g;
         $safe->share( '$self', '&encode_base64' );
         $self->{sessionInfo}->{$n} = $safe->reval($e);
@@ -90,10 +127,10 @@ sub setGroups {
         my $mesg = $self->{ldap}->search(
             base   => $self->{ldapGroupBase},
             filter => "(|(member=" . $self->{dn} . ")(uniqueMember=" . $self->{dn} . "))",
-            attrs  => ["cn"],
+            attrs => ["cn"],
         );
         if ( $mesg->code() == 0 ) {
-            foreach my $entry ($mesg->all_entries) {
+            foreach my $entry ( $mesg->all_entries ) {
                 my @values = $entry->get_value("cn");
                 $groups .= $values[0] . " ";
             }
@@ -112,7 +149,7 @@ sub scanexpr {
     # Perl expressions
     if ( s/^{(.*)}$/$1/ or $_ !~ /^\(.*\)$/ ) {
         s/\$(\w+)/\$self->{sessionInfo}->{$1}/g;
-        $safe->share( '$self', '&encode_base64'  );
+        $safe->share( '$self', '&encode_base64' );
         $result = $safe->reval($_);
         return $result ? "1" : "0";
     }
