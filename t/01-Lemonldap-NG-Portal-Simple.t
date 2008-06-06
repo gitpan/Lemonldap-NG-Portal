@@ -77,7 +77,7 @@ $p->{search}         = sub { PE_OK };
 $p->{setSessionInfo} = sub { PE_OK };
 $p->{unbind}         = sub { PE_OK };
 $p->{store}          = sub { PE_OK };
-ok( $p->process, 'User OK' );
+ok( $p->process == PE_OK , 'User OK' );
 
 # Cookie test
 $p->{id} = 1;
