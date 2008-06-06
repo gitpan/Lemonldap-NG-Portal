@@ -26,7 +26,7 @@
 		<input type="hidden" name="user" value="<TMPL_VAR NAME="AUTH_USER">" />
 		<TMPL_VAR NAME="AUTH_USER">
 		<TMPL_ELSE>
-		<input name="user" size="30" />
+		<input name="user" type="text" size="30" />
 		</TMPL_IF>
 
 		<label class="required">Password</label>

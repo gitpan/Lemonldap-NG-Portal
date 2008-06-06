@@ -17,9 +17,9 @@ my $p;
 ok(
     $p = Lemonldap::NG::Portal::Simple->new(
         {
-		globalStorage => 'Apache::Session::File',
-		domain => 'example.com',
-		authentication => 'Apache',
+            globalStorage  => 'Apache::Session::File',
+            domain         => 'example.com',
+            authentication => 'Apache',
         }
     )
 );

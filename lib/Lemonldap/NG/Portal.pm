@@ -2,7 +2,7 @@ package Lemonldap::NG::Portal;
 
 print STDERR
 "See Lemonldap::NG::Portal(3) to know which Lemonldap::NG::Portal::* module to use.";
-our $VERSION = "0.82";
+our $VERSION = "0.83";
 
 1;
 
@@ -32,7 +32,7 @@ system.
       # Write here the menu with CGI methods. This page is displayed ONLY IF
       # the user was not redirected here by a Lemonldap::NG::Handler,
       # else, the process sub redirect the user to the initial requested URI.
-      print $portal->header; # DON'T FORGET THIS (see L<CGI(3)>)
+      print $portal->header('text/html; charset=utf8'); # DON'T FORGET THIS (see L<CGI(3)>)
       print "...";
   
       # or redirect the user to the menu
@@ -45,7 +45,7 @@ system.
       # Write here the html form used to authenticate with CGI methods.
       # $portal->error returns the error message if authentification failed
       # Warning: by defaut, input names are "user" and "password"
-      print $portal->header; # DON'T FORGET THIS (see L<CGI(3)>)
+      print $portal->header('text/html; charset=utf8'); # DON'T FORGET THIS (see L<CGI(3)>)
       print "<html> ...";
       print '<form method="POST">';
       # In your form, the following value is required for redirection
@@ -274,6 +274,20 @@ servers, session is still in cache for 10 minutes maximum if the user was
 connected on it in the last 10 minutes.
 
 =back
+
+=head2 Existing sessions
+
+By default, when a user tries to connect to the portal with a valid cookie,
+the portal proposes a new authentication. This behaviour can be change easily
+by changing C<existingSession> sub :
+
+  use Lemonldap::NG::Portal::SharedConf qw(:all);
+  
+  my $portal = Lemonldap::NG::Portal::SharedConf->new ( {
+                existingSession => sub {PE_DONE},
+                configStorage => ...
+                ...
+  });
 
 =head1 USING LEMONLDAP::NG::PORTAL FOR DEVELOPMENT
 

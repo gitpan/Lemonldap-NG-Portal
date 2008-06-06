@@ -1,15 +1,21 @@
 package Lemonldap::NG::Portal::_i18n;
 
+# Developpers warning : this file must stay UTF-8 encoded
+
 use AutoLoader qw(AUTOLOAD);
-use UNIVERSAL qw(can);
-our $VERSION = '0.1';
+our $VERSION = '0.2';
 
 sub error {
-    my($error,$lang) = @_;
+    my ( $error, $lang ) = @_;
     $lang = lc($lang);
     $lang =~ s/-/_/g;
+    $error = 0 if ( $error < 0 );
     foreach ( split( /[,;]/, $lang ) ) {
         next if /=/;
+        if ( __PACKAGE__->can("error_$_") ) {
+            return &{"error_$_"}->[$error];
+        }
+        s/^(..).*$/$1/;
         if ( __PACKAGE__->can("error_$_") ) {
             return &{"error_$_"}->[$error];
         }
@@ -17,11 +23,9 @@ sub error {
     return &error_en->[$error];
 }
 
-*error_fr_fr = *error_fr;
-*error_en_us = *error_en;
-
 1;
 __END__
+
 # Order of the constants:
 # * PE_OK                   0
 # * PE_SESSIONEXPIRED       1
@@ -46,43 +50,44 @@ __END__
 # * PE_LA_SEPFAILED        20
 # * PE_PP_ACCOUNT_LOCKED   21
 # * PE_PP_PASSWORD_EXPIRED 22
+# * PE_CERTIFICATEREQUIRED 23
 
 # Not used in errors:
 # * PE_DONE                -1
+# * PE_REDIRECT            -2
 
-=pod
-=cut
 sub error_fr {
     [
-        "Utilisateur authentifi�",
-        "Votre session a expir�, vous devez vous r�authentifier",
-        "Identifiant ou mot de passe non renseign�",
+        "Utilisateur authentifié",
+        "Votre session a expiré, vous devez vous réauthentifier",
+        "Identifiant ou mot de passe non renseigné",
         "Compte ou mot de passe LDAP de l'application incorrect",
         "Utilisateur inexistant",
         "Mot de passe ou identifiant incorrect",
         "Connexion impossible au serveur LDAP",
         "Erreur anormale du serveur LDAP",
         "Erreur du module Apache::Session choisi",
-        "Authentification exig�e",
+        "Authentification exigée",
         "Certificat invalide",
-        "�chec de l'initialisation de Lasso:Login ou Lasso:Logout",
-        "�chec de la r�solution de l'artefact Liberty Alliance",
-        "�chec de la d�f�d�ration Liberty Alliance",
-        "La requ�te renvoy�e par le fournisseur d'identit� Liberty Alliance est vide",
-        "Un des appels SOAP Liberty Alliance a �chou�",
-        "Un des appels de d�connexion Liberty Alliance a �chou�",
-        "Aucun artefact SAML trouv�, ou �chec de l'auto-acceptation SSO",
-        "Initialisation, construction ou requ�te SSO en �chec",
+        "Échec de l'initialisation de Lasso:Login ou Lasso:Logout",
+        "Échec de la résolution de l'artefact Liberty Alliance",
+        "Échec de la défédération Liberty Alliance",
+        "La requête renvoyée par le fournisseur d'identité Liberty Alliance est vide",
+        "Un des appels SOAP Liberty Alliance a échoué",
+        "Un des appels de déconnexion Liberty Alliance a échoué",
+        "Aucun artefact SAML trouvé, ou échec de l'auto-acceptation SSO",
+        "Initialisation, construction ou requête SSO en échec",
         "Impossible d'enregistrer l'identifiant de connexion Liberty Alliance",
-        "Un processus terminal Liberty Alliance a �chou�",
-        "Votre compte est bloqu�",
-        "Votre mot de passe a expir�",
+        "Un processus terminal Liberty Alliance a échoué",
+        "Votre compte est bloqué",
+        "Votre mot de passe a expiré",
+        "Certificat exigé",
     ];
 }
 
 sub error_en {
     [
-        "Everything is OK",
+        "User authenticated",
         "Your connection has expired; You must to be authentified once again",
         "User and password fields must be filled",
         "Wrong directory manager account or password",
@@ -105,6 +110,35 @@ sub error_en {
         "A Liberty-Alliance Soap End Point process failed",
         "Your account is locked",
         "Your password has expired",
+        "Certificate required",
     ];
 }
 
+sub error_ro {
+    [
+        "Utilizator autentificat",
+        "Sesiunea dvs. a expirat, trebuie să vă reautentificaţi",
+        "Identificator sau parolă inexistentă",
+        "Cont sau parolă LDAP a aplicaţiei incorect",
+        "Utilizator inexistent",
+        "Parolă sau identificator incorect",
+        "Conexiune imposibilă la serverul LDAP",
+        "Eroare anormală a serverului LDAP",
+        "Eroare a modulului Apache::Session aleasă",
+        "Autentificare cerută",
+        "Certificat invalid",
+        "Eşec al iniţializării Lasso:Login sau Lasso:Logout",
+        "Eşec al rezoluţiei artefact-ului Liberty Alliance",
+        "Eşec al defederaţiei Liberty Alliance",
+        "Cererea retrimisă de către furnizorul de identitate Liberty Alliance este goală",
+        "Unul dintre apelurile SOAP Liberty Alliance a eşuat",
+        "Unul dintre apelurile de deconectare Liberty Alliance a eşuat",
+        "Nici un artefact SAML găsit, sau eşec al auto-acceptării SSO",
+        "Iniţiere, construcţie sau cerere SSO în eşec",
+        "Imposibil de a înregistra identificatorul de conectare Liberty Alliance",
+        "Un proces terminal Liberty Alliance a eşuat",
+        "Contul dvs. este blocat",
+        "Parola dvs. a expirat",
+        "Certificat cerut",
+    ];
+}

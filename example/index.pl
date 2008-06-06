@@ -12,14 +12,14 @@ my $portal = Lemonldap::NG::Portal::SharedConf->new(
 );
 
 if ( $portal->process() ) {
-    print $portal->header;
+    print $portal->header('text/html; charset=utf8');
     print $portal->start_html;
     print "<h1>Your well authenticated !</h1>";
     print "Click <a href=\"$ENV{SCRIPT_NAME}?logout=1\">here</a> to logout";
     print $portal->end_html;
 }
 else {
-    print $portal->header;
+    print $portal->header('text/html; charset=utf8');
     print $portal->start_html;
     print 'Error: ' . $portal->error . '<br />';
     print '<form method="post" action="'.$ENV{SCRIPTNAME}.'">';

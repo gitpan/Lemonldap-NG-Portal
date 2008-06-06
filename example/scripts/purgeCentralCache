@@ -1,12 +1,11 @@
 #!/usr/bin/perl
 
+use strict;
+
 # Cleaner for Lemonldap::NG : removes old sessions from Apache::Session
 #
 # This module is written to be used by cron to clean old sessions from
 # Apache::Session.
-#
-# WARNING: only Apache::Session::File and Apache::Session::MySQL can be used
-#          here
 
 BEGIN {
 
@@ -30,6 +29,15 @@ BEGIN {
         return @res;
     }
 
+    *Apache::Session::Postgres::get_all_sessions =
+      \&Apache::Session::MySQL::get_all_sessions;
+    *Apache::Session::Oracle::get_all_sessions =
+      \&Apache::Session::MySQL::get_all_sessions;
+    *Apache::Session::Sybase::get_all_sessions =
+      \&Apache::Session::MySQL::get_all_sessions;
+    *Apache::Session::Informix::get_all_sessions =
+      \&Apache::Session::MySQL::get_all_sessions;
+
     sub Apache::Session::File::get_all_sessions {
         my $class = shift;
         my $args  = shift;
@@ -42,6 +50,20 @@ BEGIN {
           readdir(DIR);
         closedir DIR;
         return @t;
+    }
+
+    sub Apache::Session::DB_File::get_all_sessions {
+        my $class = shift;
+        my $args  = shift;
+
+        if ( !tied %{ $class->{dbm} } ) {
+            my $rv = tie %{ $class->{dbm} }, 'DB_File', $args->{FileName};
+
+            if ( !$rv ) {
+                die "Could not open dbm file " . $args->{FileName} . ": $!";
+            }
+        }
+        return keys( %{ $class->{dbm} } );
     }
 }
 

@@ -9,6 +9,7 @@ WriteMakefile(
         'Net::LDAP'              => 0,
         'CGI'                    => 3.08,
         'CGI::Session'           => 0,
+        'HTML::Template'         => 0,
         'Lemonldap::NG::Manager' => 0.4,
         },
     ($] >= 5.005 ?     ## Add these new keywords supported since 5.005

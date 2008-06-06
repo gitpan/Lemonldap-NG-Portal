@@ -1,5 +1,12 @@
 Revision history for Perl extension Lemonldap::NG::Portal.
 
+0.83  Sat May 24 17:24:23 2008
+	- Integration in Handler status system
+	- Romanian translation
+	- New auth architecture
+	- ENV variables are now available using exportedValue (can be used to
+	  send SSL variables to the remote application)
+
 0.82  Mon Apr 7 15:01:02 2008
 	- 2 Net::LDAP password policy controls in the portal:
 	  * account locked

@@ -1,15 +1,19 @@
-# http://module-build.sourceforge.net/META-spec.html
-#XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
-name:         Lemonldap-NG-Portal
-version:      0.82
-version_from: lib/Lemonldap/NG/Portal.pm
-installdirs:  site
-requires:
+--- #YAML:1.0
+name:                Lemonldap-NG-Portal
+version:             0.83
+abstract:            The authentication portal part of Lemonldap::NG Web-SSO
+license:             ~
+author:              
+    - Xavier Guimard <x.guimard@free.fr>
+generated_by:        ExtUtils::MakeMaker version 6.42
+distribution_type:   module
+requires:     
     Apache::Session:               0
     CGI:                           3.08
     CGI::Session:                  0
+    HTML::Template:                0
     Lemonldap::NG::Manager:        0.4
     Net::LDAP:                     0
-
-distribution_type: module
-generated_by: ExtUtils::MakeMaker version 6.30_01
+meta-spec:
+    url:     http://module-build.sourceforge.net/META-spec-v1.3.html
+    version: 1.3

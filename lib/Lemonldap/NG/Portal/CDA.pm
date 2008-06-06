@@ -3,7 +3,7 @@ package Lemonldap::NG::Portal::CDA;
 use strict;
 use Lemonldap::NG::Portal::SharedConf qw(:all);
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 our @ISA     = ('Lemonldap::NG::Portal::SharedConf');
 
 *EXPORT_OK   = *Lemonldap::NG::Portal::SharedConf::EXPORT_OK;
@@ -56,7 +56,7 @@ compatible portals with Cross Domain Authentication.
   if($portal->process()) {
     # Write here the menu with CGI methods. This page is displayed ONLY IF
     # the user was not redirected here.
-    print $portal->header; # DON'T FORGET THIS (see L<CGI(3)>)
+    print $portal->header('text/html; charset=utf8'); # DON'T FORGET THIS (see L<CGI(3)>)
     print "...";
 
     # or redirect the user to the menu
@@ -66,7 +66,7 @@ compatible portals with Cross Domain Authentication.
     # Write here the html form used to authenticate with CGI methods.
     # $portal->error returns the error message if athentification failed
     # Warning: by defaut, input names are "user" and "password"
-    print $portal->header; # DON'T FORGET THIS (see L<CGI(3)>)
+    print $portal->header('text/html; charset=utf8'); # DON'T FORGET THIS (see L<CGI(3)>)
     print "...";
     print '<form method="POST">';
     # In your form, the following value is required for redirection
@@ -87,9 +87,9 @@ Modify your httpd.conf:
 
 =head1 DESCRIPTION
 
-This library just overload few methods of L<>Lemonldap::NG::Portal::SharedConf>
+This library just overload few methods of L<Lemonldap::NG::Portal::SharedConf>
 to add Cross Domain Authentication. Handlers that are not used in the same
-domain than the portal must inherit from L<>Lemonldap::NG::Handler::CDA>.
+domain than the portal must inherit from L<Lemonldap::NG::Handler::CDA>.
 
 See L<Lemonldap::NG::Portal::SharedConf> for usage and other methods.
 

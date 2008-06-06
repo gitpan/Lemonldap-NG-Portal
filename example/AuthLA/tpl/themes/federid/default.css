@@ -1,12 +1,10 @@
 /* Default CSS */
-/* Main color : gray */
-/* Link color : cyan and red underlined*/
 
 body {
-	font-family: Arial, Helvetica, Verdana;;
+	font-family: Arial, Helvetica, Verdana;
 	font-size: 1em;
 	color: #000;
-	background: #fff url(page-bg.png) repeat top left;
+	background: #dfdfdf url(hatch.gif);
 	margin: 10px 5%;
 	padding: 0;
 }
@@ -14,16 +12,16 @@ body {
 a img,:link img,:visited img { border:none }
 
 a, a:link, a:visited {
-	color: navy;
+	color: #1335e2;
 	text-decoration: none;
 }
 
 a:hover, a:active, a:focus {
-	
+	color: #6699ff;
 }
 
 .ui-tabs-nav a , #main-menu a, .actions a {
-	color: white;
+	color: #333333;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -41,9 +39,9 @@ h3 {font-size: 1.4em;}
 h4 {font-size: 1.2em;}
 
 hr {
-	border-width: 2px 0 0 0;
+	border-width: 1px 0 0 0;
 	border-color: gray;
-	border-style: solid;
+	border-style: dashed;
 	margin: 2px 0;
 }
 
@@ -51,7 +49,7 @@ pre, code {
 	font: 10pt monospace;
 	border-left: 5px gray solid;
 	padding: 0 0 0 10px;
-	background: #eeeee6;
+	background: #eeeeee;
 }
 
 /* LAYOUT
@@ -65,7 +63,7 @@ pre, code {
 	margin: 0;
 	padding: 10px;
 	background: #E8EAF0;
-	border-width: 4px;
+	border-width: 2px;
 	border-color: gray;
 	border-style: solid; 
 }
@@ -92,7 +90,7 @@ pre, code {
 	margin: 10px 0 10px 0;
 	padding: 0 10px 10px 10px;
 	border: 1px solid gray;
-	background: #DFDFDF;
+	background: #dfdfdf url(hatch.gif);
 }
 
 #main-menu h3 {
@@ -100,7 +98,7 @@ pre, code {
 	font-weight: bold;
 	padding: 5px;
 	font-size: 12pt;
-	border-top: 2px gray solid;
+	border-top: 1px gray dashed;
 }
 
 #content {
@@ -126,7 +124,7 @@ pre, code {
 	border: 2px #CDCD6E solid;
 	margin: 5px 0;
 	padding: 5px;
-	background: #FFFF89;
+	background: #FFFF89 url(hatch.gif);
 	width: 50%;
 }
 
@@ -158,18 +156,23 @@ li {
   padding: 0;
 }
 
-#main-menu li, .actions li, .ui-tabs-nav li {
+#main-menu li, .actions li, .ui-tabs-nav li, input[type=submit], input[type=reset], input[type=button] {
   padding: 5px;
-  background: gray;
-  border: 1px gray solid;
+  margin: 5px;
+  background: #cccccc url(hatch.gif);
+  border-width: 1px;
+  border-style: solid;
+  border-color: gray;
   text-align: center;
   font-size: 10pt;
   font-weight: bold;
+  display: block;
 }
 
-#main-menu li, .actions li, .ui-tabs-nav li {
-  display: block;
-  margin: 5px;
+input[type=submit], input[type=reset], input[type=button] {
+  padding: 2px;
+  display: inline;
+  margin: 10px 0 0 0;
 }
 
 .actions li, .ui-tabs-nav li {
@@ -178,13 +181,9 @@ li {
   margin: 5px 5px 5px 0;
 }
 
-.ui-tabs-nav li.ui-tabs-selected, #main-menu li.active {
-  background: #DFDFDF;
+.ui-tabs-nav li.ui-tabs-selected, #main-menu li.active, input[type=submit]:hover, input[type=reset]:hover, input[type=button]:hover {
+  background: #dfdfdf;
   border: 1px gray solid;
-}
-
-.ui-tabs-nav li.ui-tabs-selected a, #main-menu li.active a {
-  color: gray;
 }
 
 #main-menu li:hover, .actions li:hover, .ui-tabs-nav li:hover {
@@ -206,7 +205,7 @@ ul.message li, .errornotice {
   padding: 5px 10px;
   margin: 10px 0;
   background-color: #E8EAF0;
-  border: 1px grey solid;
+  border: 1px gray solid;
 }
 
 .ui-tabs-hide {
@@ -219,10 +218,11 @@ table {
 	font-size: 1em;
 	border-collapse: collapse;
 	margin: 5px 0;
+	background: url(hatch.gif);
 }
 
 tr:hover {
-	background: #ddd;
+	background: #eee;
 }
 
 th, td {
@@ -230,11 +230,12 @@ th, td {
 	border-color: gray;
 	vertical-align: middle;
 	padding: 0.5em;
-	border-width: 2px;
+	border-width: 1px;
 }
 
 th {
 	text-align: center;
+	background: #ccc url(hatch.gif);
 }
 
 /* FORMS
@@ -250,7 +251,7 @@ fieldset, #login {
 	border-width: 1px;
 	border-style: solid;
 	border-color: gray;
-	background: #fff url(page-bg.png) repeat top left;
+	background: #dcdcdc url(hatch.gif) repeat top left;
 	overflow: hidden;
 }
 
@@ -280,29 +281,7 @@ input, textarea, select {
 }
 
 input[type=text], input[type=password], textarea {
-	padding: 2px 0;
-}
-
-textarea {
-	padding: 2px 0;
-}
-
-input[type=submit], input[type=reset], input[type=button] {
-	padding: 1px 2px;
-	background: #d2e0e6 url(button-normal.png) repeat-x bottom left;
-	border-width: 1px;
-	border-style: outset;
-	border-color: #ccc;
-	margin-top: 10px;
-}
-
-input[type=submit]:hover, input[type=reset]:hover, input[type=button]:hover {
-	background-color: #fc3;
-	background-image: url(button-hover.png);
-}
-
-input[type=submit] {
-	font-weight: bold;
+	padding: 4px;
 }
 
 input[type=checkbox], input[type=radio] {
@@ -371,7 +350,7 @@ table.ldapentry {
   border-collapse: collapse;
   vertical-align: top;
   text-align: left;
-  margin: 0 5px 10px 5px;
+  margin: 5px 0;
 }
 
 table ul {

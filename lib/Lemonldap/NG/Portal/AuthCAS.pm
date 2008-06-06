@@ -4,32 +4,37 @@ use strict;
 use Lemonldap::NG::Portal::Simple;
 use AuthCAS;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
-our $OVERRIDE = {
-    extractFormInfo => sub {
-        my $self = shift;
-        my $cas = new AuthCAS(casUrl => $self->{CAS_url},
-                           CAFile => $self->{CAS_CAFile},
-                           );
-        my $login_url = $cas->getServerLoginURL($self->{CAS_loginUrl});
+sub authInit {
+}
 
-        my $ticket = $self->param('ticket');
-        # Unless a ticket has been found, we redirect the user
-        unless( $self->{user} = $cas->validateST($self->{CAS_validationUrl}, $ticket) ) {
-            print $self->SUPER::redirect(
-                -uri    => $login_url,
-                -status => '302 Moved Temporary'
-            );
-            exit;
-        }
-        PE_OK;
-    },
+sub extractFormInfo {
+    my $self = shift;
+    my $cas  = new AuthCAS(
+        casUrl => $self->{CAS_url},
+        CAFile => $self->{CAS_CAFile},
+    );
+    my $login_url = $cas->getServerLoginURL( $self->{CAS_loginUrl} );
 
-    authenticate => sub {
-        PE_OK;
-    },
-};
+    my $ticket = $self->param('ticket');
+
+    # Unless a ticket has been found, we redirect the user
+    unless ( $self->{user} =
+        $cas->validateST( $self->{CAS_validationUrl}, $ticket ) )
+    {
+        print $self->SUPER::redirect(
+            -uri    => $login_url,
+            -status => '302 Moved Temporary'
+        );
+        exit;
+    }
+    PE_OK;
+}
+
+sub authenticate {
+    PE_OK;
+}
 
 1;
 __END__
@@ -54,7 +59,7 @@ compatible portals with CAS authentication. EXPERIMENTAL AND NOT FINISHED!
   if($portal->process()) {
     # Write here the menu with CGI methods. This page is displayed ONLY IF
     # the user was not redirected here.
-    print $portal->header; # DON'T FORGET THIS (see CGI(3))
+    print $portal->header('text/html; charset=utf8'); # DON'T FORGET THIS (see CGI(3))
     print "...";
 
     # or redirect the user to the menu
@@ -62,7 +67,7 @@ compatible portals with CAS authentication. EXPERIMENTAL AND NOT FINISHED!
   }
   else {
     # If the user enters here, IT MEANS THAT CAS REDIRECTION DOES NOT WORK
-    print $portal->header; # DON'T FORGET THIS (see CGI(3))
+    print $portal->header('text/html; charset=utf8'); # DON'T FORGET THIS (see CGI(3))
     print "<html><body><h1>Unable to work</h1>";
     print "This server isn't well configured. Contact your administrator.";
     print "</body></html>";

@@ -105,13 +105,13 @@ my $portal = Lemonldap::NG::Portal::CDA->new(
 # Else, we process as usual, but without prompting users with a form
 
 if ( $portal->process() ) {
-    print $portal->header;
+    print $portal->header('text/html; charset=utf8');
     print $portal->start_html;
     print "<h1>Your well authenticated !</h1>";
     print $portal->end_html;
 }
 else {
-    print $portal->header;
+    print $portal->header('text/html; charset=utf8');
     print $portal->start_html;
     print qq#<h2>Authentication failed</h2>
     Portal is not able to recognize you

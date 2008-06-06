@@ -3,25 +3,30 @@ package Lemonldap::NG::Portal::AuthApache;
 use strict;
 use Lemonldap::NG::Portal::Simple;
 
-our $VERSION = '0.01';
+our $VERSION = '0.1';
 
-our $OVERRIDE = {
-    # By default, authentication is valid if REMOTE_USER environment
-    # variable is present. Change formateFilter if this does not match with
-    # UID.
-    extractFormInfo => sub {
-        my $self = shift;
-        return PE_FORMEMPTY unless( $self->{user} = $ENV{REMOTE_USER} );
-        # This is needed for Kerberos authentication
-        $self->{user} =~ s/(.*)@(.*)/$1/g;
-        PE_OK;
-    },
+sub authInit {
+}
 
-    # Authentication is made by Apache.
-    authenticate => sub {
-        PE_OK;
-    },
-};
+# By default, authentication is valid if REMOTE_USER environment
+# variable is present. Change formateFilter if this does not match with
+# UID.
+sub extractFormInfo {
+    my $self = shift;
+    unless ( $self->{user} = $ENV{REMOTE_USER} ) {
+        print STDERR "Apache is not configured to authenticate users !";
+        return PE_ERROR;
+    }
+
+    # This is needed for Kerberos authentication
+    $self->{user} =~ s/^(.*)@.*$/$1/g;
+    PE_OK;
+}
+
+# Authentication is made by Apache.
+sub authenticate {
+    PE_OK;
+}
 
 1;
 __END__
@@ -42,7 +47,7 @@ compatible portals with Apache authentication.
   if($portal->process()) {
     # Write here the menu with CGI methods. This page is displayed ONLY IF
     # the user was not redirected here.
-    print $portal->header; # DON'T FORGET THIS (see CGI(3))
+    print $portal->header('text/html; charset=utf8'); # DON'T FORGET THIS (see CGI(3))
     print "...";
 
     # or redirect the user to the menu
@@ -50,7 +55,7 @@ compatible portals with Apache authentication.
   }
   else {
     # If the user enters here, IT MEANS THAT CAS REDIRECTION DOES NOT WORK
-    print $portal->header; # DON'T FORGET THIS (see CGI(3))
+    print $portal->header('text/html; charset=utf8'); # DON'T FORGET THIS (see CGI(3))
     print "<html><body><h1>Unable to work</h1>";
     print "This server isn't well configured. Contact your administrator.";
     print "</body></html>";

@@ -34,31 +34,33 @@ use UNIVERSAL qw( isa can VERSION );
 *EXPORT_TAGS = *Lemonldap::NG::Portal::SharedConf::EXPORT_TAGS;
 *EXPORT      = *Lemonldap::NG::Portal::SharedConf::EXPORT;
 
-our $VERSION = '0.3';
+our $VERSION = '0.31';
 our @ISA     = qw(Lemonldap::NG::Portal::SharedConf) ;
 
 #===============================================================================
 # Global Constants
 #===============================================================================
 
-sub PE_LA_FAILED        { 11 }
-sub PE_LA_ARTFAILED     { 12 }
-sub PE_LA_DEFEDFAILED   { 13 }
-sub PE_LA_QUERYEMPTY    { 14 }
-sub PE_LA_SOAPFAILED    { 15 }
-sub PE_LA_SLOFAILED     { 16 }
-sub PE_LA_SSOFAILED     { 17 }
-sub PE_LA_SSOINITFAILED { 18 }
-sub PE_LA_SESSIONERROR  { 19 }
-sub PE_LA_SEPFAILED     { 20 }
+use constant {
+        PE_LA_FAILED        => 11 ,
+        PE_LA_ARTFAILED     => 12 ,
+        PE_LA_DEFEDFAILED   => 13 ,
+        PE_LA_QUERYEMPTY    => 14 ,
+        PE_LA_SOAPFAILED    => 15 ,
+        PE_LA_SLOFAILED     => 16 ,
+        PE_LA_SSOFAILED     => 17 ,
+        PE_LA_SSOINITFAILED => 18 ,
+        PE_LA_SESSIONERROR  => 19 ,
+        PE_LA_SEPFAILED     => 20 ,
 
-sub PC_LA_URLAC  { '/liberty/assertionConsumer.pl' }
-sub PC_LA_URLFT  { '/liberty/federationTermination.pl' }
-sub PC_LA_URLFTR { '/liberty/federationTerminationReturn.pl' }
-sub PC_LA_URLSL  { '/liberty/singleLogout.pl' }
-sub PC_LA_URLSLR { '/liberty/singleLogoutReturn.pl' }
-sub PC_LA_URLSC  { '/liberty/soapCall.pl' }
-sub PC_LA_URLSE  { '/liberty/soapEndpoint.pl' }
+        PC_LA_URLAC  => '/liberty/assertionConsumer.pl' ,
+        PC_LA_URLFT  => '/liberty/federationTermination.pl' ,
+        PC_LA_URLFTR => '/liberty/federationTerminationReturn.pl' ,
+        PC_LA_URLSL  => '/liberty/singleLogout.pl' ,
+        PC_LA_URLSLR => '/liberty/singleLogoutReturn.pl' ,
+        PC_LA_URLSC  => '/liberty/soapCall.pl' ,
+        PC_LA_URLSE  => '/liberty/soapEndpoint.pl' ,
+};
 
 #===============================================================================
 #===============================================================================
@@ -196,7 +198,7 @@ sub process {
     #   $self->_debug("parameter : $_ = " . $self->param($_)) ;
     # }
     # while(my($k,$v) = each(%ENV)) {
-    #	$self->_debug("env : $k = $v") ;
+    #        $self->_debug("env : $k = $v") ;
     # }
 
     #--------
@@ -213,6 +215,7 @@ sub process {
         # TODO Security tricks :
         # - Check if URL figures in locationRules
         $self->{error} = PE_DONE;
+        $self->updateStatus;
         return $self->{error};
     }
 
@@ -295,47 +298,42 @@ sub process {
         $self->{isLibertyProcess} = 0;
     }
 
-    return 0
-      if ( $self->{error} );
+    if ( $self->{error} ) {
+        $self->updateStatus;
+        return 0
+    }
 
     # Liberty Process OK -> do Lemonldap::NG process.
-    my $err = $self->SUPER::process(@_);
-    return $err unless( $err != PE_OK );
-    $err = $self->_subProcess(qw( log autoRedirect ))
-      if ( $self->{urldc} );
-    return $err;
+    # TODO Warning, PE_OK==0 and process returns 0 if an error occurs!
+    # my $err = $self->SUPER::process(@_);
+    #return $err unless( $err != PE_OK );
+    # TODO: Why ? log and  autoRedirect are executed with SUPER::process
+    #$err = $self->_subProcess(qw( log autoRedirect ))
+    #  if ( $self->{urldc} );
+    #return $err;
+    # So I think we have just to write this
+    return $self->SUPER::process(@_);
 }
 
 #===============================================================================
 # setSessionInfo
 #===============================================================================
 #
-# Après une consommation d'assertion d'auth valide cette fonction est appelée
-# pour initialiser les infos de session dans le cas où c'est le wsf qui est
-# choisi pour récup les infos du user (sera par défaut en ldap).
+# After a valid auth assertion consumption, this function is called to init
+# session info. If ID-WSF is enabled, get attributes from WebServices, else
+# use the standard setSessionInfo (attributes read from LDAP).
 #
-# TODO :
-# 	* Faire de cette fonction un override de setSessionInfo avec par défaut
-#         le comportement de l'ancienne version et si dans la conf recup
-#         attribut par wsf... recup en wsf2.0.
+# TODO: implement ID-WSF support
 #
 #===============================================================================
 
 sub setSessionInfo {
     my $self = shift;
 
-    # Si configuration fixée à WSF
-    # Alors
-    # 	Traitement de récupération des informations par WSF
-    # Sinon
-    # 	Traitement de récupération des informations en appelant la fonction
-    # 	SUPER::setSessionInfo.
+    # If ID-WSF enabled, use WebService 
+    # TODO    
 
-    # $self->{sessionInfo}->{dn} = "cn=tutu,ou=people,dc=example,dc=com" ;
-    # $self->{sessionInfo}->{cn} = "tutu" ;
-    # $self->{sessionInfo}->{mail} = "tutu@example;com" ;
-    # $self->{sessionInfo}->{uid} = "ttutu" ;
-
+    # Else use SUPER::setSessionInfo
     return $self->SUPER::setSessionInfo;
 }
 
@@ -611,7 +609,7 @@ sub libertyExtractFormInfo {
 #
 # Terminate federation.
 #
-# TO BE DONE.
+# TODO
 #
 #===============================================================================
 
@@ -647,9 +645,7 @@ sub libertyFederationTermination {
 # libertyFederationTerminationReturn
 #===============================================================================
 #
-# Quand cet appel ce produit t'il?
-#
-# TO BE DONE.
+# TODO 
 #
 #===============================================================================
 
@@ -866,9 +862,9 @@ sub libertySignOn {
 #===============================================================================
 #
 # Two cases :
-# 	* Portal or applications requiere singleLogout -> SP request ;
-# 	* IDP requiere singleLogout -> IDP request with $ENV{'QUERY_STRING'}
-# 	  specified.
+#         * Portal or applications requiere singleLogout -> SP request ;
+#         * IDP requiere singleLogout -> IDP request with $ENV{'QUERY_STRING'}
+#           specified.
 #
 # This function one optional parameter that specifies if the portal is called
 # through a SOAP call.
@@ -947,10 +943,9 @@ sub libertySingleLogout {
 # Here, as there is no more liberty session on IDP, we suppress liberty session
 # on Lemon.
 #
-# TODO : Modifier le redirect pour appeler le handler logout configuré dans la
-# directive location (portal ou handler dédié, plus besoin du relaystate).
+# TODO: Modify redirect to call handler logout configured in location directive
+# (dedicated portal or handler, nor more relaystate need)
 #
-# TO BE DONE.
 #
 #===============================================================================
 
@@ -1005,7 +1000,7 @@ sub libertySingleLogoutReturn {
 #
 # IDP request defederation by SOAP calls.
 #
-# TO BE DONE.
+# TODO
 #
 #===============================================================================
 
