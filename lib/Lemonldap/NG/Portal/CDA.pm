@@ -3,7 +3,7 @@ package Lemonldap::NG::Portal::CDA;
 use strict;
 use Lemonldap::NG::Portal::SharedConf qw(:all);
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 our @ISA     = ('Lemonldap::NG::Portal::SharedConf');
 
 *EXPORT_OK   = *Lemonldap::NG::Portal::SharedConf::EXPORT_OK;
@@ -27,8 +27,14 @@ sub existingSession {
 sub autoRedirect {
     my $self = shift;
     my $tmp  = $self->{domain};
-    $self->{urldc} .= "?" . $self->{cookieName} . "=" . $self->{id}
-      if ( $self->{urldc} and $self->{urldc} !~ m#https?://[^/]*$tmp/#oi );
+    my $cookieName = $self->{cookieName};
+
+    if ( $self->{urldc} and $self->{urldc} !~ m#https?://[^/]*$tmp/#oi
+        and $self->{id} and $self->{urldc} !~ m#[\?&]?$cookieName=\w+&?#oi )
+    {
+      $self->{urldc} .= ( $self->{urldc} =~ /\?{1}/oi ) ? '&' : '?' ;
+      $self->{urldc} .= $cookieName . "=" . $self->{id} ;
+    }
     return $self->SUPER::autoRedirect(@_);
 }
 

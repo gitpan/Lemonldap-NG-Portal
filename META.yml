@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                Lemonldap-NG-Portal
-version:             0.84
+version:             0.85
 abstract:            The authentication portal part of Lemonldap::NG Web-SSO
 license:             ~
 author:              

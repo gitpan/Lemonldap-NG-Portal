@@ -13,29 +13,36 @@ use CGI::Cookie;
 require POSIX;
 use Lemonldap::NG::Portal::_i18n;
 
-our $VERSION = '0.84';
+our $VERSION = '0.85';
 
 our @ISA = qw(CGI Exporter);
 
 # Constants
 use constant {
-    PE_REDIRECT            => -2,
-    PE_DONE                => -1,
-    PE_OK                  => 0,
-    PE_SESSIONEXPIRED      => 1,
-    PE_FORMEMPTY           => 2,
-    PE_WRONGMANAGERACCOUNT => 3,
-    PE_USERNOTFOUND        => 4,
-    PE_BADCREDENTIALS      => 5,
-    PE_LDAPCONNECTFAILED   => 6,
-    PE_LDAPERROR           => 7,
-    PE_APACHESESSIONERROR  => 8,
-    PE_FIRSTACCESS         => 9,
-    PE_BADCERTIFICATE      => 10,
-    PE_PP_ACCOUNT_LOCKED   => 21,
-    PE_PP_PASSWORD_EXPIRED => 22,
-    PE_CERTIFICATEREQUIRED => 23,
-    PE_ERROR               => 24,
+    PE_REDIRECT                         => -2,
+    PE_DONE                             => -1,
+    PE_OK                               => 0,
+    PE_SESSIONEXPIRED                   => 1,
+    PE_FORMEMPTY                        => 2,
+    PE_WRONGMANAGERACCOUNT              => 3,
+    PE_USERNOTFOUND                     => 4,
+    PE_BADCREDENTIALS                   => 5,
+    PE_LDAPCONNECTFAILED                => 6,
+    PE_LDAPERROR                        => 7,
+    PE_APACHESESSIONERROR               => 8,
+    PE_FIRSTACCESS                      => 9,
+    PE_BADCERTIFICATE                   => 10,
+    PE_PP_ACCOUNT_LOCKED                => 21,
+    PE_PP_PASSWORD_EXPIRED              => 22,
+    PE_CERTIFICATEREQUIRED              => 23,
+    PE_ERROR                            => 24,
+    PE_PP_CHANGE_AFTER_RESET            => 25,
+    PE_PP_PASSWORD_MOD_NOT_ALLOWED      => 26,
+    PE_PP_MUST_SUPPLY_OLD_PASSWORD      => 27,
+    PE_PP_INSUFFICIENT_PASSWORD_QUALITY => 28,
+    PE_PP_PASSWORD_TOO_SHORT            => 29,
+    PE_PP_PASSWORD_TOO_YOUNG            => 30,
+    PE_PP_PASSWORD_IN_HISTORY           => 31,
 };
 
 # EXPORTER PARAMETERS
@@ -44,7 +51,10 @@ our @EXPORT =
   PE_USERNOTFOUND PE_BADCREDENTIALS PE_LDAPCONNECTFAILED PE_LDAPERROR
   PE_APACHESESSIONERROR PE_FIRSTACCESS PE_BADCERTIFICATE PE_REDIRECT
   PE_PP_ACCOUNT_LOCKED PE_PP_PASSWORD_EXPIRED PE_CERTIFICATEREQUIRED
-  PE_ERROR);
+  PE_ERROR PE_PP_CHANGE_AFTER_RESET PE_PP_PASSWORD_MOD_NOT_ALLOWED
+  PE_PP_MUST_SUPPLY_OLD_PASSWORD PE_PP_INSUFFICIENT_PASSWORD_QUALITY
+  PE_PP_PASSWORD_TOO_SHORT PE_PP_PASSWORD_TOO_YOUNG
+  PE_PP_PASSWORD_IN_HISTORY);
 our %EXPORT_TAGS = ( 'all' => [ @EXPORT, 'import' ], );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
@@ -69,7 +79,7 @@ sub new {
     $self->{authentication} =~ s/^ldap/LDAP/;
 
     # Authentication module is required and has to be in @ISA
-    my $tmp = 'Lemonldap::NG::Portal::Auth' .  $self->{authentication};
+    my $tmp = 'Lemonldap::NG::Portal::Auth' . $self->{authentication};
     $tmp =~ s/\s.*$//;
     eval "require $tmp";
     die($@) if ($@);
@@ -79,7 +89,7 @@ sub new {
     # key2 = ...)
     $tmp = $self->{authentication};
     $tmp =~ s/^\w+\s*//;
-    my %h = split( /\s*[=;]\s*/, $tmp) if($tmp);
+    my %h = split( /\s*[=;]\s*/, $tmp ) if ($tmp);
     %$self = ( %h, %$self );
 
     $self->authInit();
@@ -289,8 +299,8 @@ sub formateParams() {
 #    it with Active Directory, overload it to use CN instead of UID.
 sub formateFilter {
     my $self = shift;
-    $self->{filter} = $self->{authFilter} ||
-      "(&(uid=" . $self->{user} . ")(objectClass=inetOrgPerson))";
+    $self->{filter} = $self->{authFilter}
+      || "(&(uid=" . $self->{user} . ")(objectClass=inetOrgPerson))";
     PE_OK;
 }
 
@@ -434,14 +444,15 @@ sub store {
 # 14. If all is done, we build the Lemonldap::NG cookie
 sub buildCookie {
     my $self = shift;
-    push @{$self->{cookie}}, $self->cookie(
+    push @{ $self->{cookie} },
+      $self->cookie(
         -name   => $self->{cookieName},
         -value  => $self->{id},
         -domain => $self->{domain},
         -path   => "/",
         -secure => $self->{securedCookie},
         @_,
-    );
+      );
     PE_OK;
 }
 
@@ -635,7 +646,8 @@ not re-authenticated and C<>process> returns true.
 
 =head3 extractFormInfo
 
-Converts form input into object variables ($self->{user} and
+Method implemented into Lemonldap::NG::Portal::Auth* modules. By default
+(ldap bind), converts form input into object variables ($self->{user} and
 $self->{password}).
 
 =head3 formateParams
@@ -647,6 +659,9 @@ Does nothing. To be overloaded if needed.
 Creates the ldap filter using $self->{user}. By default :
 
   $self->{filter} = "(&(uid=" . $self->{user} . ")(objectClass=inetOrgPerson))";
+
+If $self->{authFilter} is set, it is used instead of this. This is used by
+Lemonldap::NG::Portal::Auth* modules to overload filter.
 
 =head3 connectLDAP
 
@@ -661,6 +676,10 @@ if exist. Anonymous bind is provided else.
 
 Retrives the LDAP entry corresponding to the user using $self->{filter}.
 
+=head3 setAuthSessionInfo
+
+Same as setSessionInfo but implemented in Lemonldap::NG::Portal::Auth* modules.
+
 =head3 setSessionInfo
 
 Prepares variables to store in central cache (stored temporarily in
@@ -673,7 +692,8 @@ Does nothing by default.
 
 =head3 authenticate
 
-Authenticates the user by rebinding to the LDAP server using the dn retrived
+Method implemented in Lemonldap::NG::Portal::Auth* modules. By default (ldap),
+authenticates the user by rebinding to the LDAP server using the dn retrived
 with search() and the password.
 
 =head3 store
@@ -747,6 +767,14 @@ find the user distinguished name (dn) was refused by the server
 =item * B<PE_FIRSTACCESS>: First access to the portal
 
 =item * B<PE_BADCERTIFICATE>: Wrong certificate
+
+=item * PE_PP_ACCOUNT_LOCKED: account locked
+
+=item * PE_PP_PASSWORD_EXPIRED: password axpired
+
+=item * PE_CERTIFICATEREQUIRED: certificate required
+
+=item * PE_ERROR: unclassified error
 
 =back
 

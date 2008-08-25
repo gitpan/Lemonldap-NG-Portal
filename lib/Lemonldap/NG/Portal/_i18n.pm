@@ -27,30 +27,38 @@ sub error {
 __END__
 
 # Order of the constants:
-# * PE_OK                   0
-# * PE_SESSIONEXPIRED       1
-# * PE_FORMEMPTY            2
-# * PE_WRONGMANAGERACCOUNT  3
-# * PE_USERNOTFOUND         4
-# * PE_BADCREDENTIALS       5
-# * PE_LDAPCONNECTFAILED    6
-# * PE_LDAPERROR            7
-# * PE_APACHESESSIONERROR   8
-# * PE_FIRSTACCESS          9
-# * PE_BADCERTIFICATE      10
-# * PE_LA_FAILED           11
-# * PE_LA_ARTFAILED        12
-# * PE_LA_DEFEDFAILED      13
-# * PE_LA_QUERYEMPTY       14
-# * PE_LA_SOAPFAILED       15
-# * PE_LA_SLOFAILED        16
-# * PE_LA_SSOFAILED        17
-# * PE_LA_SSOINITFAILED    18
-# * PE_LA_SESSIONERROR     19
-# * PE_LA_SEPFAILED        20
-# * PE_PP_ACCOUNT_LOCKED   21
-# * PE_PP_PASSWORD_EXPIRED 22
-# * PE_CERTIFICATEREQUIRED 23
+# * PE_OK                                 0
+# * PE_SESSIONEXPIRED                     1
+# * PE_FORMEMPTY                          2
+# * PE_WRONGMANAGERACCOUNT                3
+# * PE_USERNOTFOUND                       4
+# * PE_BADCREDENTIALS                     5
+# * PE_LDAPCONNECTFAILED                  6
+# * PE_LDAPERROR                          7
+# * PE_APACHESESSIONERROR                 8
+# * PE_FIRSTACCESS                        9
+# * PE_BADCERTIFICATE                    10
+# * PE_LA_FAILED                         11
+# * PE_LA_ARTFAILED                      12
+# * PE_LA_DEFEDFAILED                    13
+# * PE_LA_QUERYEMPTY                     14
+# * PE_LA_SOAPFAILED                     15
+# * PE_LA_SLOFAILED                      16
+# * PE_LA_SSOFAILED                      17
+# * PE_LA_SSOINITFAILED                  18
+# * PE_LA_SESSIONERROR                   19
+# * PE_LA_SEPFAILED                      20
+# * PE_PP_ACCOUNT_LOCKED                 21
+# * PE_PP_PASSWORD_EXPIRED               22
+# * PE_CERTIFICATEREQUIRED               23
+# * PE_ERROR                             24
+# * PE_PP_CHANGE_AFTER_RESET             25
+# * PE_PP_PASSWORD_MOD_NOT_ALLOWED       26
+# * PE_PP_MUST_SUPPLY_OLD_PASSWORD       27
+# * PE_PP_INSUFFICIENT_PASSWORD_QUALITY  28
+# * PE_PP_PASSWORD_TOO_SHORT             29
+# * PE_PP_PASSWORD_TOO_YOUNG             30
+# * PE_PP_PASSWORD_IN_HISTORY            31
 
 # Not used in errors:
 # * PE_DONE                -1
@@ -82,6 +90,14 @@ sub error_fr {
         "Votre compte est bloqué",
         "Votre mot de passe a expiré",
         "Certificat exigé",
+        "Erreur",
+        "Le mot de passe a été réinitialisé et doit être changé",
+        "Modification du mot de passe non autorisée",
+        "Ancien mot de passe à fournir pour le changer",
+        "Qualité de mot de passe insuffisante",
+        "Mot de passe trop court",
+        "Mot de passe trop récent",
+        "Mot de passe utilisé trop récemment",
     ];
 }
 
@@ -111,6 +127,14 @@ sub error_en {
         "Your account is locked",
         "Your password has expired",
         "Certificate required",
+        'Error',
+        'Password has been reset and now must be changed',
+        'Password may not be modified',
+        'Old password must also be supplied when setting a new password',
+        'Insufficient password quality',
+        'Password too short',
+        'Password too young',
+        'Password used too recently',
     ];
 }
 
@@ -140,5 +164,13 @@ sub error_ro {
         "Contul dvs. este blocat",
         "Parola dvs. a expirat",
         "Certificat cerut",
+        'Eroare',
+        'Password has been reset and now must be changed',
+        'Password may not be modified',
+        'Old password must also be supplied when setting a new password',
+        'Insufficient password quality',
+        'Password too short',
+        'Password too young',
+        'Password used too recently',
     ];
 }

@@ -51,8 +51,8 @@ ok( $p->process == 0,              'No user' );
 ok( $p->{error} == PE_FIRSTACCESS, 'Error code: first access' );
 
 # Process test: user without password
-$ENV{REQUEST_URI}  = '/?user=test';
-$ENV{QUERY_STRING} = 'user=test';
+$ENV{REQUEST_URI}  = '/?user=test&password=';
+$ENV{QUERY_STRING} = 'user=test&password=';
 $p                 = Lemonldap::NG::Portal::Simple->new(
     {
         globalStorage => 'Apache::Session::File',
@@ -68,6 +68,7 @@ ok( $p->{error} == PE_FORMEMPTY, 'Error code: missing password' );
 $p->{extractFormInfo} = sub {
     my $self = shift;
     $self->{user} = 'user';
+    $self->{password} = '';
     PE_OK;
 };
 
@@ -77,7 +78,8 @@ $p->{search}         = sub { PE_OK };
 $p->{setSessionInfo} = sub { PE_OK };
 $p->{unbind}         = sub { PE_OK };
 $p->{store}          = sub { PE_OK };
-ok( $p->process == PE_OK , 'User OK' );
+$p->{authenticate}   = sub { PE_OK };
+ok( $p->process >0 , 'User OK' );
 
 # Cookie test
 $p->{id} = 1;
