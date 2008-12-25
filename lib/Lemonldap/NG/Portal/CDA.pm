@@ -3,8 +3,8 @@ package Lemonldap::NG::Portal::CDA;
 use strict;
 use Lemonldap::NG::Portal::SharedConf qw(:all);
 
-our $VERSION = '0.03';
-our @ISA     = ('Lemonldap::NG::Portal::SharedConf');
+our $VERSION = '0.04';
+use base ('Lemonldap::NG::Portal::SharedConf');
 
 *EXPORT_OK   = *Lemonldap::NG::Portal::SharedConf::EXPORT_OK;
 *EXPORT_TAGS = *Lemonldap::NG::Portal::SharedConf::EXPORT_TAGS;
@@ -25,15 +25,17 @@ sub existingSession {
 #     to the requested URL. If it does not come from our domain, we add
 #     ID in URL
 sub autoRedirect {
-    my $self = shift;
-    my $tmp  = $self->{domain};
+    my $self       = shift;
+    my $tmp        = $self->{domain};
     my $cookieName = $self->{cookieName};
 
-    if ( $self->{urldc} and $self->{urldc} !~ m#https?://[^/]*$tmp/#oi
-        and $self->{id} and $self->{urldc} !~ m#[\?&]?$cookieName=\w+&?#oi )
+    if (    $self->{urldc}
+        and $self->{urldc} !~ m#^https?://[^/]*$tmp/#oi
+        and $self->{id}
+        and $self->{urldc} !~ m#[\?&]?$cookieName=\w+&?#oi )
     {
-      $self->{urldc} .= ( $self->{urldc} =~ /\?{1}/oi ) ? '&' : '?' ;
-      $self->{urldc} .= $cookieName . "=" . $self->{id} ;
+        $self->{urldc} .= ( $self->{urldc} =~ /\?{1}/oi ) ? '&' : '?';
+        $self->{urldc} .= $cookieName . "=" . $self->{id};
     }
     return $self->SUPER::autoRedirect(@_);
 }

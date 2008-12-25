@@ -1,27 +1,30 @@
+## @file
+# Main portal for Lemonldap::NG portal
+#
+# @copy 2005, 2006, 2007, 2008, Xavier Guimard &lt;x.guimard@free.fr&gt;
+
+## @class
+# Main portal for Lemonldap::NG portal
 package Lemonldap::NG::Portal::SharedConf;
 
 use strict;
 use Lemonldap::NG::Portal::Simple qw(:all);
-use Lemonldap::NG::Manager::Conf;
-use Safe;
+use Lemonldap::NG::Common::Conf;
 
 *EXPORT_OK   = *Lemonldap::NG::Portal::Simple::EXPORT_OK;
 *EXPORT_TAGS = *Lemonldap::NG::Portal::Simple::EXPORT_TAGS;
 *EXPORT      = *Lemonldap::NG::Portal::Simple::EXPORT;
 
-our $VERSION = "0.42";
-our @ISA     = qw(Lemonldap::NG::Portal::Simple);
-
-# Secure jail
-our $safe = new Safe;
+our $VERSION = "0.5";
+use base qw(Lemonldap::NG::Portal::Simple);
 
 ##################
 # OVERLOADED SUB #
 ##################
 
-# getConf: all parameters returned by the Lemonldap::NG::Manager::Conf object
+# getConf: all parameters returned by the Lemonldap::NG::Common::Conf object
 #          are copied in $self
-#          See Lemonldap::NG::Manager::Conf(3) for more
+#          See Lemonldap::NG::Common::Conf(3) for more
 sub getConf {
     my $self = shift;
     my %args;
@@ -42,7 +45,7 @@ sub getConf {
     }
     unless ($tmp) {
         $self->{lmConf} =
-          Lemonldap::NG::Manager::Conf->new( $self->{configStorage} )
+          Lemonldap::NG::Common::Conf->new( $self->{configStorage} )
           unless $self->{lmConf};
         return 0 unless ( ref( $self->{lmConf} ) );
         $tmp = $self->{lmConf}->getConf;
@@ -64,8 +67,9 @@ sub localStorageObject {
     my $self = shift;
     eval "use " . $self->{localStorage};
     if ($@) {
-        print STDERR "Unable to load " . $self->{localStorage}
-	  . ", local configuration cache is disabled: $@\n";
+        print STDERR "Unable to load "
+          . $self->{localStorage}
+          . ", local configuration cache is disabled: $@\n";
         return 0;
     }
     my $refLocalStorage;
@@ -77,127 +81,6 @@ sub localStorageObject {
         return 0;
     }
     return $refLocalStorage;
-}
-
-# Here is implemented the 'macro' mechanism.
-our $self;    # Safe cannot share a variable declared with my
-
-sub setMacros {
-    local $self = shift;
-    die __PACKAGE__ . ": Unable to get configuration"
-      unless ( $self->getConf(@_) );
-    while ( my ( $n, $e ) = each( %{ $self->{macros} } ) ) {
-        $e =~ s/\$(\w+)/\$self->{sessionInfo}->{$1}/g;
-        $safe->share( '$self', '&encode_base64' );
-        $self->{sessionInfo}->{$n} = $safe->reval($e);
-    }
-    PE_OK;
-}
-
-# Here is implemented the 'groups' mechanism. See Lemonldap::NG::Portal for
-# more.
-sub setGroups {
-    local $self = shift;
-    my $groups;
-    foreach ( keys %{ $self->{groups} } ) {
-        my $filter = $self->scanexpr( $self->{groups}->{$_} );
-        next if ( $filter eq "0" );
-        if ( $filter eq "1" ) {
-            $groups .= "$_ ";
-            next;
-        }
-        else {
-            $filter = "(&(uid=" . $self->{user} . ")$filter)";
-        }
-        my $mesg = $self->{ldap}->search(
-            base   => $self->{ldapBase},
-            filter => $filter,
-            attrs  => ["uid"],
-        );
-        if ( $mesg->code() != 0 ) {
-            print STDERR $mesg->error . "\n$filter\n";
-            return PE_LDAPERROR;
-        }
-        my $entry = $mesg->entry(0);
-        if ($entry) {
-            $groups .= "$_ ";
-        }
-    }
-    if ( $self->{ldapGroupBase} ) {
-        my $mesg = $self->{ldap}->search(
-            base   => $self->{ldapGroupBase},
-            filter => "(|(member=" . $self->{dn} . ")(uniqueMember=" . $self->{dn} . "))",
-            attrs => ["cn"],
-        );
-        if ( $mesg->code() == 0 ) {
-            foreach my $entry ( $mesg->all_entries ) {
-                my @values = $entry->get_value("cn");
-                $groups .= $values[0] . " ";
-            }
-        }
-    }
-    $self->{sessionInfo}->{groups} = $groups;
-    PE_OK;
-}
-
-# Internal sub used to replace Perl expressions in 'groups' rules.
-sub scanexpr {
-    my $self = shift;
-    local $_ = shift;
-    my $result;
-
-    # Perl expressions
-    if ( s/^{(.*)}$/$1/ or $_ !~ /^\(.*\)$/ ) {
-        s/\$(\w+)/\$self->{sessionInfo}->{$1}/g;
-        $safe->share( '$self', '&encode_base64' );
-        $result = $safe->reval($_);
-        return $result ? "1" : "0";
-    }
-
-    # Simple LDAP expression
-    unless (/[^\\][\({]/) {
-        return $_;
-    }
-
-    # Node
-    my $brackets  = 0;
-    my $exprCount = 0;
-    my $tmp;
-    my $subexpr;
-    my $esc = 0;
-    $result = "";
-    my $cond = substr $_, 1, 1;
-    my $or = ( $cond eq '|' );
-
-    for ( my $i = 2 ; $i < ( length($_) - 1 ) ; $i++ ) {
-        $tmp = substr $_, $i, 1;
-        $subexpr .= $tmp;
-        if ($esc) {
-            $esc = 0;
-            next;
-        }
-        $esc++ if ( $tmp eq "\\" );
-        $brackets++ if ( $tmp =~ /^[\({]$/ );
-        $brackets-- if ( $tmp =~ /^[\)}]$/ );
-        unless ($brackets) {
-            $subexpr = $self->scanexpr($subexpr);
-            if ( $subexpr eq "1" ) {
-                return "1" if ($or);
-            }
-            elsif ( $subexpr eq "0" ) {
-                return "0" unless ($or);
-            }
-            else {
-                $exprCount++;
-                $result .= $subexpr;
-            }
-            $subexpr = '';
-        }
-    }
-    die "Incorrect expression" if $brackets;
-    return $result if ( $result eq "0" or $result eq "1" );
-    return $result if ( $exprCount == 1 );
-    return "($cond$result)";
 }
 
 # With SharedConf, $locationRules contains a hash table with virtual hosts as
@@ -229,6 +112,8 @@ compatible portals using a central configuration database.
              dbiPassword => "password",
              dbiTable    => "lmConfig",
          },
+         # Activate SOAP service
+         Soap           => 1
     } );
 
   if($portal->process()) {
@@ -254,6 +139,36 @@ compatible portals using a central configuration database.
     print 'Password : <input name="password" type="password" autocomplete="off">';
     print '<input type="submit" value="go" />';
     print '</form>';
+  }
+
+SOAP mode authentication (client) :
+
+  #!/usr/bin/perl -l
+  
+  use SOAP::Lite;
+  use Data::Dumper;
+  
+  my $soap =
+    SOAP::Lite->proxy('http://auth.example.com/')
+    ->uri('urn:/Lemonldap::NG::Portal::SharedConf');
+  my $r = $soap->getCookies( 'user', 'password' );
+  
+  # Catch SOAP errors
+  if ( $r->fault ) {
+      print STDERR "SOAP Error: " . $r->fault->{faultstring};
+  }
+  else {
+      my $res = $r->result();
+  
+      # If authentication failed, display error
+      if ( $res->{error} ) {
+          print STDERR "Error: " . $soap->error( 'fr', $res->{error} )->result();
+      }
+  
+      # print session-ID
+      else {
+          print "Cookie: lemonldap=" . $res->{cookies}->{lemonldap};
+      }
   }
 
 =head1 DESCRIPTION

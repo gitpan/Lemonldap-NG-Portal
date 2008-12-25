@@ -39,7 +39,7 @@ BEGIN {
     sub Apache::Session::File::get_sessions_count {
         my $class = shift;
         my $args  = shift;
-        $args->{Directory} ||= '/tmp';
+        $args->{Directory} ||= '__SESSIONDIR__';
         unless ( opendir DIR, $args->{Directory} ) {
             die "Cannot open directory $args->{Directory}\n";
         }
@@ -66,8 +66,8 @@ BEGIN {
     }
 }
 
-use Lemonldap::NG::Manager::Conf;
-use Lemonldap::NG::Manager::Conf::Constants;
+use Lemonldap::NG::Common::Conf;
+use Lemonldap::NG::Common::Conf::Constants;
 use strict;
 use DBI;
 
@@ -80,12 +80,7 @@ print $cgi->header(
 
 print "LEMONLDAP::NG::PORTAL STATUS\n\nConfiguration          : ";
 
-my $lmconf = Lemonldap::NG::Manager::Conf->new(
-    {
-        type    => 'File',
-        dirName => '__CONFDIR__',
-    }
-);
+my $lmconf = Lemonldap::NG::Common::Conf->new();
 
 unless ($lmconf) {
     print "unable to create conf object\n";

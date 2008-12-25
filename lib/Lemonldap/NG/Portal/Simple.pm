@@ -1,3 +1,10 @@
+## @file
+# Base package for Lemonldap::NG portal
+#
+# @copy 2005, 2006, 2007, 2008, Xavier Guimard &lt;x.guimard@free.fr&gt;
+
+## @class
+# Base class for Lemonldap::NG portal
 package Lemonldap::NG::Portal::Simple;
 
 use strict;
@@ -5,17 +12,18 @@ use warnings;
 
 use Exporter 'import';
 
-use Net::LDAP;
 use warnings;
 use MIME::Base64;
-use CGI;
+use Lemonldap::NG::Common::CGI;
 use CGI::Cookie;
 require POSIX;
 use Lemonldap::NG::Portal::_i18n;
+use Safe;
 
-our $VERSION = '0.85';
+our $VERSION = '0.86';
 
-our @ISA = qw(CGI Exporter);
+use base qw(Lemonldap::NG::Common::CGI Exporter);
+our @ISA;
 
 # Constants
 use constant {
@@ -43,6 +51,12 @@ use constant {
     PE_PP_PASSWORD_TOO_SHORT            => 29,
     PE_PP_PASSWORD_TOO_YOUNG            => 30,
     PE_PP_PASSWORD_IN_HISTORY           => 31,
+    PE_PP_GRACE                         => 32,
+    PE_PP_EXP_WARNING                   => 33,
+    PE_PASSWORD_MISMATCH                => 34,
+    PE_PASSWORD_OK                      => 35,
+    PE_NOTIFICATION                     => 36,
+    PE_BADURL                           => 37,
 };
 
 # EXPORTER PARAMETERS
@@ -54,49 +68,78 @@ our @EXPORT =
   PE_ERROR PE_PP_CHANGE_AFTER_RESET PE_PP_PASSWORD_MOD_NOT_ALLOWED
   PE_PP_MUST_SUPPLY_OLD_PASSWORD PE_PP_INSUFFICIENT_PASSWORD_QUALITY
   PE_PP_PASSWORD_TOO_SHORT PE_PP_PASSWORD_TOO_YOUNG
-  PE_PP_PASSWORD_IN_HISTORY);
+  PE_PP_PASSWORD_IN_HISTORY PE_PP_GRACE PE_PP_EXP_WARNING
+  PE_PASSWORD_MISMATCH PE_PASSWORD_OK PE_NOTIFICATION PE_BADURL );
 our %EXPORT_TAGS = ( 'all' => [ @EXPORT, 'import' ], );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
-# CONSTRUCTOR
+# Secure jail
+our $safe;
+our $self;    # Safe cannot share a variable declared with my
+
+## @cmethod new($args)
+# Class constructor.
+# @param args hash reference
+# @return Lemonldap::NG::Portal object
 sub new {
+    binmode( STDOUT, ":utf8" );
     my $class = shift;
-    my $self  = $class->SUPER::new();
-    $self->getConf(@_) or die "Unable to get configuration";
-    die("You've to indicate a an Apache::Session storage module !")
+    return $class if ( ref($class) );
+    $self = $class->SUPER::new();
+    $self->getConf(@_)
+      or $self->abort( "Configuration error",
+        "Unable to get configuration: $Lemonldap::NG::Common::Conf::msg" );
+    $self->abort( "Configuration error",
+        "You've to indicate a an Apache::Session storage module !" )
       unless ( $self->{globalStorage} );
     eval "require " . $self->{globalStorage};
-    die( "Module " . $self->{globalStorage} . " not found in \@INC" ) if ($@);
-    die("You've to indicate a domain for cookies") unless ( $self->{domain} );
+    $self->abort( "Configuration error",
+        "Module " . $self->{globalStorage} . " not found in \@INC" )
+      if ($@);
+    $self->abort( "Configuration error",
+        "You've to indicate a domain for cookies" )
+      unless ( $self->{domain} );
     $self->{domain} =~ s/^([^\.])/.$1/;
-    $self->{ldapServer}         ||= 'localhost';
-    $self->{ldapPort}           ||= 389;
-    $self->{securedCookie}      ||= 0;
-    $self->{cookieName}         ||= "lemonldap";
-    $self->{ldapPpolicyControl} ||= 0;
-    $self->{authentication}     ||= 'LDAP';
+    $self->{securedCookie}  ||= 0;
+    $self->{cookieName}     ||= "lemonldap";
+    $self->{authentication} ||= 'LDAP';
+    $self->{userDB}         ||= 'LDAP';
     $self->{authentication} =~ s/^ldap/LDAP/;
+    $self->{mustRedirect} =
+      ( $ENV{REQUEST_METHOD} eq 'POST' or $self->param('logout') ) ? 1 : 0;
 
     # Authentication module is required and has to be in @ISA
-    my $tmp = 'Lemonldap::NG::Portal::Auth' . $self->{authentication};
-    $tmp =~ s/\s.*$//;
-    eval "require $tmp";
-    die($@) if ($@);
-    push @ISA, $tmp;
+    foreach (qw(authentication userDB)) {
+        my $tmp =
+            'Lemonldap::NG::Portal::'
+          . ( $_ eq 'userDB' ? 'UserDB' : 'Auth' )
+          . $self->{$_};
+        $tmp =~ s/\s.*$//;
+        eval "require $tmp";
+        $self->abort( "Configuration error", $@ ) if ($@);
+        push @ISA, $tmp;
 
-    # $self->{authentication} can contains arguments (key1 = scalar_value;
-    # key2 = ...)
-    $tmp = $self->{authentication};
-    $tmp =~ s/^\w+\s*//;
-    my %h = split( /\s*[=;]\s*/, $tmp ) if ($tmp);
-    %$self = ( %h, %$self );
-
-    $self->authInit();
+        # $self->{authentication} and $self->{userDB} can contains arguments
+        # (key1 = scalar_value; key2 = ...)
+        $tmp = $self->{$_};
+        $tmp =~ s/^\w+\s*//;
+        my %h = split( /\s*[=;]\s*/, $tmp ) if ($tmp);
+        %$self = ( %h, %$self );
+    }
+    if ( $self->{notification} ) {
+        require Lemonldap::NG::Common::Notification;
+    }
+    if ( $self->{Soap} ) {
+        require SOAP::Lite;
+        $self->soapTest("${class}::getCookies ${class}::error");
+    }
     return $self;
 }
 
-# getConf basic, copy all parameters in $self. Overloaded in SharedConf.pm
+## @method protected getConf($args)
+# Copy all parameters in caller object.
+# @param args hash-ref
 sub getConf {
     my ($self) = shift;
     my %args;
@@ -110,28 +153,80 @@ sub getConf {
     1;
 }
 
-# error calls i18n.pm to dysplay error in the wanted language
+## @method protected string error($lang)
+# error calls Portal/_i18n.pm to display error in the wanted language.
+# @param lang optional (browser language is used instead)
+# @return error message
 sub error {
     my $self = shift;
-    return &Lemonldap::NG::Portal::_i18n::error( $self->{error},
-        shift || $ENV{HTTP_ACCEPT_LANGUAGE} );
+    my $lang = shift || $ENV{HTTP_ACCEPT_LANGUAGE};
+    my $code = shift || $self->{error};
+    return &Lemonldap::NG::Portal::_i18n::error( $code, $lang );
 }
 
-# Private sub used to bind to LDAP server both with Lemonldap::NG account and user
-# credentials if LDAP authentication is used
-sub _bind {
-    my ( $self, $ldap, $dn, $password ) = @_;
-    my $mesg;
-    if ( $dn and $password ) {    # named bind
-        $mesg = $ldap->bind( $dn, password => $password );
+## @method int error_type()
+# error_type tells if error is positive, warning or negative
+sub error_type {
+    my $self = shift;
+    my $code = shift || $self->{error};
+
+    # Positive errors
+    return "positive"
+      if (
+        scalar(
+            grep { /^$code$/ } (
+                -2,    #PE_REDIRECT
+                -1,    #PE_DONE,
+                0,     #PE_OK
+                35,    #PE_PASSWORD_OK
+            )
+        )
+      );
+
+    # Warning errors
+    return "warning"
+      if (
+        scalar(
+            grep { /^$code$/ } (
+                1,     #PE_SESSIONEXPIRED
+                2,     #PE_FORMEMPTY
+                9,     #PE_FIRSTACCESS
+                32,    #PE_PP_GRACE
+                33,    #PE_PP_EXP_WARNING
+                36,    #PE_NOTIFICATION
+                37,    #PE_BADURL
+            )
+        )
+      );
+
+    # Negative errors (default)
+    return "negative";
+}
+
+## @method translate_template($$text_ref, $lang)
+# translate_template is used as an HTML::Template filter to tranlate strings in
+# the wanted language
+# @param text_ref reference to the string to translate
+# @param lang optionnal language wanted. Falls to browser language instead.
+sub translate_template {
+    my $self     = shift;
+    my $text_ref = shift;
+    my $lang     = shift || $ENV{HTTP_ACCEPT_LANGUAGE};
+
+    # Get the lang code (2 letters)
+    $lang = lc($lang);
+    $lang =~ s/-/_/g;
+    $lang =~ s/^(..).*$/$1/;
+
+    # Test if a translation is available for the selected language
+    # If not available, return the first translated string
+    # <lang en="Please enter your credentials" fr="Merci de vous autentifier"/>
+    if ( $$text_ref =~ m/$lang=\"(.*?)\"/ ) {
+        $$text_ref =~ s/<lang.*$lang=\"(.*?)\".*?\/>/$1/gx;
     }
-    else {                        # anonymous bind
-        $mesg = $ldap->bind();
+    else {
+        $$text_ref =~ s/<lang\s+\w+=\"(.*?)\".*?\/>/$1/gx;
     }
-    if ( $mesg->code() != 0 ) {
-        return 0;
-    }
-    return 1;
 }
 
 # CGI.pm overload to add Lemonldap::NG cookie
@@ -154,6 +249,76 @@ sub redirect {
     else {
         $self->SUPER::redirect(@_);
     }
+}
+
+# getSessionInfo
+# Read session and store it in $self
+sub getSessionInfo {
+    my $self    = shift;
+    my %cookies = fetch CGI::Cookie;
+
+    # Test if Lemonldap::NG cookie is available
+    if ( $cookies{ $self->{cookieName} }
+        and my $id = $cookies{ $self->{cookieName} }->value )
+    {
+        my %h;
+
+        # Trying to recover session from global session storage
+        eval {
+            tie %h, $self->{globalStorage}, $id, $self->{globalStorageOptions};
+        };
+        if ( $@ or not tied(%h) ) {
+
+            # Session not available (expired ?)
+            print STDERR
+              "Session $id isn't yet available ($ENV{REMOTE_ADDR})\n";
+            return undef;
+        }
+
+        # Store session values
+        foreach ( keys %h ) {
+            $self->{sessionInfo}->{$_} = $h{$_};
+        }
+
+        untie %h;
+    }
+
+}
+
+# updateSession
+# Update information stored in session
+# TODO: update all caches
+sub updateSession {
+    my $self    = shift;
+    my ($infos) = @_;
+    my %cookies = fetch CGI::Cookie;
+
+    # Test if Lemonldap::NG cookie is available
+    if ( $cookies{ $self->{cookieName} }
+        and my $id = $cookies{ $self->{cookieName} }->value )
+    {
+        my %h;
+
+        # Trying to recover session from global session storage
+        eval {
+            tie %h, $self->{globalStorage}, $id, $self->{globalStorageOptions};
+        };
+        if ( $@ or not tied(%h) ) {
+
+            # Session not available (expired ?)
+            print STDERR
+              "Session $id isn't yet available ($ENV{REMOTE_ADDR})\n";
+            return undef;
+        }
+
+        # Store/update session values
+        foreach ( keys %$infos ) {
+            $h{$_} = $infos->{$_};
+        }
+
+        untie %h;
+    }
+
 }
 
 # Externalise functions execution
@@ -183,45 +348,164 @@ sub updateStatus {
       if ($Lemonldap::NG::Handler::Simple::statusPipe);
 }
 
+sub notification {
+    my ($self) = @_;
+    return $self->{_notification};
+}
+
+##@method string get_url()
+# check url against XSS attacks
+sub get_url {
+    my ($self) = @_;
+    return if ( $self->param('url') =~ m#[^A-Za-z0-9\+/=]# );
+    return $self->param('url');
+}
+
+##@method private object safe()
+# Provide the security jail.
+#@return Safe object
+sub safe {
+    my $self = shift;
+    return $safe if ($safe);
+    $safe = new Safe;
+    my @t =
+      $self->{customFunctions} ? split( /\s+/, $self->{customFunctions} ) : ();
+    foreach (@t) {
+        my $sub = $_;
+        unless (/::/) {
+            $sub = ref($self) . "::$_";
+        }
+        else {
+            s/^.*:://;
+        }
+        next if ( $self->can($_) );
+        eval "sub $_ {
+                return $sub( '$self->{portal}', \@_ );
+            }";
+        print STDERR $@ if ($@);
+    }
+    $safe->share( '$self', '&encode_base64', @t );
+    return $safe;
+}
+
+####################
+# SOAP subroutines #
+####################
+
+##@method string SOAP::Data getCookies($user,$password)
+# Called in SOAP context, returns cookies in an array.
+# This subroutine works only for portals working with user and password
+#@param user uid
+#@param password password
+#@return session => { error => code , cookies => { cookieName1 => value ,... } }
+sub getCookies {
+    my $class = shift;
+    $self->{error} = PE_OK;
+    ( $self->{user}, $self->{password} ) = ( shift, shift );
+    unless ( $self->{user} && $self->{password} ) {
+        $self->{error} = PE_FORMEMPTY;
+    }
+    else {
+        $self->{error} = $self->_subProcess(
+            qw(authInit userDBInit getUser setAuthSessionInfo setSessionInfo
+              setMacros setGroups authenticate store buildCookie log)
+        );
+    }
+    my @tmp = ();
+    push @tmp, SOAP::Data->name( error => $self->{error} );
+    unless ( $self->{error} ) {
+        push @tmp,
+          SOAP::Data->name(
+            cookies => \SOAP::Data->value(
+                SOAP::Data->name( $self->{cookieName} => $self->{id} ),
+            )
+          );
+    }
+    my $res = SOAP::Data->name( session => \SOAP::Data->value(@tmp) );
+    $self->updateStatus;
+    return $res;
+}
+
 ###############################################################
 # MAIN subroutine: call all steps until one returns something #
 #                  different than PE_OK                       #
 ###############################################################
 
-# extractFormInfo, setAuthSessionInfo and authenticate must be implemented in
-# auth modules
+##@method boolean process()
+# Main method.
+# process() call functions issued from :
+#  - itself : controlUrlOrigin, controlExistingSession, setMacros, setGroups, store, buildCookie, log, autoredirect
+#  - authentication module : extractFormInfo, setAuthSessionInfo, authenticate
+#  - user database module  : getUser, setSessionInfo
+#@return 1 if user is all is OK, 0 if session isn't created or a notification has to be done
 
 sub process {
     my ($self) = @_;
     $self->{error} = PE_OK;
     $self->{error} = $self->_subProcess(
-        qw(controlUrlOrigin controlExistingSession extractFormInfo formateParams
-          formateFilter connectLDAP bind search setAuthSessionInfo
-          setSessionInfo setMacros setGroups authenticate store unbind
-          buildCookie log autoRedirect)
+        qw(checkNotifBack controlUrlOrigin controlExistingSession authInit
+          extractFormInfo userDBInit getUser setAuthSessionInfo setSessionInfo
+          setMacros setGroups authenticate store buildCookie log
+          checkNotification autoRedirect)
     );
     $self->updateStatus;
     return ( ( $self->{error} > 0 ) ? 0 : 1 );
 }
 
-# 1. If the user was redirected here, we have to load 'url' parameter
+## @method error_code checkNotifBack()
+# 1) Checks if a message has to be notified to the connected user.
+# @return error code
+sub checkNotifBack {
+    my $self = shift;
+
+    # TODO
+    PE_OK;
+}
+
+## @method error_code controlUrlOrigin()
+# 2) If the user was redirected here, loads 'url' parameter.
+# @return error_code
 sub controlUrlOrigin {
     my $self = shift;
     if ( $self->param('url') ) {
+
+        # REJECT NON BASE64 URL
+        return PE_BADURL if ( $self->param('url') =~ m#[^A-Za-z0-9\+/=]# );
+
         $self->{urldc} = decode_base64( $self->param('url') );
+        $self->{urldc} =~ s/[\r\n]//sg;
+
+        # REJECT [\0<'"`] in URL or encoded '%' and non protected hosts
+        if (
+            $self->{urldc} =~ /(?:\0|<|'|"|`|\%(?:00|25|3C|22|27|2C))/
+            or ( $self->{urldc} !~ m#^https?://(?:$self->{reVHosts}|(?:[^/]*)?$self->{domain})(?:/.*)?$#
+                and not $self->param('logout') )
+          )
+        {
+            delete $self->{urldc};
+            return PE_BADURL;
+        }
+    }
+    elsif ( $self->{mustRedirect} ) {
+        $self->{urldc} = $self->{portal};
     }
     PE_OK;
 }
 
-# 2. Control existing sessions
+## @method error_code controlExistingSession()
+# 3) Control existing sessions.
+# To overload to control what to do with existing sessions.
 # what to do with existing sessions ?
-#       - delete and create a new session (default)
-#       - re-authentication (actual scheme)
-#       - nothing: user is authenticated and process
-#                  returns true
+#       - nothing: user is authenticated and process returns true (default)
+#       - delete and create a new session (not implemented)
+#       - re-authentication (set existingSession => sub{PE_OK})
+# @return error_code
 sub controlExistingSession {
     my $self    = shift;
     my %cookies = fetch CGI::Cookie;
+
+    # Store IP address
+    $self->{sessionInfo}->{ipAddr} = $ENV{REMOTE_ADDR};
 
     # Test if Lemonldap::NG cookie is available
     if ( $cookies{ $self->{cookieName} }
@@ -248,17 +532,18 @@ sub controlExistingSession {
             tied(%h)->delete;
 
             # Delete cookie
-            $self->{id} = "";
-            $self->buildCookie();
-            if ( $self->{urldc} ) {
-                $self->{error} = PE_REDIRECT;
-                if ( $self->{autoRedirect} ) {
-                    &{ $self->{autoRedirect} }($self);
-                }
-                else {
-                    $self->autoRedirect();
-                }
-            }
+            push @{ $self->{cookie} },
+              $self->cookie(
+                -name    => $self->{cookieName},
+                -value   => 0,
+                -domain  => $self->{domain},
+                -path    => "/",
+                -secure  => 0,
+                -expires => '-1d',
+                @_,
+              );
+            $self->{error} = PE_REDIRECT;
+            $self->_subProcess(qw(log autoRedirect));
             return PE_FIRSTACCESS;
         }
         $self->{id} = $id;
@@ -285,144 +570,84 @@ sub controlExistingSession {
 }
 
 sub existingSession {
-    my ( $self, $id, $datas ) = @_;
-    PE_OK;
+
+    #my ( $self, $id, $datas ) = @_;
+    PE_DONE;
 }
 
-# Unused. You can overload if you have to modify user and password before
-# authentication
-sub formateParams() {
-    PE_OK;
-}
+# 4. authInit() : must be implemented in Auth* module
 
-# 4. By default, the user is searched in the LDAP server with its UID. To use
-#    it with Active Directory, overload it to use CN instead of UID.
-sub formateFilter {
-    my $self = shift;
-    $self->{filter} = $self->{authFilter}
-      || "(&(uid=" . $self->{user} . ")(objectClass=inetOrgPerson))";
-    PE_OK;
-}
+# 5. extractFormInfo() : must be implemented in Auth* module:
+#                         * set $self->{user}
+#                         * authenticate user if possible (or do it in 11.)
 
-# 5. First LDAP connexion used to find user DN with the filter defined before.
-sub connectLDAP {
-    my $self = shift;
-    return PE_OK if ( $self->{ldap} );
-    my $useTls = 0;
-    my $tlsParam;
-    foreach my $server ( split /[\s,]+/, $self->{ldapServer} ) {
-        if ( $server =~ m{^ldap\+tls://([^/]+)/?\??(.*)$} ) {
-            $useTls   = 1;
-            $server   = $1;
-            $tlsParam = $2 || "";
-        }
-        else {
-            $useTls = 0;
-        }
-        last
-          if $self->{ldap} = Net::LDAP->new(
-            $server,
-            port    => $self->{ldapPort},
-            onerror => undef,
-          );
-    }
-    return PE_LDAPCONNECTFAILED unless ( $self->{ldap} );
-    if ($useTls) {
-        my %h = split( /[&=]/, $tlsParam );
-        $h{cafile} = $self->{caFile} if ( $self->{caFile} );
-        $h{capath} = $self->{caPath} if ( $self->{caPath} );
-        my $mesg = $self->{ldap}->start_tls(%h);
-        $mesg->code && return PE_LDAPCONNECTFAILED;
-    }
-    PE_OK;
-}
+# 6. userDBInit() : must be implemented in User* module
 
-# 6. LDAP bind with Lemonldap::NG account or anonymous unless defined
-sub bind {
-    my $self = shift;
-    $self->connectLDAP unless ( $self->{ldap} );
-    return PE_WRONGMANAGERACCOUNT
-      unless (
-        $self->_bind(
-            $self->{ldap}, $self->{managerDn}, $self->{managerPassword}
-        )
-      );
-    PE_OK;
-}
+# 7. getUser() : must be implemented in User* module
 
-# 7. Search the DN
-sub search {
-    my $self = shift;
-    my $mesg = $self->{ldap}->search(
-        base   => $self->{ldapBase},
-        scope  => 'sub',
-        filter => $self->{filter},
-    );
-    if ( $mesg->code() != 0 ) {
-        print STDERR $mesg->error . "\n";
-        return PE_LDAPERROR;
-    }
-    return PE_USERNOTFOUND unless ( $self->{entry} = $mesg->entry(0) );
-    $self->{dn} = $self->{entry}->dn();
-    PE_OK;
-}
+# 8. setAuthSessionInfo() : must be implemented in Auth* module:
+#                            * store exported datas in $self->{sessionInfo}
 
-# sub setAuthSessionInfo has to be defined in auth module
+# 9. setSessionInfo() : must be implemented in User* module:
+#                            * store exported datas in $self->{sessionInfo}
 
-# 8. Load all parameters included in exportedVars parameter.
-#    Multi-value parameters are loaded in a single string with
-#    '; ' separator
-sub setSessionInfo {
-    my ($self) = @_;
-    $self->{sessionInfo}->{dn} = $self->{dn};
-    $self->{sessionInfo}->{startTime} =
-      &POSIX::strftime( "%Y%m%d%H%M%S", localtime() );
-    unless ( $self->{exportedVars} ) {
-        foreach (qw(uid cn mail)) {
-            $self->{sessionInfo}->{$_} =
-              join( '; ', $self->{entry}->get_value($_) ) || "";
-        }
-    }
-    elsif ( ref( $self->{exportedVars} ) eq 'HASH' ) {
-        foreach ( keys %{ $self->{exportedVars} } ) {
-            if ( my $tmp = $ENV{$_} ) {
-                $tmp =~ s/[\r\n]/ /gs;
-                $self->{sessionInfo}->{$_} = $tmp;
-            }
-            else {
-                $self->{sessionInfo}->{$_} = join( '; ',
-                    $self->{entry}->get_value( $self->{exportedVars}->{$_} ) )
-                  || "";
-            }
-        }
-    }
-    else {
-        die('Only hash reference are supported now in exportedVars');
-    }
-    PE_OK;
-}
-
-# 9. Unused here, but overloaded in SharedConf.pm
+## @method error_code setMacro()
+# 10) macro mechanism:
+#                  * store macro results in $self->{sessionInfo}
+# @return error_code
 sub setMacros {
+    local $self = shift;
+    $self->abort( __PACKAGE__ . ": Unable to get configuration" )
+      unless ( $self->getConf(@_) );
+    while ( my ( $n, $e ) = each( %{ $self->{macros} } ) ) {
+        $e =~ s/\$(\w+)/\$self->{sessionInfo}->{$1}/g;
+        $self->{sessionInfo}->{$n} = $self->safe->reval($e);
+    }
     PE_OK;
 }
 
-# 10. Unused here, but overloaded in SharedConf.pm
+## @method error_code setGroups()
+# 11) groups mechanism:
+#                    * store all groups name that the user match in
+#                      $self->{sessionInfo}->{groups}
 sub setGroups {
+    local $self = shift;
+    my $groups;
+
+    #foreach ( keys %{ $self->{groups} } ) {
+    while ( my ( $group, $expr ) = each %{ $self->{groups} } ) {
+        $expr =~ s/\$(\w+)/\$self->{sessionInfo}->{$1}/g;
+
+        # TODO : custom Functions
+        $groups .= "$group " if ( $self->safe->reval($expr) );
+    }
+    if ( $self->{ldapGroupBase} ) {
+        my $mesg = $self->{ldap}->search(
+            base   => $self->{ldapGroupBase},
+            filter => "(|(member="
+              . $self->{dn}
+              . ")(uniqueMember="
+              . $self->{dn} . "))",
+            attrs => ["cn"],
+        );
+        if ( $mesg->code() == 0 ) {
+            foreach my $entry ( $mesg->all_entries ) {
+                my @values = $entry->get_value("cn");
+                $groups .= $values[0] . " ";
+            }
+        }
+    }
+    $self->{sessionInfo}->{groups} = $groups;
     PE_OK;
 }
 
-# 11. Now, LDAP will not be used by Lemonldap::NG except for LDAP
-#     authentication scheme
-sub unbind {
-    my $self = shift;
-    $self->{ldap}->unbind if $self->{ldap};
-    delete $self->{ldap};
-    PE_OK;
-}
+# 12. authenticate() : must be implemented in Auth* module:
+#                       * authenticate the user if not done before
 
-# 13. Now, the user is authenticated. It's time to store his parameters with
-#     Apache::Session::* module
+## @method error_code store()
+# 13. Now, the user is known, authenticated and session variable are evaluated.
+#     It's time to store his parameters with Apache::Session::* module
+# @return error_code
 sub store {
     my ($self) = @_;
     my %h;
@@ -441,7 +666,9 @@ sub store {
     PE_OK;
 }
 
+## @method error_code buildCookie()
 # 14. If all is done, we build the Lemonldap::NG cookie
+# @return error_code
 sub buildCookie {
     my $self = shift;
     push @{ $self->{cookie} },
@@ -456,6 +683,7 @@ sub buildCookie {
     PE_OK;
 }
 
+## @method error_code log()
 # 15. By default, nothing is logged. Users actions are logged on applications.
 #     It's easy to override this in the contructor :
 #       my $portal = new Lemonldap::NG::Portal ( {
@@ -466,12 +694,39 @@ sub buildCookie {
 #                               },
 #                   ...
 #                 } );
+# @return error_code
 sub log {
     PE_OK;
 }
 
-# 16. If the user was redirected to the portal, we will now redirect him
+## @method error_code checkNotification()
+# 16. Check if messages has to be notified
+# @return error_code
+sub checkNotification {
+    my $self = shift;
+    if ( $self->{notification} ) {
+        my $tmp;
+        if ( ref( $self->{notification} ) ) {
+            $tmp = $self->{notification};
+        }
+        else {
+            $tmp = $self->{configStorage};
+            $tmp->{dbiTable} = 'notifications';
+        }
+        if ( $self->{_notification} =
+            Lemonldap::NG::Common::Notification->new($tmp)
+            ->getNotification( $self->{user} ) )
+        {
+            return PE_NOTIFICATION;
+        }
+    }
+    return PE_OK;
+}
+
+## @method error_code autoRedirect()
+# 17) If the user was redirected to the portal, we will now redirect him
 #     to the requested URL
+# @return error_code
 sub autoRedirect {
     my $self = shift;
     if ( my $u = $self->{urldc} ) {
@@ -527,9 +782,16 @@ Lemonldap::NG::Portal::Simple - Base module for building Lemonldap::NG compatibl
          },
          ldapServer     => 'ldap.domaine.com,ldap-backup.domaine.com',
          securedCookie  => 1,
-         exportedVars  => ["uid","cn","mail","appli"],
+         exportedVars  => {
+           uid   => 'uid',
+           cn    => 'cn',
+           mail  => 'mail',
+           appli => 'appli',
+         },
+         # Activate SOAP service
+         Soap           => 1
     );
-
+  
   if($portal->process()) {
     # Write here the menu with CGI methods. This page is displayed ONLY IF
     # the user was not redirected here.
@@ -553,6 +815,36 @@ Lemonldap::NG::Portal::Simple - Base module for building Lemonldap::NG compatibl
     print 'Password : <input name="password" type="password" autocomplete="off">';
     print '<input type="submit" value="go" />';
     print '</form>';
+  }
+
+SOAP mode authentication (client) :
+
+  #!/usr/bin/perl -l
+  
+  use SOAP::Lite;
+  use Data::Dumper;
+  
+  my $soap =
+    SOAP::Lite->proxy('http://auth.example.com/')
+    ->uri('urn:/Lemonldap::NG::Portal::SharedConf');
+  my $r = $soap->getCookies( 'user', 'password' );
+  
+  # Catch SOAP errors
+  if ( $r->fault ) {
+      print STDERR "SOAP Error: " . $r->fault->{faultstring};
+  }
+  else {
+      my $res = $r->result();
+  
+      # If authentication failed, display error
+      if ( $res->{error} ) {
+          print STDERR "Error: " . $soap->error( 'fr', $res->{error} )->result();
+      }
+  
+      # print session-ID
+      else {
+          print "Cookie: lemonldap=" . $res->{cookies}->{lemonldap};
+      }
   }
 
 =head1 DESCRIPTION
@@ -686,6 +978,10 @@ Prepares variables to store in central cache (stored temporarily in
 C<$self->{sessionInfo}>). It use C<exportedVars> entry (passed to the new sub)
 if defined to know what to store else it stores uid, cn and mail attributes.
 
+=head3 getSessionInfo
+
+Pick up an information stored in session.
+
 =head3 setGroups
 
 Does nothing by default.
@@ -728,6 +1024,14 @@ Main method.
 
 Returns the error message corresponding to the error returned by the methods
 described above
+
+=head3 error_type
+
+Give the type of the error (positive, warning or positive)
+
+=head3 translate_template
+
+Define an HTML::Template filter to translate multilingual strings
 
 =head3 _bind( $ldap, $dn, $password )
 

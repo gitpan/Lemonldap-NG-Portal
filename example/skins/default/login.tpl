@@ -2,15 +2,15 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
-	<title><TMPL_VAR NAME="AUTH_TITLE"></title>
+	<title>Authentication portal</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <meta http-equiv="Content-Language" content="en" />
         <meta http-equiv="Content-Script-Type" content="text/javascript" />
-        <link rel="stylesheet" type="text/css" href="<TMPL_VAR NAME="CSS_FILE">" />
+        <link rel="stylesheet" type="text/css" href="skins/default/styles.css" />
 </head>
 <body>
 	<div id="page">
-	<div id="top"><h1><TMPL_VAR NAME="AUTH_TITLE"></h1></div>
+	<div id="top"><h1><TMPL_VAR NAME="PAGE_TITLE"></h1></div>
 	<div id="content">
 
 	<div id="messages"><ul><li><TMPL_VAR NAME="AUTH_ERROR"></li></ul></div>
@@ -23,8 +23,9 @@
         <li><a href="http://<TMPL_VAR NAME='SITE_NAME'>"><TMPL_VAR NAME="SITE_NAME"></a></li>
         </TMPL_LOOP>
         </ul>
+	</TMPL_IF>
 
-	<TMPL_ELSE>
+	<TMPL_IF NAME="DISPLAY_FORM">
 	<!-- Display login form -->
 	<form method="post">
 	<input type="hidden" name="url" value="<TMPL_VAR NAME="AUTH_URL">" />

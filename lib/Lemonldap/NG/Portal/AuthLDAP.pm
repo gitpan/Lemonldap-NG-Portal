@@ -1,38 +1,48 @@
 package Lemonldap::NG::Portal::AuthLDAP;
 
 use Lemonldap::NG::Portal::Simple;
+use Lemonldap::NG::Portal::_LDAP;
+use Lemonldap::NG::Portal::_WebForm;
+use Lemonldap::NG::Portal::UserDBLDAP;
 
-our $VERSION = '0.1';
+our $VERSION = '0.2';
+use base qw(Lemonldap::NG::Portal::_WebForm);
 
-sub authInit {
-}
-
-sub extractFormInfo {
+sub ldap {
     my $self = shift;
-    return PE_FIRSTACCESS
-      unless ( $self->param('user') );
-    return PE_FORMEMPTY
-      unless ( length( $self->{'user'} = $self->param('user') ) > 0
-        && length( $self->{'password'} = $self->param('password') ) > 0 );
-    PE_OK;
+    unless ( ref( $self->{ldap} ) ) {
+        my $mesg = $self->{ldap}->bind
+          if ( $self->{ldap} = Lemonldap::NG::Portal::_LDAP->new($self) );
+        if ( !$mesg || $mesg->code != 0 ) {
+            return 0;
+        }
+    }
+    return $self->{ldap};
 }
 
-sub setAuthSessionInfo {
-    PE_OK;
-}
+*_formateFilter = *Lemonldap::NG::Portal::UserDBLDAP::formateFilter;
+*_search = *Lemonldap::NG::Portal::UserDBLDAP::search;
 
 sub authenticate {
     my $self = shift;
-    $self->unbind();
-    my $err;
-    return $err unless ( ( $err = $self->connectLDAP ) == PE_OK );
+    unless ( $self->ldap ) {
+        return PE_LDAPCONNECTFAILED;
+    }
+
+    # Set the dn unless done before
+    unless($self->{dn}) {
+        my $tmp = $self->_subProcess(qw(_formateFilter _search));
+        return $tmp if($tmp);
+    }
+
     # Check if we use Ppolicy control
     if ( $self->{ldapPpolicyControl} ) {
 
         # require Perl module
         eval 'require Net::LDAP::Control::PasswordPolicy';
         if ($@) {
-            print STDERR "Module Net::LDAP::Control::PasswordPolicy not found in @INC\n";
+            print STDERR
+              "Module Net::LDAP::Control::PasswordPolicy not found in @INC\n";
             return PE_LDAPERROR;
         }
         no strict 'subs';
@@ -41,20 +51,26 @@ sub authenticate {
         my $pp = Net::LDAP::Control::PasswordPolicy->new;
 
         # Bind with user credentials
-        my $mesg = $self->{ldap}->bind(
+        my $mesg = $self->ldap->bind(
             $self->{dn},
             password => $self->{password},
             control  => [$pp]
         );
 
-        # Get bind response
-        return PE_OK if ( $mesg->code == 0 );
-
         # Get server control response
         my ($resp) = $mesg->control("1.3.6.1.4.1.42.2.27.8.5.1");
 
+        # Get expiration warning and graces
+        $self->{ppolicy}->{time_before_expiration} =
+          $resp->time_before_expiration;
+        $self->{ppolicy}->{grace_authentications_remaining} =
+          $resp->grace_authentications_remaining;
+
+        # Get bind response
+        return PE_OK if ( $mesg->code == 0 );
+
         if ( defined $resp ) {
-            my $pp_error = $resp->error;
+            my $pp_error = $resp->pp_error;
             if ( defined $pp_error ) {
                 return [
                     PE_PP_PASSWORD_EXPIRED,
@@ -77,9 +93,9 @@ sub authenticate {
         }
     }
     else {
-        return PE_BADCREDENTIALS
-          unless (
-            $self->_bind( $self->{ldap}, $self->{dn}, $self->{password} ) );
+        my $mesg =
+          $self->ldap->bind( $self->{dn}, password => $self->{password} );
+        return PE_BADCREDENTIALS if ( $mesg->code != 0 );
     }
     $self->{sessionInfo}->{authenticationLevel} = 2;
     PE_OK;

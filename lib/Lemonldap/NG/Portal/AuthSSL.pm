@@ -4,15 +4,16 @@ use strict;
 use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::AuthLDAP;
 
-our @ISA = qw(Lemonldap::NG::Portal::AuthLDAP);
+use base qw(Lemonldap::NG::Portal::AuthLDAP);
 
-our $VERSION = '0.1';
+our $VERSION = '0.11';
 
 sub authInit {
     my $self = shift;
     $self->{SSLRequire} = 1 unless ( defined $self->{SSLRequire} );
     $self->{SSLVar}       ||= 'SSL_CLIENT_S_DN_Email';
     $self->{SSLLDAPField} ||= 'mail';
+    PE_OK;
 }
 
 # Authentication is made by Apache with SSL and here before searching the LDAP

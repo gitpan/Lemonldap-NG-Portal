@@ -4,9 +4,10 @@ use strict;
 use Lemonldap::NG::Portal::Simple;
 use AuthCAS;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 sub authInit {
+    PE_OK;
 }
 
 sub extractFormInfo {

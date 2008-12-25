@@ -1,5 +1,19 @@
 Revision history for Perl extension Lemonldap::NG::Portal.
 
+0.86  Thu dec 25 8:55:41 2008
+	- New Menu module
+	  * Password management
+	  * Dynamic links
+	- New pastel skin
+	- Configuration managed by Lemonldap::NG::Common::Conf
+	- UserDB system : LDAP is not needed now
+	- Custom functions
+	- SOAP functions
+
+0.85  Mon aug 25 22:07:54 2008
+	- CSS for the portal
+	- Little bug in CDA
+
 0.83  Sat May 24 17:24:23 2008
 	- Integration in Handler status system
 	- Romanian translation

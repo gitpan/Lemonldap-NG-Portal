@@ -13,6 +13,7 @@ BEGIN { use_ok('Lemonldap::NG::Portal::Simple') }
 # Insert your test code below, the Test::More module is use()ed here so read
 # its man page ( perldoc Test::More ) for help writing this test script.
 
+$ENV{"REQUEST_METHOD"} = 'GET';
 my $p;
 ok(
     $p = Lemonldap::NG::Portal::Simple->new(

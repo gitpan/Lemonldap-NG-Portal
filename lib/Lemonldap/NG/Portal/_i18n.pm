@@ -3,7 +3,7 @@ package Lemonldap::NG::Portal::_i18n;
 # Developpers warning : this file must stay UTF-8 encoded
 
 use AutoLoader qw(AUTOLOAD);
-our $VERSION = '0.2';
+our $VERSION = '0.3';
 
 sub error {
     my ( $error, $lang ) = @_;
@@ -59,12 +59,19 @@ __END__
 # * PE_PP_PASSWORD_TOO_SHORT             29
 # * PE_PP_PASSWORD_TOO_YOUNG             30
 # * PE_PP_PASSWORD_IN_HISTORY            31
+# * PE_PP_GRACE                          32
+# * PE_PP_EXP_WARNING                    33
+# * PE_PASSWORD_MISMATCH                 34
+# * PE_PASSWORD_OK                       35
+# * PE_NOTIFICATION                      36
+# * PE_BADURL                            37
 
 # Not used in errors:
 # * PE_DONE                -1
 # * PE_REDIRECT            -2
 
 sub error_fr {
+    use utf8;
     [
         "Utilisateur authentifié",
         "Votre session a expiré, vous devez vous réauthentifier",
@@ -98,6 +105,12 @@ sub error_fr {
         "Mot de passe trop court",
         "Mot de passe trop récent",
         "Mot de passe utilisé trop récemment",
+        " authentifications restantes, changez votre mot de passe !",
+        " secondes avant expiration de votre mot de passe, pensez &agrave; le changer !",
+        "Les mots de passe ne correspondent pas",
+        "Le mot de passe a &eacute;t&eacute; chang&eacute;",
+        "Vous avez un nouveau message",
+        'Mauvaise URL',
     ];
 }
 
@@ -135,10 +148,17 @@ sub error_en {
         'Password too short',
         'Password too young',
         'Password used too recently',
+        ' authentications remaining, change your password!',
+        ' seconds before password expiration, change it!',
+        'Passwords mismatch',
+        'Password successfully changed',
+        'You have a new message',
+        'Bad URL',
     ];
 }
 
 sub error_ro {
+    use utf8;
     [
         "Utilizator autentificat",
         "Sesiunea dvs. a expirat, trebuie să vă reautentificaţi",
@@ -172,5 +192,11 @@ sub error_ro {
         'Password too short',
         'Password too young',
         'Password used too recently',
+        ' authentications remaining, change your password!',
+        ' seconds before password expiration, change it!',
+        'Passwords mismatch',
+        'Password successfully changed',
+        'You have a new message',
+        'Bad URL',
     ];
 }

@@ -34,32 +34,32 @@ use UNIVERSAL qw( isa can VERSION );
 *EXPORT_TAGS = *Lemonldap::NG::Portal::SharedConf::EXPORT_TAGS;
 *EXPORT      = *Lemonldap::NG::Portal::SharedConf::EXPORT;
 
-our $VERSION = '0.31';
-our @ISA     = qw(Lemonldap::NG::Portal::SharedConf) ;
+our $VERSION = '0.32';
+use base qw(Lemonldap::NG::Portal::SharedConf);
 
 #===============================================================================
 # Global Constants
 #===============================================================================
 
 use constant {
-        PE_LA_FAILED        => 11 ,
-        PE_LA_ARTFAILED     => 12 ,
-        PE_LA_DEFEDFAILED   => 13 ,
-        PE_LA_QUERYEMPTY    => 14 ,
-        PE_LA_SOAPFAILED    => 15 ,
-        PE_LA_SLOFAILED     => 16 ,
-        PE_LA_SSOFAILED     => 17 ,
-        PE_LA_SSOINITFAILED => 18 ,
-        PE_LA_SESSIONERROR  => 19 ,
-        PE_LA_SEPFAILED     => 20 ,
+    PE_LA_FAILED        => 11,
+    PE_LA_ARTFAILED     => 12,
+    PE_LA_DEFEDFAILED   => 13,
+    PE_LA_QUERYEMPTY    => 14,
+    PE_LA_SOAPFAILED    => 15,
+    PE_LA_SLOFAILED     => 16,
+    PE_LA_SSOFAILED     => 17,
+    PE_LA_SSOINITFAILED => 18,
+    PE_LA_SESSIONERROR  => 19,
+    PE_LA_SEPFAILED     => 20,
 
-        PC_LA_URLAC  => '/liberty/assertionConsumer.pl' ,
-        PC_LA_URLFT  => '/liberty/federationTermination.pl' ,
-        PC_LA_URLFTR => '/liberty/federationTerminationReturn.pl' ,
-        PC_LA_URLSL  => '/liberty/singleLogout.pl' ,
-        PC_LA_URLSLR => '/liberty/singleLogoutReturn.pl' ,
-        PC_LA_URLSC  => '/liberty/soapCall.pl' ,
-        PC_LA_URLSE  => '/liberty/soapEndpoint.pl' ,
+    PC_LA_URLAC  => '/liberty/assertionConsumer.pl',
+    PC_LA_URLFT  => '/liberty/federationTermination.pl',
+    PC_LA_URLFTR => '/liberty/federationTerminationReturn.pl',
+    PC_LA_URLSL  => '/liberty/singleLogout.pl',
+    PC_LA_URLSLR => '/liberty/singleLogoutReturn.pl',
+    PC_LA_URLSC  => '/liberty/soapCall.pl',
+    PC_LA_URLSE  => '/liberty/soapEndpoint.pl',
 };
 
 #===============================================================================
@@ -212,6 +212,7 @@ sub process {
     if ( not $self->param('url')
         and ( $url eq $self->{portal} or $urlr eq $self->{portal} ) )
     {
+
         # TODO Security tricks :
         # - Check if URL figures in locationRules
         $self->{error} = PE_DONE;
@@ -233,14 +234,14 @@ sub process {
 
         $self->_debug( "Login user = '" . $self->{user} . "'" );
 
-    # federationTermination
+        # federationTermination
     }
     elsif ( $urldir eq $self->PC_LA_URLFT ) {
 
         $self->{error} = $self->_subProcess(
             qw( libertyFederationTermination log autoRedirect ));
 
-    # federationTerminationReturn
+        # federationTerminationReturn
     }
     elsif ( $urldir eq $self->PC_LA_URLFTR ) {
 
@@ -249,7 +250,7 @@ sub process {
               autoRedirect )
         );
 
-    # singleLogout : called when IDP request Logout.
+        # singleLogout : called when IDP request Logout.
     }
     elsif ( $urldir eq $self->PC_LA_URLSL ) {
 
@@ -261,30 +262,32 @@ sub process {
         # OK : $self->{urldc} is fixed at the end of this process.
         $self->_debug( "Logout user = '" . $self->{user} . "'" );
 
-    # singleLogoutReturn
+        # singleLogoutReturn
     }
     elsif ( $urldir eq $self->PC_LA_URLSLR ) {
 
         $self->{error} =
           $self->_subProcess(qw( libertySingleLogoutReturn log ));
 
-    # soapCall
+        # soapCall
     }
     elsif ( $urldir eq $self->PC_LA_URLSC ) {
 
         $self->{error} = $self->_subProcess(qw( libertySoapCall log ));
 
-    # soapEndpoint
+        # soapEndpoint
     }
     elsif ( $urldir eq $self->PC_LA_URLSE ) {
 
-        $self->{error} =
-          $self->_subProcess(qw( libertySoapEndpoint log ));
+        $self->{error} = $self->_subProcess(qw( libertySoapEndpoint log ));
 
-    # Direct access or simple access -> main
-    # WARNING : we permit authentication on service.
+        # Direct access or simple access -> main
+        # WARNING : we permit authentication on service.
     }
-    elsif ( not $self->param('user') and not $self->param('password') and not $self->param('logout')) {
+    elsif ( not $self->param('user')
+        and not $self->param('password')
+        and not $self->param('logout') )
+    {
 
         $self->{error} = $self->_subProcess(
             qw( libertyRetrieveExistingSession
@@ -292,7 +295,7 @@ sub process {
               autoRedirect )
         );
 
-    # Not in liberty authentication process.
+        # Not in liberty authentication process.
     }
     else {
         $self->{isLibertyProcess} = 0;
@@ -300,7 +303,7 @@ sub process {
 
     if ( $self->{error} ) {
         $self->updateStatus;
-        return 0
+        return 0;
     }
 
     # Liberty Process OK -> do Lemonldap::NG process.
@@ -330,8 +333,8 @@ sub process {
 sub setSessionInfo {
     my $self = shift;
 
-    # If ID-WSF enabled, use WebService 
-    # TODO    
+    # If ID-WSF enabled, use WebService
+    # TODO
 
     # Else use SUPER::setSessionInfo
     return $self->SUPER::setSessionInfo;
@@ -355,9 +358,9 @@ sub store {
       if ( $err != PE_OK or not $self->{isLibertyProcess} );
 
     return PE_LA_SESSIONERROR
-      unless defined $self->{userNameIdentifier} ;
+      unless defined $self->{userNameIdentifier};
 
-    return $self->_assertionSessionStore($self->{userNameIdentifier}) ;
+    return $self->_assertionSessionStore( $self->{userNameIdentifier} );
 }
 
 #===============================================================================
@@ -467,13 +470,19 @@ sub libertyArtefactResolution {
             $formLareq = 'SAMLart=' . $self->param('SAMLart');
         }
 
-        if ( my $error = $lassoLogin->initRequest( $formLareq, $lassoHttpMethod ) ) {
-            $self->_debug( "libertyArtefactResolution : lassoLogin->initRequest(...) : error = $error");
+        if ( my $error =
+            $lassoLogin->initRequest( $formLareq, $lassoHttpMethod ) )
+        {
+            $self->_debug(
+"libertyArtefactResolution : lassoLogin->initRequest(...) : error = $error"
+            );
             return PE_LA_ARTFAILED;
         }
 
         if ( my $error = $lassoLogin->buildRequestMsg() ) {
-            $self->_debug( "libertyArtefactResolution : lassoLogin->buildRequestMsg(...) : error = $error");
+            $self->_debug(
+"libertyArtefactResolution : lassoLogin->buildRequestMsg(...) : error = $error"
+            );
             return PE_LA_ARTFAILED;
         }
 
@@ -484,12 +493,16 @@ sub libertyArtefactResolution {
           $self->_soapRequest( $lassoLogin->{msgUrl}, $lassoLogin->{msgBody} );
 
         if ( my $error = $lassoLogin->processResponseMsg($soapResponseMsg) ) {
-            $self->_debug( "libertyArtefactResolution : lassoLogin->processResponseMsg(...) : error = $error");
+            $self->_debug(
+"libertyArtefactResolution : lassoLogin->processResponseMsg(...) : error = $error"
+            );
             return PE_LA_SOAPFAILED;
         }
 
         if ( my $error = $lassoLogin->acceptSso() ) {
-            $self->_debug( "libertyArtefactResolution : lassoLogin->acceptSso(...) : error = $error");
+            $self->_debug(
+"libertyArtefactResolution : lassoLogin->acceptSso(...) : error = $error"
+            );
             return PE_LA_SSOFAILED;
         }
 
@@ -570,11 +583,9 @@ sub libertyDeletingExistingSession {
     # Deleting association file, which is created when asserting consumer,
     # in store function.
 
-    if ( $self->{sessionInfo}->{'laNameIdentifier'} )
-    {
+    if ( $self->{sessionInfo}->{'laNameIdentifier'} ) {
         return $self->_assertionSessionDelete(
-                $self->{sessionInfo}->{'laNameIdentifier'}
-            ) ;
+            $self->{sessionInfo}->{'laNameIdentifier'} );
     }
 
     return PE_OK;
@@ -645,7 +656,7 @@ sub libertyFederationTermination {
 # libertyFederationTerminationReturn
 #===============================================================================
 #
-# TODO 
+# TODO
 #
 #===============================================================================
 
@@ -676,12 +687,13 @@ sub libertyRetrieveExistingSession {
       unless ( defined $self->{laStorageOptions}->{Directory} );
 
     return PE_OK
-      unless ( defined $self->param('NameIdentifier') ) ;
+      unless ( defined $self->param('NameIdentifier') );
 
     # Retrieve the Apache session ID.
     # It should not return any errors when trying to retrieve assertions.
 
-    my $err = $self->_assertionSessionRetrieve($self->param('NameIdentifier')) ;
+    my $err =
+      $self->_assertionSessionRetrieve( $self->param('NameIdentifier') );
 
     # return PE_LA_SESSIONERROR
     #   unless $err == 0 ;
@@ -693,49 +705,39 @@ sub libertyRetrieveExistingSession {
     my %h;
     eval {
         tie %h,
-            $self->{globalStorage},
-            $self->{id},
-            $self->{globalStorageOptions} ;
+          $self->{globalStorage}, $self->{id}, $self->{globalStorageOptions};
     };
 
     if ( $@ or not tied(%h) ) {
-        print STDERR
-          "Session " . $self->{id} . " isn't yet available ($ENV{REMOTE_ADDR})\n";
-        return PE_OK ;
+        print STDERR "Session "
+          . $self->{id}
+          . " isn't yet available ($ENV{REMOTE_ADDR})\n";
+        return PE_OK;
     }
 
-    %{ $self->{datas} } = %h ;
+    %{ $self->{datas} } = %h;
     untie(%h);
 
-    my $r ;
+    my $r;
     if ( $self->{existingSession} ) {
-        $r = &{ $self->{existingSession} }(
-                $self,
-                $self->{id},
-                $self->{datas}
-            );
+        $r =
+          &{ $self->{existingSession} }( $self, $self->{id}, $self->{datas} );
     }
     else {
-        $r = $self->existingSession(
-                $self->{id},
-                $self->{datas}
-            );
+        $r = $self->existingSession( $self->{id}, $self->{datas} );
     }
 
-    if ($r == PE_OK)
-    {
-        print STDERR "No existing liberty session found\n" ;
-        return PE_OK ;
+    if ( $r == PE_OK ) {
+        print STDERR "No existing liberty session found\n";
+        return PE_OK;
     }
 
-    while ( my ( $k, $v ) = each( %{ $self->{datas} } ) )
-    {
-        $self->{sessionInfo}->{$k} = $v ;
+    while ( my ( $k, $v ) = each( %{ $self->{datas} } ) ) {
+        $self->{sessionInfo}->{$k} = $v;
     }
 
-    if (defined $self->{sessionInfo}->{$self->{laLdapLoginAttribute}})
-    {
-        $self->{user} = $self->{sessionInfo}->{$self->{laLdapLoginAttribute}} ;
+    if ( defined $self->{sessionInfo}->{ $self->{laLdapLoginAttribute} } ) {
+        $self->{user} = $self->{sessionInfo}->{ $self->{laLdapLoginAttribute} };
     }
 
     return PE_OK;
@@ -765,6 +767,7 @@ sub libertySetSessionInfo {
     return PE_LA_FAILED
       unless (
         defined $lassoLogin->{session}
+
         # and defined $lassoLogin->{identity}
         and $lassoLogin->{nameIdentifier}->{content}
       );
@@ -783,17 +786,15 @@ sub libertySetSessionInfo {
     # The Lemonldap::NG search consists to perform a search with a filter
     # using nameIdentifier, instead of username.
 
-    $self->{userNameIdentifier} = $lassoLogin->{nameIdentifier}->{content} ;
-    $self->{password}           = 'none' ;
+    $self->{userNameIdentifier} = $lassoLogin->{nameIdentifier}->{content};
+    $self->{password}           = 'none';
 
     # Try to retrieve uid in SAML response form assertion statement.
     # For the moment, uid have to be unique in LDAP directory.
 
     my @uidValues =
-      $self->_getAttributeValuesOfSamlAssertion(
-        $lassoLogin->{response},
-        $self->{laLdapLoginAttribute}
-      ) ;
+      $self->_getAttributeValuesOfSamlAssertion( $lassoLogin->{response},
+        $self->{laLdapLoginAttribute} );
 
     $self->{user} = $uidValues[0]
       if (@uidValues);
@@ -839,7 +840,7 @@ sub libertySignOn {
     $lassoLogin->{request}->{nameIdPolicy} =
       $lasso::LIB_NAMEID_POLICY_TYPE_ONE_TIME;
 
-    #$lassoLogin->{request}->{nameIdPolicy} = $lasso::LIB_NAMEID_POLICY_TYPE_FEDERATED ;
+#$lassoLogin->{request}->{nameIdPolicy} = $lasso::LIB_NAMEID_POLICY_TYPE_FEDERATED ;
     $lassoLogin->{request}->{isPassive} = 0;
 
     if ( $self->param('url') ) {
@@ -872,8 +873,8 @@ sub libertySignOn {
 #===============================================================================
 
 sub libertySingleLogout {
-    my $self = shift ;
-    my $soap = shift ;
+    my $self = shift;
+    my $soap = shift;
 
     my $lassoLogout = lasso::Logout->new( $self->{laServer} );
     return PE_LA_FAILED
@@ -881,7 +882,7 @@ sub libertySingleLogout {
         and defined($lassoLogout)
         and defined $ENV{'QUERY_STRING'} );
 
-    if ( lasso::isLibertyQuery($ENV{'QUERY_STRING'}) ) {
+    if ( lasso::isLibertyQuery( $ENV{'QUERY_STRING'} ) ) {
 
         # We retrieve query string and verify it.
         # If it is OK, we set lemonldap::ng logout parameter, so we can perform
@@ -890,13 +891,16 @@ sub libertySingleLogout {
 
         $self->param( 'logout' => '1' );
 
-        if ( my $error = $lassoLogout->processRequestMsg( $ENV{'QUERY_STRING'} ) ) {
-            $self->_debug( "lassoLogout->processRequestMsg(...) : error = $error");
+        if ( my $error =
+            $lassoLogout->processRequestMsg( $ENV{'QUERY_STRING'} ) )
+        {
+            $self->_debug(
+                "lassoLogout->processRequestMsg(...) : error = $error");
             return PE_LA_SLOFAILED;
         }
 
-        # my $lassoIdentity = lasso::Identity::newFromDump($self->{sessionInfo}->{laIdentityDump}) ;
-        # $lassoLogout->{identity} = $lassoIdentity ;
+# my $lassoIdentity = lasso::Identity::newFromDump($self->{sessionInfo}->{laIdentityDump}) ;
+# $lassoLogout->{identity} = $lassoIdentity ;
         my $lassoSession =
           lasso::Session::newFromDump( $self->{sessionInfo}->{laSessionDump} );
         $lassoLogout->{session} = $lassoSession;
@@ -906,13 +910,15 @@ sub libertySingleLogout {
             if (    $error != $lasso::PROFILE_ERROR_SESSION_NOT_FOUND
                 and $error != $lasso::PROFILE_ERROR_IDENTITY_NOT_FOUND )
             {
-                $self->_debug( "lassoLogout->validateRequest(...) : error = $error");
+                $self->_debug(
+                    "lassoLogout->validateRequest(...) : error = $error");
                 return PE_LA_SLOFAILED;
             }
         }
 
         if ( my $error = $lassoLogout->buildResponseMsg() ) {
-            $self->_debug( "lassoLogout->buildResponseMsg(...) : error = $error");
+            $self->_debug(
+                "lassoLogout->buildResponseMsg(...) : error = $error");
             return PE_LA_SLOFAILED;
         }
 
@@ -920,7 +926,7 @@ sub libertySingleLogout {
         # itself by a SOAP request.
         if ( defined $lassoLogout->{msgBody} && !$soap ) {
             my $soapResponseMsg = $self->_soapRequest( $lassoLogout->{msgUrl},
-                $lassoLogout->{msgBody} ) ;
+                $lassoLogout->{msgBody} );
         }
     }
 
@@ -952,46 +958,47 @@ sub libertySingleLogout {
 sub libertySingleLogoutReturn {
     my $self = shift;
 
-    # Original code from Unwind :
-    #
-    # 8<--------
-    #    logout = lasso.Logout(misc.get_lasso_server())
-    #    try:
-    #        logout.processResponseMsg(get_request().get_query())
-    #    except lasso.Error, error:
-    #        if error[0] == lasso.PROFILE_ERROR_INVALID_QUERY:
-    #            raise AccessError()
-    #        if error[0] == lasso.DS_ERROR_INVALID_SIGNATURE:
-    #            return error_page(_('Failed to check single logout request signature.'))
-    #        if hasattr(lasso, 'LOGOUT_ERROR_REQUEST_DENIED') and \
-    #                error[0] == lasso.LOGOUT_ERROR_REQUEST_DENIED:
-    #            # ignore silently
-    #            return redirect(get_request().environ['SCRIPT_NAME'] + '/')
-    #        elif error[0] == lasso.ERROR_UNDEFINED:
-    #            # XXX: unknown status; ignoring for now.
-    #            return redirect(get_request().environ['SCRIPT_NAME'] + '/')
-    #        raise
-    #    return redirect(get_request().environ['SCRIPT_NAME'] + '/')
-    # 8<--------
-    #
-    # Normaly, if we are here, assertion and session should have been removed
-    # in a previous request.
+# Original code from Unwind :
+#
+# 8<--------
+#    logout = lasso.Logout(misc.get_lasso_server())
+#    try:
+#        logout.processResponseMsg(get_request().get_query())
+#    except lasso.Error, error:
+#        if error[0] == lasso.PROFILE_ERROR_INVALID_QUERY:
+#            raise AccessError()
+#        if error[0] == lasso.DS_ERROR_INVALID_SIGNATURE:
+#            return error_page(_('Failed to check single logout request signature.'))
+#        if hasattr(lasso, 'LOGOUT_ERROR_REQUEST_DENIED') and \
+#                error[0] == lasso.LOGOUT_ERROR_REQUEST_DENIED:
+#            # ignore silently
+#            return redirect(get_request().environ['SCRIPT_NAME'] + '/')
+#        elif error[0] == lasso.ERROR_UNDEFINED:
+#            # XXX: unknown status; ignoring for now.
+#            return redirect(get_request().environ['SCRIPT_NAME'] + '/')
+#        raise
+#    return redirect(get_request().environ['SCRIPT_NAME'] + '/')
+# 8<--------
+#
+# Normaly, if we are here, assertion and session should have been removed
+# in a previous request.
 
-    $self->{lassoLogout} = lasso::Logout->new($self->{laServer}) ;
+    $self->{lassoLogout} = lasso::Logout->new( $self->{laServer} );
 
     return PE_LA_SLOFAILED
-      unless $self->{lassoLogout} and defined($self->{lassoLogout}) ;
+      unless $self->{lassoLogout} and defined( $self->{lassoLogout} );
 
-    if (my $error = $self->{lassoLogout}->processResponseMsg($ENV{'QUERY_STRING'}))
+    if ( my $error =
+        $self->{lassoLogout}->processResponseMsg( $ENV{'QUERY_STRING'} ) )
     {
-        $self->_debug( "Process response message error = $error" ) ;
-        return PE_LA_SLOFAILED ;
+        $self->_debug("Process response message error = $error");
+        return PE_LA_SLOFAILED;
     }
 
     # Test if Lemonldap::NG cookie is available. If it is the case, the
     # corresponding session should be previously deleted.
 
-    return PE_OK ;
+    return PE_OK;
 }
 
 #===============================================================================
@@ -1056,7 +1063,7 @@ sub libertySoapEndpoint {
     # Logout SOAP request
     if ( $soapRequestType == $lasso::REQUEST_TYPE_LOGOUT ) {
         $ENV{'QUERY_STRING'} = $soapRequest;
-        return $self->libertySingleLogout(1) ;
+        return $self->libertySingleLogout(1);
 
         # Defederation SOAP request
     }
@@ -1090,32 +1097,27 @@ sub libertySoapEndpoint {
 #===============================================================================
 
 sub _assertionSessionDelete {
-    my $self = shift ;
-    my $assertionId = shift ;
+    my $self        = shift;
+    my $assertionId = shift;
 
     return PE_LA_SESSIONERROR
-      unless (
-        defined $self->{laStorage}
-        and defined $self->{laStorageOptions} ) ;
+      unless ( defined $self->{laStorage}
+        and defined $self->{laStorageOptions} );
 
-    my $session = new CGI::Session(
-            "driver:" . $self->{laStorage} . ";id:STATIC" ,
-            $assertionId ,
-            $self->{laStorageOptions}
-        ) ;
+    my $session =
+      new CGI::Session( "driver:" . $self->{laStorage} . ";id:STATIC",
+        $assertionId, $self->{laStorageOptions} );
 
-    if ( defined $session )
-    {
-        $session->delete() ;
-        $session->flush() ;
+    if ( defined $session ) {
+        $session->delete();
+        $session->flush();
     }
-    else
-    {
-        $self->_debug("Unable to delete assertion file\n") ;
-        return PE_LA_SESSIONERROR ;
+    else {
+        $self->_debug("Unable to delete assertion file\n");
+        return PE_LA_SESSIONERROR;
     }
 
-    return PE_OK ;
+    return PE_OK;
 }
 
 #===============================================================================
@@ -1129,31 +1131,26 @@ sub _assertionSessionDelete {
 #===============================================================================
 
 sub _assertionSessionRetrieve {
-    my $self = shift ;
-    my $assertionId = shift ;
+    my $self        = shift;
+    my $assertionId = shift;
 
     return PE_LA_SESSIONERROR
-      unless (
-        defined $self->{laStorage}
-        and defined $self->{laStorageOptions} ) ;
+      unless ( defined $self->{laStorage}
+        and defined $self->{laStorageOptions} );
 
-    my $session = new CGI::Session(
-            "driver:" . $self->{laStorage} . ";id:STATIC" ,
-            $assertionId ,
-            $self->{laStorageOptions}
-        ) ;
+    my $session =
+      new CGI::Session( "driver:" . $self->{laStorage} . ";id:STATIC",
+        $assertionId, $self->{laStorageOptions} );
 
-    if ( defined $session and defined $session->param('id') )
-    {
-        $self->{id} = $session->param('id') ;
+    if ( defined $session and defined $session->param('id') ) {
+        $self->{id} = $session->param('id');
     }
-    else
-    {
-        $self->_debug("Unable to retrieve assertion file\n") ;
-        return PE_LA_SESSIONERROR ;
+    else {
+        $self->_debug("Unable to retrieve assertion file\n");
+        return PE_LA_SESSIONERROR;
     }
 
-    return PE_OK ;
+    return PE_OK;
 }
 
 #===============================================================================
@@ -1172,32 +1169,27 @@ sub _assertionSessionRetrieve {
 #===============================================================================
 
 sub _assertionSessionStore {
-    my $self = shift ;
-    my $assertionId = shift ;
+    my $self        = shift;
+    my $assertionId = shift;
 
     return PE_LA_SESSIONERROR
-      unless (
-        defined $self->{laStorage}
-        and defined $self->{laStorageOptions} ) ;
+      unless ( defined $self->{laStorage}
+        and defined $self->{laStorageOptions} );
 
-    my $session = new CGI::Session(
-            "driver:" . $self->{laStorage} . ";id:STATIC" ,
-            $assertionId ,
-            $self->{laStorageOptions}
-        ) ;
+    my $session =
+      new CGI::Session( "driver:" . $self->{laStorage} . ";id:STATIC",
+        $assertionId, $self->{laStorageOptions} );
 
-    if ( defined $session and defined $self->{id} )
-    {
-        $session->param('id', $self->{id}) ;
-        $session->flush() ;
+    if ( defined $session and defined $self->{id} ) {
+        $session->param( 'id', $self->{id} );
+        $session->flush();
     }
-    else
-    {
-        $self->_debug("Unable to store assertion file\n") ;
-        return PE_LA_SESSIONERROR ;
+    else {
+        $self->_debug("Unable to store assertion file\n");
+        return PE_LA_SESSIONERROR;
     }
 
-    return PE_OK ;
+    return PE_OK;
 }
 
 #===============================================================================
@@ -1211,21 +1203,21 @@ sub _assertionSessionStore {
 #===============================================================================
 
 sub _getAttributeValuesOfSamlAssertion {
-    my $self          = shift ;
-    my $samlp         = shift ;
-    my $attributeName = shift ;
-    my @tab = () ;
+    my $self          = shift;
+    my $samlp         = shift;
+    my $attributeName = shift;
+    my @tab           = ();
 
     # This function is in version alpha. The structure of the SAML assertion
     # depends of the source application. So, we decide to catch possible
     # exception due to parsing errors. So, if an error occurs, we just return
     # an empty table. BUT, the error has been logged.
 
-    eval
-    {
+    eval {
+
         # Search the specific attribute.
 
-        my $attribute = undef ;
+        my $attribute = undef;
 
         for (
             my $i = 0 ;
@@ -1246,7 +1238,8 @@ sub _getAttributeValuesOfSamlAssertion {
               )
             {
                 my $attr =
-                  lasso::NodeList::getItem( $attributeStatement->{attribute}, $j );
+                  lasso::NodeList::getItem( $attributeStatement->{attribute},
+                    $j );
 
                 if ( $attr->{attributeName} eq $attributeName ) {
                     $attribute = $attr;
@@ -1257,8 +1250,7 @@ sub _getAttributeValuesOfSamlAssertion {
         # Then get values for this attribute.
         # Values are only lasso::MiscTextNode type.
 
-        if (defined $attribute)
-        {
+        if ( defined $attribute ) {
             for (
                 my $k = 0 ;
                 $k < lasso::NodeList::length( $attribute->{attributeValue} ) ;
@@ -1269,7 +1261,11 @@ sub _getAttributeValuesOfSamlAssertion {
                   lasso::NodeList::getItem( $attribute->{attributeValue}, $k );
                 my $valueList = $attributeValue->{any};
 
-                for ( my $l = 0 ; $l < lasso::NodeList::length($valueList) ; $l++ )
+                for (
+                    my $l = 0 ;
+                    $l < lasso::NodeList::length($valueList) ;
+                    $l++
+                  )
                 {
                     my $value = lasso::NodeList::getItem( $valueList, $l );
                     push @tab, $value->{content}
@@ -1278,13 +1274,15 @@ sub _getAttributeValuesOfSamlAssertion {
             }
         }
 
-    } ; # end eval
+    };    # end eval
 
     if ($@) {
-        $self->_debug("SAML parsing errors : could not retrieve values for $attributeName attribute") ;
+        $self->_debug(
+"SAML parsing errors : could not retrieve values for $attributeName attribute"
+        );
     }
 
-    return @tab ;
+    return @tab;
 }
 
 #===============================================================================
