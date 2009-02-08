@@ -1,3 +1,8 @@
+##@file
+# Internationalization for Lemonldap::NG portal
+
+##@class
+# Internationalization for Lemonldap::NG portal
 package Lemonldap::NG::Portal::_i18n;
 
 # Developpers warning : this file must stay UTF-8 encoded
@@ -5,6 +10,10 @@ package Lemonldap::NG::Portal::_i18n;
 use AutoLoader qw(AUTOLOAD);
 our $VERSION = '0.3';
 
+## @fn string error(int error,string lang)
+# @param $error Number of error to resolve
+# @param $lang Language or Accepted-Language HTTP header string
+# @return Error string for the $code in the $lang language
 sub error {
     my ( $error, $lang ) = @_;
     $lang = lc($lang);
@@ -70,6 +79,9 @@ __END__
 # * PE_DONE                -1
 # * PE_REDIRECT            -2
 
+## @fn private arrayRef error_fr()
+# French translation.
+# @return Array of error messages
 sub error_fr {
     use utf8;
     [
@@ -114,6 +126,9 @@ sub error_fr {
     ];
 }
 
+## @fn private arrayRef error_en()
+# English translation.
+# @return Array of error messages
 sub error_en {
     [
         "User authenticated",
@@ -157,6 +172,9 @@ sub error_en {
     ];
 }
 
+## @fn private arrayRef error_ro()
+# Romanian translation.
+# @return Array of error messages
 sub error_ro {
     use utf8;
     [
@@ -185,18 +203,18 @@ sub error_ro {
         "Parola dvs. a expirat",
         "Certificat cerut",
         'Eroare',
-        'Password has been reset and now must be changed',
-        'Password may not be modified',
-        'Old password must also be supplied when setting a new password',
-        'Insufficient password quality',
-        'Password too short',
-        'Password too young',
-        'Password used too recently',
-        ' authentications remaining, change your password!',
-        ' seconds before password expiration, change it!',
-        'Passwords mismatch',
-        'Password successfully changed',
-        'You have a new message',
-        'Bad URL',
+        'Parola a fost de resetare şi acum trebuie să fie schimbat',
+        'Parola nu poate fi modificat',
+        'Vechea parolă trebuie să fi, de asemenea, furnizate atunci când stabilesc o nouă parolă',
+        'Calitate parola insuficiente',
+        'Parola prea scurt',
+        'Prea parolă nouă',
+        'Parola folosit prea recent',
+        ' authentications rămase, schimbaţi-vă parola!',
+        ' secunde înainte de expirarea parola dvs., asiguraţi-vă pentru a schimba!',
+        'Parolele nu se potrivesc',
+        'Parola a fost schimbată',
+        'Ai un mesaj nou',
+        'Rea URL',
     ];
 }

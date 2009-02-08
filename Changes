@@ -1,5 +1,11 @@
 Revision history for Perl extension Lemonldap::NG::Portal.
 
+0.87  Sun feb 8 8:05:02 2009
+	- ldap+tls was broken
+	- fix security problem when running on Apache with thread support:
+	  setMacros and setGroups were not launched with the good datas
+	- fix XSS filter that rejected URL with a port
+
 0.86  Thu dec 25 8:55:41 2008
 	- New Menu module
 	  * Password management

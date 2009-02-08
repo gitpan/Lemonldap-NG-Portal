@@ -1,8 +1,13 @@
+## @file
+# Alias for Lemonldap::NG::SharedConf
+
+## @class
+# Alias for Lemonldap::NG::SharedConf
 package Lemonldap::NG::Portal;
 
-print STDERR
-"See Lemonldap::NG::Portal(3) to know which Lemonldap::NG::Portal::* module to use.";
-our $VERSION = "0.86";
+our $VERSION = "0.87";
+use Lemonldap::NG::Portal::SharedConf;
+use base 'Lemonldap::NG::Portal::SharedConf';
 
 1;
 
@@ -70,7 +75,7 @@ SOAP mode authentication (client) :
   
   my $soap =
     SOAP::Lite->proxy('http://auth.example.com/')
-    ->uri('urn:/Lemonldap::NG::Portal::SharedConf');
+    ->uri('urn:/Lemonldap::NG::Common::::CGI::SOAPService');
   my $r = $soap->getCookies( 'user', 'password' );
   
   # Catch SOAP errors

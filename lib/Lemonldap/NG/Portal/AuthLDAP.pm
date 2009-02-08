@@ -1,3 +1,8 @@
+##@file
+# LDAP authentication backend file
+
+##@class
+# LDAP authentication backend class
 package Lemonldap::NG::Portal::AuthLDAP;
 
 use Lemonldap::NG::Portal::Simple;
@@ -8,6 +13,8 @@ use Lemonldap::NG::Portal::UserDBLDAP;
 our $VERSION = '0.2';
 use base qw(Lemonldap::NG::Portal::_WebForm);
 
+## @fn private Lemonldap::NG::Portal::_LDAP ldap()
+# @return Lemonldap::NG::Portal::_LDAP object
 sub ldap {
     my $self = shift;
     unless ( ref( $self->{ldap} ) ) {
@@ -23,6 +30,9 @@ sub ldap {
 *_formateFilter = *Lemonldap::NG::Portal::UserDBLDAP::formateFilter;
 *_search = *Lemonldap::NG::Portal::UserDBLDAP::search;
 
+## @method int authenticate()
+# Authenticate user by LDAP mechanism.
+# @return Lemonldap::NG::Portal constant
 sub authenticate {
     my $self = shift;
     unless ( $self->ldap ) {

@@ -1,3 +1,8 @@
+##@file
+# CAS authentication backend file
+
+##@class
+# CAS authentication backend class
 package Lemonldap::NG::Portal::AuthCAS;
 
 use strict;
@@ -6,10 +11,17 @@ use AuthCAS;
 
 our $VERSION = '0.04';
 
+## @method int authInit()
+# Does nothing.
+# @return Lemonldap::NG::Portal constant
 sub authInit {
     PE_OK;
 }
 
+## @method int extractFormInfo()
+# Read username return by CAS authentication system.
+# If user isn't authenticated, redirect it to CAS portal.
+# @return Lemonldap::NG::Portal constant
 sub extractFormInfo {
     my $self = shift;
     my $cas  = new AuthCAS(
@@ -33,6 +45,9 @@ sub extractFormInfo {
     PE_OK;
 }
 
+## @method int authenticate()
+# Does nothing.
+# @return Lemonldap::NG::Portal constant
 sub authenticate {
     PE_OK;
 }

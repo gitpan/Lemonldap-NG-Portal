@@ -4,9 +4,52 @@ use Lemonldap::NG::Portal::SharedConf;
 
 my $portal = Lemonldap::NG::Portal::SharedConf->new(
     {
-        #ldapPpolicyControl => 1,               # Remove comment to use LDAP Password Policy
-        #storePassword      => 1,               # Remove comment to store password in session (use with caution)
-        #Soap => 1,                             # Remove comment to activate SOAP Function getCookies(user,pwd)
+
+        # ACCESS TO CONFIGURATION
+
+        # By default, Lemonldap::NG uses the default storage.conf file to know
+        # where to find is configuration
+        # (generaly /etc/lemonldap-ng/storage.conf)
+        # You can specify by yourself this file :
+        #configStorage => { File => '/path/to/my/file' },
+
+        # You can also specify directly the configuration
+        # (see Lemonldap::NG::Handler::SharedConf(3))
+        #configStorage => {
+        #      type => 'File',
+        #      directory => '/usr/local/lemonlda-ng/conf/'
+        #},
+
+        # SOAP FUNCTIONS
+        # Remove comment to activate SOAP Functions getCookies(user,pwd) and
+        # error(language, code)
+        #Soap => 1,
+
+        # PASSWORD POLICY
+        # Remove comment to use LDAP Password Policy
+        #ldapPpolicyControl => 1,
+
+        # Remove comment to store password in session (use with caution)
+        #storePassword      => 1,
+
+        # CUSTOM FUNCTION
+        # If you want to create customFunctions in rules, declare them here:
+        #customFunctions    => 'function1 function2',
+        #customFunctions    => 'Package::func1 Package::func2',
+
+        # OTHERS
+        # You can also overload any parameter issued from manager
+        # configuration. Example:
+        #globalStorage => 'Lemonldap::NG::Common::Apache::Session::SOAP',
+        #globalStorageOptions => {
+        #    proxy => 'http://manager.example.com/soapserver.pl',
+        #    proxyOptions => {
+        #        timeout => 5,
+        #    },
+        #    # If soapserver is protected by HTTP Basic:
+        #    User     => 'http-user',
+        #    Password => 'pass',
+        #},
     }
 );
 

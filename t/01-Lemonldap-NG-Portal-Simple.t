@@ -67,7 +67,7 @@ ok( $p->{error} == PE_FORMEMPTY, 'Error code: missing password' );
 # No ldap
 $p->{extractFormInfo} = sub {
     my $self = shift;
-    $self->{user} = 'user';
+    $self->{user}     = 'user';
     $self->{password} = '';
     PE_OK;
 };
@@ -79,11 +79,16 @@ $p->{setSessionInfo} = sub { PE_OK };
 $p->{unbind}         = sub { PE_OK };
 $p->{store}          = sub { PE_OK };
 $p->{authenticate}   = sub { PE_OK };
-ok( $p->process >0 , 'User OK' );
+ok( $p->process > 0, 'User OK' );
 
 # Cookie test
 $p->{id} = 1;
 ok( $p->buildCookie == PE_OK, 'Cookie build' );
-ok( ( ref( $p->{cookie} ) eq 'ARRAY' and $p->{cookie}->[0]->isa('CGI::Cookie') ), 'Valid cookie' );
+ok(
+    (
+        ref( $p->{cookie} ) eq 'ARRAY' and $p->{cookie}->[0]->isa('CGI::Cookie')
+    ),
+    'Valid cookie'
+);
 ok( $p->{cookie}->[0]->value eq '1', 'Cookie value' );
 

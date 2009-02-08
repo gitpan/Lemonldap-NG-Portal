@@ -1,7 +1,13 @@
+##@file
+# Menu for Lemonldap::NG portal
+
+##@class
+# Menu class for Lemonldap::NG portal
 package Lemonldap::NG::Portal::Menu;
 
 use strict;
 use warnings;
+require Lemonldap::NG::Common::CGI;
 use Lemonldap::NG::Portal::SharedConf;
 use Lemonldap::NG::Portal::_LDAP;
 use XML::LibXML;
@@ -14,6 +20,10 @@ our $VERSION = '0.01';
 our ( $defaultCondition, $locationCondition, $locationRegexp, $cfgNum, $path ) =
   ( undef, undef, undef, 0 );
 
+## @method private Safe _safe()
+# Build and returns security jail.
+# Includes custom functions
+# @return Safe object
 sub _safe {
     my $self = shift;
     return $self->{_safe} if ( $self->{_safe} );
@@ -41,7 +51,11 @@ sub _safe {
 
 my $catlevel = 0;
 
-# CONSTRUCTOR
+##@cmethod Lemonldap::NG::Portal::Menu new(hashRef args)
+# Constructor.
+# $args->{portalObject} is required.
+#@param $args hash reference
+#@return new object
 sub new {
     my $class = shift;
     my $self  = {};
@@ -49,10 +63,11 @@ sub new {
 
     # Get configuration
     $self->Lemonldap::NG::Portal::Simple::getConf(@_)
-      or $self->abort("Unable to get configuration");
+      or Lemonldap::NG::Common::CGI->abort("Unable to read $class->new() parameters");
 
     # Portal is required
-    $self->abort("Portal object required") unless ( $self->{portalObject} );
+    Lemonldap::NG::Common::CGI->abort("Portal object required") unless ( $self->{portalObject} );
+
 
     # Fill sessionInfo
     &Lemonldap::NG::Portal::Simple::getSessionInfo( $self->{portalObject} );
@@ -88,6 +103,8 @@ sub new {
     return $self;
 }
 
+## @method private Lemonldap::NG::Portal::_LDAP ldap()
+# @return object Lemonldap::NG::Portal::_LDAP object
 sub ldap {
     my $self = shift;
     unless ( ref( $self->{ldap} ) ) {
@@ -100,6 +117,10 @@ sub ldap {
     return $self->{ldap};
 }
 
+## @method string error(string language)
+# Return error string
+# @param $language optional language to use. Default: browser accepted languages
+# @return error string
 sub error {
 
     # Copied from Simple.pm
@@ -113,14 +134,13 @@ sub error {
     return $error_string;
 }
 
-sub error_type {
-    my $self = shift;
-    return &Lemonldap::NG::Portal::Simple::error_type($self);
-}
+*error_type = *Lemonldap::NG::Portal::Simple::error_type;
 
-# displayModule($modulename)
-# Return true if the user can see the module
-# Use for HTML::Template variable
+## @method boolean displayModule(string modulename)
+# Return true if the user can see the module.
+# Use for HTML::Template variable.
+# @param $modulename string
+# @return boolean
 sub displayModule {
     my $self = shift;
     my ($modulename) = @_;
@@ -136,9 +156,10 @@ sub displayModule {
     return 0;
 }
 
-# displayTab
-# Tells which tab should be selected
-# Design for Jquery tabs
+## @method string displayTab()
+# Tells which tab should be selected.
+# Design for Jquery tabs.
+# @return password, appslist or logout
 sub displayTab {
     my $self = shift;
 
@@ -167,8 +188,9 @@ sub displayTab {
     return "logout";
 }
 
-# appslistMenu
-# HTML code for application list menu
+## @method string appslistMenu()
+# Returns HTML code for application list menu.
+# @return HTML string
 sub appslistMenu {
     my $self = shift;
     my $root = $self->_getXML;
@@ -177,8 +199,9 @@ sub appslistMenu {
     return $self->_displayCategory( $root, $catlevel );
 }
 
-# appslistDescription
-# HTML code for application description
+## @method string appslistDescription()
+# Returns HTML code for application description.
+# @return HTML string
 sub appslistDescription {
     my $self = shift;
     my $root = $self->_getXML;
@@ -187,8 +210,8 @@ sub appslistDescription {
     return $self->_displayDescription($root);
 }
 
-# _getXML
-# return XML root element object
+## @method private XML::LibXML::Document _getXML()
+# @return XML root element object
 sub _getXML {
     my $self = shift;
 
@@ -208,8 +231,9 @@ sub _getXML {
     return $root;
 }
 
-# _displayCategory
-# Create HTML code for a category
+## @method string _displayCategory()
+# Creates and returns HTML code for a category.
+# @return HTML string
 sub _displayCategory {
     my $self = shift;
     my ( $cat, $catlevel ) = @_;
@@ -245,14 +269,20 @@ sub _displayCategory {
     return $html;
 }
 
+## @method private string _userParam(string arg)
+# Returns value of $arg variable stored in session.
+# @param $arg string to modify
+# @return string modified
 sub _userParam {
     my ( $self, $arg ) = @_;
     $arg =~ s/\$([\w]+)/$self->{portalObject}->{sessionInfo}->{$1}/g;
     return $arg;
 }
 
-# _displayApplication
-# Create HTML code for an application
+## @method private string _displayApplication(XML::LibXML::Element app)
+# Creates HTML code for an application.
+# @param $app XML applications element
+# @return HTML string
 sub _displayApplication {
     my $self = shift;
     my ($app) = @_;
@@ -272,8 +302,10 @@ sub _displayApplication {
     return $html;
 }
 
-# _displayDescription
-# Create HTML code for application description
+## @method private string _displayDescription(XML::LibXML::Document root)
+# Create HTML code for application description.
+# @param $root XML root element
+# @return HTML_string
 sub _displayDescription {
     my $self = shift;
     my ($root) = @_;
@@ -305,8 +337,10 @@ sub _displayDescription {
     return $html;
 }
 
-# _filterXML
-# Remove unauthorized nodes
+## @method private string _filterXML(XML::LibXML::Document root)
+# Remove unauthorized nodes.
+# @param $root XML root element
+# @return XML_string
 sub _filterXML {
     my $self = shift;
     my ($root) = @_;
@@ -334,8 +368,10 @@ sub _filterXML {
     return;
 }
 
-# _hideEmptyCategory
-#
+## @method private void _hideEmptyCategory(XML::LibXML::Element cat)
+# Hides empty categories for _filterXML().
+# Return nothing $cat is modified directly
+# @param $cat XML element
 sub _hideEmptyCategory {
     my $self = shift;
     my ($cat) = @_;
@@ -361,10 +397,14 @@ sub _hideEmptyCategory {
     return;
 }
 
-# _changePassword
-# Change user's password
-# TODO: Check used Auth module and change password for LDAP or DBI
+## @method private int _changePassword(string newpassword,string confirmpassword,string oldpassword)
+# Change user's password.
+# @param $newpassword New password
+# @param $confirmpassword New password
+# @param $oldpassword Current password
+# @return Lemonldap::NG::Portal constant
 sub _changePassword {
+    # TODO: Check used Auth module and change password for LDAP or DBI
     my $self = shift;
     my ( $newpassword, $confirmpassword, $oldpassword ) = @_;
     my $err;
@@ -444,8 +484,10 @@ sub _changePassword {
     }
 }
 
-# _storePassword
-# Store new password in session if storePassword parameter is set
+## @method private boolean _storePassword(string password)
+# Store new password in session if storePassword parameter is set.
+# @param $password Password used in form
+# @return True
 sub _storePassword {
     my $self = shift;
     my ($password) = @_;
@@ -459,8 +501,9 @@ sub _storePassword {
     return 1;
 }
 
-# _ppolicyWarning
+## @method private int function _ppolicyWarning()
 # Return ppolicy warnings get in AuthLDAP.pm
+# @return Lemonldap::NG::Portal constant
 sub _ppolicyWarning {
     my $self = shift;
 
@@ -484,8 +527,10 @@ sub _ppolicyWarning {
     return ( PE_OK, undef );
 }
 
-# _grant
-# Check user's authorization
+## @method private boolean _grant(string uri)
+# Check user's authorization for $uri.
+# @param $uri URL string
+# @return True if granted
 sub _grant {
     my $self = shift;
     my ($uri) = @_;
@@ -512,8 +557,9 @@ sub _grant {
     return 1;
 }
 
-# _compileRules
-# Parse configured rules
+## @method private boolean _compileRules()
+# Parse configured rules and compile them
+# @return True
 sub _compileRules {
     my $self = shift;
     foreach my $vhost ( keys %{ $self->{portalObject}->{locationRules} } ) {
@@ -540,8 +586,10 @@ sub _compileRules {
     1;
 }
 
-# _conditionSub
-# Return subroutine giving authorization condition
+## @method private CODE _conditionSub(string cond)
+# Return subroutine giving authorization condition.
+# @param $cond boolean expression
+# @return Compiled routine
 sub _conditionSub {
     my $self = shift;
     my ($cond) = @_;

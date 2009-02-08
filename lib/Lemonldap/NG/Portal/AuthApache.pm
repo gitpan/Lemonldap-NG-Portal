@@ -1,3 +1,8 @@
+##@file
+# Apache authentication backend file
+
+##@class
+# Apache authentication backend class
 package Lemonldap::NG::Portal::AuthApache;
 
 use strict;
@@ -5,13 +10,17 @@ use Lemonldap::NG::Portal::Simple;
 
 our $VERSION = '0.11';
 
+## @method int authInit()
+# @return Lemonldap::NG::Portal constant
 sub authInit {
     PE_OK;
 }
 
+## @method int extractFormInfo()
+# Read username return by Apache authentication system.
 # By default, authentication is valid if REMOTE_USER environment
-# variable is present. Change formateFilter if this does not match with
-# UID.
+# variable is set.
+# @return Lemonldap::NG::Portal constant
 sub extractFormInfo {
     my $self = shift;
     unless ( $self->{user} = $ENV{REMOTE_USER} ) {
@@ -24,7 +33,9 @@ sub extractFormInfo {
     PE_OK;
 }
 
-# Authentication is made by Apache.
+# @method int authenticate()
+# Does nothing.
+# @return Lemonldap::NG::Portal constant
 sub authenticate {
     PE_OK;
 }

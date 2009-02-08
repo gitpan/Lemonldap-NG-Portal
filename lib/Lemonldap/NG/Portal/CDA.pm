@@ -1,3 +1,8 @@
+##@file
+# Cross domain extension for Lemonldap::NG portals.
+
+##@class
+# Cross domain extension for Lemonldap::NG portals.
 package Lemonldap::NG::Portal::CDA;
 
 use strict;
@@ -14,16 +19,17 @@ use base ('Lemonldap::NG::Portal::SharedConf');
 # OVERLOADED SUB #
 ##################
 
-# 2. Existing sessions are validated so users coming from an other domain
-#    are not re-prompted
+## @method int existingSession()
+# Existing sessions must not be reauthenticated in CDA usage
+# @return Lemonldap::NG::Portal error code
 sub existingSession {
-    my ( $self, $id, $datas ) = @_;
     PE_DONE;
 }
 
-# 16. If the user was redirected to the portal, we will now redirect him
-#     to the requested URL. If it does not come from our domain, we add
-#     ID in URL
+## @method int autoRedirect()
+# Same as Lemonldap::NG::Portal::SharedConf::autoRedirect(), but add ID in URL
+# if the user was redirected to the portal from another domain.
+# @return Lemonldap::NG::Portal error code
 sub autoRedirect {
     my $self       = shift;
     my $tmp        = $self->{domain};

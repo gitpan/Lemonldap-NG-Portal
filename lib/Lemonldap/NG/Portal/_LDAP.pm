@@ -1,10 +1,18 @@
+##@file
+# LDAP common functions
+
+##@class
+# LDAP common functions
 package Lemonldap::NG::Portal::_LDAP;
 
 use Net::LDAP;
 use base qw(Net::LDAP);
 
-our $VERSION = '0.1';
+our $VERSION = '0.11';
 
+## @cmethod Lemonldap::NG::Portal::_LDAP new(Lemonldap::NG::Portal::Simple portal)
+# Build a Net::LDAP object using parameters issued from $portal
+# @return Lemonldap::NG::Portal::_LDAP object
 sub new {
     my $class  = shift;
     my $portal = shift;
@@ -39,7 +47,7 @@ sub new {
         my %h = split( /[&=]/, $tlsParam );
         $h{cafile} = $portal->{caFile} if ( $portal->{caFile} );
         $h{capath} = $portal->{caPath} if ( $portal->{caPath} );
-        my $mesg = $self->{ldap}->start_tls(%h);
+        my $mesg = $self->start_tls(%h);
         if ( $mesg->code ) {
             print STDERR __PACKAGE__ . " StartTLS failed\n";
             return 0;
@@ -49,13 +57,22 @@ sub new {
     return $self;
 }
 
-# 6. LDAP bind with Lemonldap::NG account or anonymous unless defined
+## @method Net::LDAP::Message bind(string dn, %args)
+# Reimplementation of Net::LDAP::bind(). Connection is done :
+# - with $dn and $args->{password} as dn/password if defined,
+# - or with Lemonldap::NG account,
+# - or with an anonymous bind.
+# @param $dn LDAP distinguish name
+# @param %args See Net::LDAP(3) manpage for more
+# @return Net::LDAP::Message
 sub bind {
     my $self = shift;
     my $mesg;
     my ( $dn, %args ) = @_;
-    $dn ||= $self->{portal}->{managerDn};
-    $args{password} ||= $self->{portal}->{managerPassword};
+    unless($dn) {
+        $dn = $self->{portal}->{managerDn};
+        $args{password} = $self->{portal}->{managerPassword};
+    }
     if ( $dn && $args{password} ) {
         $mesg = $self->SUPER::bind( $dn, %args );
     }

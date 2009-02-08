@@ -13,6 +13,7 @@
         <script type="text/javascript" src="skins/pastel/jquery-tabs.js"></script>
         <script type="text/javascript">
         $(document).ready(function(){
+          $("input[name=user]").focus();
           $("div.message").slideToggle('slow');
           $("input[type='password']").attr("autocomplete","off");
   	  $("#menu > ul").tabs();
