@@ -19,6 +19,7 @@ my $template = HTML::Template->new(
 
 $template->param( PORTAL_URL => "$portal_url" );
 $template->param( LOGOUT_URL => "$logout_url" );
+$template->param( SKIN       => "$skin" );
 
 print $portal->header('text/html; charset=utf8');
 print $template->output;

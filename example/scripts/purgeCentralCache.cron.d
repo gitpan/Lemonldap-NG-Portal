@@ -1,4 +1,4 @@
 #
-# Regular cron jobs for the Lemonldap::NG portal
+# Regular cron jobs for LemonLDAP::NG
 #
-*/10 *	* * *	www-data	test -x /usr/share/lemonldap-ng/bin/purgeCentralCache
+*/10 * * * * __APACHEUSER__ [ -x __BINDIR__/purgeCentralCache ] && __BINDIR__/purgeCentralCache

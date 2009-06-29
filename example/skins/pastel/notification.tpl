@@ -6,6 +6,19 @@
 
 	<div class="loginlogo"></div>
 
-    <TMPL_VAR NAME="NOTIFICATION">
+	<form action="#" method="post" class="login">
+		<h3><lang en="New message(s)" fr="Nouveaux messages"/>&nbsp;:</h3>
+		<table>
+		<tr><td>
+		<TMPL_VAR NAME="NOTIFICATION">
+		<div class="buttons">
+			<button type="submit" class="positive">
+				<img src="skins/common/accept.png" alt="" />
+				<lang en="Accept" fr="Accepter" />
+			</button>
+		</div>
+		</td></tr>
+		</table>
+	</form>
 
 <TMPL_INCLUDE NAME="footer.tpl">

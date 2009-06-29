@@ -5,7 +5,7 @@
 # Alias for Lemonldap::NG::SharedConf
 package Lemonldap::NG::Portal;
 
-our $VERSION = "0.87";
+our $VERSION = '0.88';
 use Lemonldap::NG::Portal::SharedConf;
 use base 'Lemonldap::NG::Portal::SharedConf';
 
@@ -75,7 +75,7 @@ SOAP mode authentication (client) :
   
   my $soap =
     SOAP::Lite->proxy('http://auth.example.com/')
-    ->uri('urn:/Lemonldap::NG::Common::::CGI::SOAPService');
+    ->uri('urn:/Lemonldap::NG::Common::CGI::SOAPService');
   my $r = $soap->getCookies( 'user', 'password' );
   
   # Catch SOAP errors
@@ -479,11 +479,6 @@ Liberty-Alliance mechanisms to authenticate users
 =item * L<Lemonldap::NG::Portal::SharedConf>: this module provide the ability
 to read portal configuration from a central database. It inherits from
 L<Lemonldap::NG::Portal::Simple>. It's the more used module.
-
-=item * L<Lemonldap::NG::Portal::CDA>: this module inherits from
-L<Lemonldap::NG::Portal::SharedConf> and provides the capability to use
-handlers in different domains that the portal itself. See
-L<Lemonldap::NG::Portal::CDA> for more.
 
 =back
 

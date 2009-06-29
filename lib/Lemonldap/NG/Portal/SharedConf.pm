@@ -7,20 +7,20 @@ package Lemonldap::NG::Portal::SharedConf;
 
 use strict;
 use Lemonldap::NG::Portal::Simple qw(:all);
-use Lemonldap::NG::Common::Conf;
+use Lemonldap::NG::Common::Conf; #link protected lmConf Configuration
 
 *EXPORT_OK   = *Lemonldap::NG::Portal::Simple::EXPORT_OK;
 *EXPORT_TAGS = *Lemonldap::NG::Portal::Simple::EXPORT_TAGS;
 *EXPORT      = *Lemonldap::NG::Portal::Simple::EXPORT;
 
-our $VERSION = "0.5";
+our $VERSION = '0.6';
 use base qw(Lemonldap::NG::Portal::Simple);
 
 ##################
 # OVERLOADED SUB #
 ##################
 
-## @method boolean getConf(hashRef args)
+## @method protected boolean getConf(hashRef args)
 # Copy all parameters returned by the Lemonldap::NG::Common::Conf object in $self.
 # @param args hash
 # @return True
@@ -34,19 +34,8 @@ sub getConf {
         %args = @_;
     }
     %$self = ( %$self, %args );
-
-    # For better performance the Portal can use the configuration stored in
-    # the local file system by the handlers. This can be used when
-    # configuration is not local (type DBI or SOAP)
-    my $tmp = 0;
-    unless ($tmp) {
-        $self->{lmConf} =
-          Lemonldap::NG::Common::Conf->new( $self->{configStorage} )
-          unless $self->{lmConf};
-        return 0 unless ( ref( $self->{lmConf} ) );
-        $tmp = $self->{lmConf}->getConf;
+    my $tmp = $self->_getLmConf;
         return 0 unless $tmp;
-    }
 
     # Local configuration prepends global
     $self->{$_} = $args{$_} || $tmp->{$_} foreach ( keys %$tmp );
@@ -54,16 +43,26 @@ sub getConf {
 }
 
 ## @method list getProtectedSites()
-# @return list list of protected virtual hosts.
-
 # With SharedConf, $locationRules contains a hash table with virtual hosts as
 # keys. So we can use it to know all protected virtual hosts.
+# @return list list of protected virtual hosts.
 sub getProtectedSites {
     my $self = shift;
     my @tab  = ();
     return ( keys %{ $self->{locationRules} } )
       if ( ref $self->{locationRules} );
     return ();
+}
+
+## @method private hashref _getLmConf()
+# Call and return Lemonldap::NG::Common::Conf::getConf() value.
+# @return Lemonldap::NG shared configuration
+sub _getLmConf {
+    my $self = shift;
+    $self->{lmConf} = Lemonldap::NG::Common::Conf->new( $self->{configStorage} )
+      unless $self->{lmConf};
+    return 0 unless ( ref( $self->{lmConf} ) );
+    return $self->{lmConf}->getConf;
 }
 
 1;

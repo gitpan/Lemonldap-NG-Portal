@@ -1,0 +1,149 @@
+#!/usr/bin/perl
+
+use Lemonldap::NG::Common::BuildWSDL;
+
+print Lemonldap::NG::Common::BuildWSDL->new->buildWSDL(<<EOT);
+<?xml version="1.0" encoding="UTF-8"?>
+<wsdl:definitions targetNamespace="urn:Lemonldap/NG/Common/CGI/SOAPService" xmlns:impl="urn:Lemonldap/NG/Common/CGI/SOAPService" xmlns:wsdlsoap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:tns1="urn:Lemonldap/NG/Common/CGI/SOAPService">
+ <wsdl:types>
+  <schema targetNamespace="urn:Lemonldap/NG/Common/CGI/SOAPService" xmlns="http://www.w3.org/2001/XMLSchema">
+   <import namespace="http://schemas.xmlsoap.org/soap/encoding/" />
+   <complexType name="CookiesSequence">
+    <sequence>
+     __XMLCOOKIELIST__
+    </sequence>
+   </complexType>
+   <complexType name="AttributesSequence">
+    <sequence>
+     __ATTRLIST__
+    </sequence>
+   </complexType>
+   <complexType name="GetCookieResponse">
+    <sequence>
+     <element name="errorCode" type="xsd:int"></element>
+     <element name="cookies" type="tns1:CookiesSequence"></element>
+    </sequence>
+   </complexType>
+   <complexType name="GetAttributesResponse">
+    <sequence>
+     <element name="errorCode" type="xsd:int"></element>
+     <element name="attributes" type="tns1:AttributesSequence"></element>
+    </sequence>
+   </complexType>
+  </schema>
+ </wsdl:types>
+
+
+ <wsdl:service name="authenticationHandlerService">
+  <wsdl:port binding="impl:authenticationSoapBinding" name="authentication">
+   <wsdlsoap:address location="__PORTAL__" />
+  </wsdl:port>
+ </wsdl:service>
+ <wsdl:binding name="authenticationSoapBinding" type="impl:authenticationHandler">
+  <wsdlsoap:binding style="rpc" transport="http://schemas.xmlsoap.org/soap/http" />
+  <wsdl:operation name="error">
+   <wsdlsoap:operation soapAction="" />
+   <wsdl:input name="errorRequest">
+    <wsdlsoap:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:Lemonldap/NG/Common/CGI/SOAPService" use="encoded" />
+   </wsdl:input>
+   <wsdl:output name="errorResponse">
+    <wsdlsoap:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:Lemonldap/NG/Common/CGI/SOAPService" use="encoded" />
+   </wsdl:output>
+  </wsdl:operation>
+  <wsdl:operation name="getCookies">
+   <wsdlsoap:operation soapAction="" />
+   <wsdl:input name="getCookiesRequest">
+    <wsdlsoap:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:Lemonldap/NG/Common/CGI/SOAPService" use="encoded" />
+   </wsdl:input>
+   <wsdl:output name="getCookiesResponse">
+    <wsdlsoap:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:Lemonldap/NG/Common/CGI/SOAPService" use="encoded" />
+   </wsdl:output>
+  </wsdl:operation>
+ </wsdl:binding>
+ <wsdl:portType name="authenticationHandler">
+  <wsdl:operation name="error" parameterOrder="lang code">
+   <wsdl:input message="impl:errorRequest" name="errorRequest" />
+   <wsdl:output message="impl:errorResponse" name="errorResponse" />
+  </wsdl:operation>
+  <wsdl:operation name="getCookies" parameterOrder="user password">
+   <wsdl:input message="impl:getCookiesRequest" name="getCookiesRequest" />
+   <wsdl:output message="impl:getCookiesResponse" name="getCookiesResponse" />
+  </wsdl:operation>
+ </wsdl:portType>
+ <wsdl:message name="errorRequest">
+  <wsdl:part name="lang" type="xsd:string" />
+  <wsdl:part name="code" type="xsd:int" />
+ </wsdl:message>
+  <wsdl:message name="errorResponse">
+  <wsdl:part name="result" type="xsd:string" />
+ </wsdl:message>
+ <wsdl:message name="getCookiesRequest">
+  <wsdl:part name="user" type="xsd:string" />
+  <wsdl:part name="password" type="xsd:string" />
+ </wsdl:message>
+ <wsdl:message name="getCookiesResponse">
+  <wsdl:part name="session" type="tns1:GetCookieResponse" />
+ </wsdl:message>
+
+ <wsdl:service name="notificationPostHandlerService">
+  <wsdl:port binding="impl:notificationPostSoapBinding" name="notificationPost">
+   <wsdlsoap:address location="__PORTAL__/notification" />
+  </wsdl:port>
+ </wsdl:service>
+ <wsdl:binding name="notificationPostSoapBinding" type="impl:notificationPostHandler">
+  <wsdlsoap:binding style="rpc" transport="http://schemas.xmlsoap.org/soap/http" />
+  <wsdl:operation name="newNotification">
+   <wsdlsoap:operation soapAction="" />
+   <wsdl:input name="newNotificationRequest">
+    <wsdlsoap:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:Lemonldap/NG/Common/CGI/SOAPService" use="encoded" />
+   </wsdl:input>
+   <wsdl:output name="newNotificationResponse">
+    <wsdlsoap:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:Lemonldap/NG/Common/CGI/SOAPService" use="encoded" />
+   </wsdl:output>
+  </wsdl:operation>
+ </wsdl:binding>
+ <wsdl:portType name="notificationPostHandler">
+  <wsdl:operation name="newNotification" parameterOrder="notification">
+   <wsdl:input message="impl:newNotificationRequest" name="newNotificationRequest" />
+   <wsdl:output message="impl:newNotificationResponse" name="newNotificationResponse" />
+  </wsdl:operation>
+ </wsdl:portType>
+ <wsdl:message name="newNotificationRequest">
+  <wsdl:part name="notification" type="xsd:string" />
+ </wsdl:message>
+  <wsdl:message name="newNotificationResponse">
+  <wsdl:part name="result" type="xsd:string" />
+ </wsdl:message>
+
+ <wsdl:service name="sessionsHandlerService">
+  <wsdl:port binding="impl:sessionsSoapBinding" name="sessionsHandler">
+   <wsdlsoap:address location="__PORTAL__/sessions" />
+  </wsdl:port>
+ </wsdl:service>
+ <wsdl:binding name="sessionsSoapBinding" type="impl:sessionsHandler">
+  <wsdlsoap:binding style="rpc" transport="http://schemas.xmlsoap.org/soap/http" />
+  <wsdl:operation name="getAttributes">
+   <wsdlsoap:operation soapAction="" />
+   <wsdl:input name="getAttributesRequest">
+    <wsdlsoap:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:Lemonldap/NG/Common/CGI/SOAPService" use="encoded" />
+   </wsdl:input>
+   <wsdl:output name="getAttributesResponse">
+    <wsdlsoap:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:Lemonldap/NG/Common/CGI/SOAPService" use="encoded" />
+   </wsdl:output>
+  </wsdl:operation>
+ </wsdl:binding>
+ <wsdl:portType name="sessionsHandler">
+  <wsdl:operation name="getAttributes" parameterOrder="id">
+   <wsdl:input message="impl:getAttributesRequest" name="getAttributesRequest" />
+   <wsdl:output message="impl:getAttributesResponse" name="getAttributesResponse" />
+  </wsdl:operation>
+ </wsdl:portType>
+ <wsdl:message name="getAttributesRequest">
+  <wsdl:part name="id" type="xsd:string" />
+ </wsdl:message>
+  <wsdl:message name="getAttributesResponse">
+  <wsdl:part name="session" type="tns1:GetAttributesResponse" />
+ </wsdl:message>
+</wsdl:definitions>
+EOT
+

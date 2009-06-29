@@ -8,6 +8,9 @@
 #-------------------------------------------------------------------------------
 # CHANGELOGS
 #-------------------------------------------------------------------------------
+# 2009-02-09 - Version 0.3.1
+# Author(s) : Thomas CHEMINEAU
+#   - Fixe a bug in libertySignOn function, to retrieve correct $providerID
 # 2008-03-25 - Version 0.3
 # Author(s) : Thomas CHEMINEAU
 #   - Fixe some bugs into logout process from IDP or SP ;
@@ -34,7 +37,7 @@ use UNIVERSAL qw( isa can VERSION );
 *EXPORT_TAGS = *Lemonldap::NG::Portal::SharedConf::EXPORT_TAGS;
 *EXPORT      = *Lemonldap::NG::Portal::SharedConf::EXPORT;
 
-our $VERSION = '0.32';
+our $VERSION = '0.33';
 use base qw(Lemonldap::NG::Portal::SharedConf);
 
 #===============================================================================
@@ -239,15 +242,14 @@ sub process {
     elsif ( $urldir eq $self->PC_LA_URLFT ) {
 
         $self->{error} = $self->_subProcess(
-            qw( libertyFederationTermination log autoRedirect ));
+            qw( libertyFederationTermination autoRedirect ));
 
         # federationTerminationReturn
     }
     elsif ( $urldir eq $self->PC_LA_URLFTR ) {
 
         $self->{error} = $self->_subProcess(
-            qw( libertyFederationTerminationReturn log
-              autoRedirect )
+            qw( libertyFederationTerminationReturn autoRedirect )
         );
 
         # singleLogout : called when IDP request Logout.
@@ -267,19 +269,19 @@ sub process {
     elsif ( $urldir eq $self->PC_LA_URLSLR ) {
 
         $self->{error} =
-          $self->_subProcess(qw( libertySingleLogoutReturn log ));
+          $self->_subProcess(qw( libertySingleLogoutReturn ));
 
         # soapCall
     }
     elsif ( $urldir eq $self->PC_LA_URLSC ) {
 
-        $self->{error} = $self->_subProcess(qw( libertySoapCall log ));
+        $self->{error} = $self->_subProcess(qw( libertySoapCall ));
 
         # soapEndpoint
     }
     elsif ( $urldir eq $self->PC_LA_URLSE ) {
 
-        $self->{error} = $self->_subProcess(qw( libertySoapEndpoint log ));
+        $self->{error} = $self->_subProcess(qw( libertySoapEndpoint ));
 
         # Direct access or simple access -> main
         # WARNING : we permit authentication on service.
@@ -290,9 +292,8 @@ sub process {
     {
 
         $self->{error} = $self->_subProcess(
-            qw( libertyRetrieveExistingSession
-              libertyExtractFormInfo libertySignOn log
-              autoRedirect )
+            qw( libertyRetrieveExistingSession libertyExtractFormInfo
+              libertySignOn autoRedirect )
         );
 
         # Not in liberty authentication process.
@@ -310,8 +311,8 @@ sub process {
     # TODO Warning, PE_OK==0 and process returns 0 if an error occurs!
     # my $err = $self->SUPER::process(@_);
     #return $err unless( $err != PE_OK );
-    # TODO: Why ? log and  autoRedirect are executed with SUPER::process
-    #$err = $self->_subProcess(qw( log autoRedirect ))
+    # TODO: Why ? autoRedirect is executed with SUPER::process
+    #$err = $self->_subProcess(qw( autoRedirect ))
     #  if ( $self->{urldc} );
     #return $err;
     # So I think we have just to write this
@@ -822,7 +823,7 @@ sub libertySignOn {
     # TODO :
     #   Catching error when retrieving $providerID.
 
-    my $providerID = $self->{LAidps}->{ $self->{idp}->{id} }->{url};
+    my $providerID = $self->{laIdps}->{ $self->{idp}->{id} }->{url};
 
     if (
         my $error = $lassoLogin->initAuthnRequest(

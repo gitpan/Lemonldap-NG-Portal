@@ -8,15 +8,27 @@ package Lemonldap::NG::Portal::AuthApache;
 use strict;
 use Lemonldap::NG::Portal::Simple;
 
-our $VERSION = '0.11';
+our $VERSION = '0.2';
 
-## @method int authInit()
+## @apmethod int authInit()
 # @return Lemonldap::NG::Portal constant
 sub authInit {
     PE_OK;
 }
 
-## @method int extractFormInfo()
+## @apmethod int setAuthSessionInfo()
+# Store user.
+# @return Lemonldap::NG::Portal constant
+sub setAuthSessionInfo {
+    my $self = shift;
+
+    # Store user submitted login for basic rules
+    $self->{sessionInfo}->{'_user'} = $self->{'user'};
+
+    PE_OK;
+}
+
+## @apmethod int extractFormInfo()
 # Read username return by Apache authentication system.
 # By default, authentication is valid if REMOTE_USER environment
 # variable is set.
@@ -24,7 +36,8 @@ sub authInit {
 sub extractFormInfo {
     my $self = shift;
     unless ( $self->{user} = $ENV{REMOTE_USER} ) {
-        print STDERR "Apache is not configured to authenticate users !";
+        $self->lmLog( 'Apache is not configured to authenticate users !',
+            'error' );
         return PE_ERROR;
     }
 
@@ -33,7 +46,7 @@ sub extractFormInfo {
     PE_OK;
 }
 
-# @method int authenticate()
+## @apmethod int authenticate()
 # Does nothing.
 # @return Lemonldap::NG::Portal constant
 sub authenticate {

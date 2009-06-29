@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::_i18n;
 # Developpers warning : this file must stay UTF-8 encoded
 
 use AutoLoader qw(AUTOLOAD);
-our $VERSION = '0.3';
+our $VERSION = '0.4';
 
 ## @fn string error(int error,string lang)
 # @param $error Number of error to resolve
@@ -74,6 +74,8 @@ __END__
 # * PE_PASSWORD_OK                       35
 # * PE_NOTIFICATION                      36
 # * PE_BADURL                            37
+# * PE_NOSCHEME                          38
+# * PE_BASOLDPASSWORD                    39
 
 # Not used in errors:
 # * PE_DONE                -1
@@ -99,7 +101,7 @@ sub error_fr {
         "Échec de l'initialisation de Lasso:Login ou Lasso:Logout",
         "Échec de la résolution de l'artefact Liberty Alliance",
         "Échec de la défédération Liberty Alliance",
-        "La requête renvoyée par le fournisseur d'identité Liberty Alliance est vide",
+"La requête renvoyée par le fournisseur d'identité Liberty Alliance est vide",
         "Un des appels SOAP Liberty Alliance a échoué",
         "Un des appels de déconnexion Liberty Alliance a échoué",
         "Aucun artefact SAML trouvé, ou échec de l'auto-acceptation SSO",
@@ -118,11 +120,13 @@ sub error_fr {
         "Mot de passe trop récent",
         "Mot de passe utilisé trop récemment",
         " authentifications restantes, changez votre mot de passe !",
-        " secondes avant expiration de votre mot de passe, pensez &agrave; le changer !",
+" secondes avant expiration de votre mot de passe, pensez &agrave; le changer !",
         "Les mots de passe ne correspondent pas",
         "Le mot de passe a &eacute;t&eacute; chang&eacute;",
         "Vous avez un nouveau message",
         'Mauvaise URL',
+        'Aucun sch&eacute;ma disponible',
+        'Ancien mot de passe invalide',
     ];
 }
 
@@ -169,6 +173,8 @@ sub error_en {
         'Password successfully changed',
         'You have a new message',
         'Bad URL',
+        'No scheme available',
+        'Bad old password',
     ];
 }
 
@@ -192,12 +198,12 @@ sub error_ro {
         "Eşec al iniţializării Lasso:Login sau Lasso:Logout",
         "Eşec al rezoluţiei artefact-ului Liberty Alliance",
         "Eşec al defederaţiei Liberty Alliance",
-        "Cererea retrimisă de către furnizorul de identitate Liberty Alliance este goală",
+"Cererea retrimisă de către furnizorul de identitate Liberty Alliance este goală",
         "Unul dintre apelurile SOAP Liberty Alliance a eşuat",
         "Unul dintre apelurile de deconectare Liberty Alliance a eşuat",
         "Nici un artefact SAML găsit, sau eşec al auto-acceptării SSO",
         "Iniţiere, construcţie sau cerere SSO în eşec",
-        "Imposibil de a înregistra identificatorul de conectare Liberty Alliance",
+"Imposibil de a înregistra identificatorul de conectare Liberty Alliance",
         "Un proces terminal Liberty Alliance a eşuat",
         "Contul dvs. este blocat",
         "Parola dvs. a expirat",
@@ -205,16 +211,18 @@ sub error_ro {
         'Eroare',
         'Parola a fost de resetare şi acum trebuie să fie schimbat',
         'Parola nu poate fi modificat',
-        'Vechea parolă trebuie să fi, de asemenea, furnizate atunci când stabilesc o nouă parolă',
+'Vechea parolă trebuie să fi, de asemenea, furnizate atunci când stabilesc o nouă parolă',
         'Calitate parola insuficiente',
         'Parola prea scurt',
         'Prea parolă nouă',
         'Parola folosit prea recent',
         ' authentications rămase, schimbaţi-vă parola!',
-        ' secunde înainte de expirarea parola dvs., asiguraţi-vă pentru a schimba!',
+' secunde înainte de expirarea parola dvs., asiguraţi-vă pentru a schimba!',
         'Parolele nu se potrivesc',
         'Parola a fost schimbată',
         'Ai un mesaj nou',
         'Rea URL',
+        'No scheme available',
+        'Bad old password',
     ];
 }

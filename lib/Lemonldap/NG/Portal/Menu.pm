@@ -9,11 +9,18 @@ use strict;
 use warnings;
 require Lemonldap::NG::Common::CGI;
 use Lemonldap::NG::Portal::SharedConf;
-use Lemonldap::NG::Portal::_LDAP;
+use Lemonldap::NG::Portal::_LDAP 'ldap';    #link protected ldap Object used to change passwords only
 use XML::LibXML;
+use Lemonldap::NG::Common::Safelib;    #link protected safe Safe object
 use Safe;
+use Lemonldap::NG::Portal::PasswordDBLDAP; #inherits
 
-our $VERSION = '0.01';
+#inherits Net::LDAP::Control::PasswordPolicy
+
+*_modifyPassword = *Lemonldap::NG::Portal::PasswordDBLDAP::modifyPassword;
+*_passwordDBInit = *Lemonldap::NG::Portal::PasswordDBLDAP::passwordDBInit;
+
+our $VERSION = '0.1';
 
 ### ACCESS CONTROL DISPLAY SYSTEM
 
@@ -43,8 +50,11 @@ sub _safe {
         eval "sub $_ {
             return $sub(\$path,\@_);
         }";
-        print STDERR "$@\n" if ($@);
+        $self->{portalObject}->lmLog( $@, 'error' ) if ($@);
     }
+    $self->{_safe}->share_from( 'main', ['%ENV'] );
+    $self->{_safe}->share_from( 'Lemonldap::NG::Common::Safelib',
+        $Lemonldap::NG::Common::Safelib::functions );
     $self->{_safe}->share( '&encode_base64', @t );
     return $self->{_safe};
 }
@@ -63,14 +73,15 @@ sub new {
 
     # Get configuration
     $self->Lemonldap::NG::Portal::Simple::getConf(@_)
-      or Lemonldap::NG::Common::CGI->abort("Unable to read $class->new() parameters");
+      or Lemonldap::NG::Common::CGI->abort(
+        "Unable to read $class->new() parameters");
 
     # Portal is required
-    Lemonldap::NG::Common::CGI->abort("Portal object required") unless ( $self->{portalObject} );
+    Lemonldap::NG::Common::CGI->abort("Portal object required")
+      unless ( $self->{portalObject} );
 
-
-    # Fill sessionInfo
-    &Lemonldap::NG::Portal::Simple::getSessionInfo( $self->{portalObject} );
+    # Fill sessionInfo (yet done in portal...)
+    #&Lemonldap::NG::Portal::Simple::getSessionInfo( $self->{portalObject} );
 
     # Default values
     $self->{apps}->{xmlfile} ||= 'apps-list.xml';
@@ -88,33 +99,18 @@ sub new {
     # Print Ppolicy warning messages
     ( $self->{error}, $self->{error_value} ) = $self->_ppolicyWarning;
 
-    # Gest POST data
-    my ( $newpassword, $confirmpassword, $oldpassword ) = (
-        $self->{portalObject}->param('newpassword'),
-        $self->{portalObject}->param('confirmpassword'),
-        $self->{portalObject}->param('oldpassword')
-    );
+    # Store POST data in $self->{portalObject}
+    $self->{portalObject}->{'newpassword'} = $self->{portalObject}->param('newpassword');
+    $self->{portalObject}->{'confirmpassword'} = $self->{portalObject}->param('confirmpassword');
+    $self->{portalObject}->{'oldpassword'} = $self->{portalObject}->param('oldpassword');
+    $self->{portalObject}->{'dn'} = $self->{portalObject}->{sessionInfo}->{'dn'};
+    $self->{portalObject}->{'user'} = $self->{portalObject}->{sessionInfo}->{'_user'};
 
     # Change password (only if newpassword submitted)
-    $self->{error} =
-      $self->_changePassword( $newpassword, $confirmpassword, $oldpassword )
-      if $newpassword;
+    $self->{error} = &_passwordDBInit( $self->{portalObject} ) if $self->{portalObject}->{'newpassword'};
+    $self->{error} = &_modifyPassword( $self->{portalObject} ) if $self->{portalObject}->{'newpassword'};
 
     return $self;
-}
-
-## @method private Lemonldap::NG::Portal::_LDAP ldap()
-# @return object Lemonldap::NG::Portal::_LDAP object
-sub ldap {
-    my $self = shift;
-    unless ( ref( $self->{ldap} ) ) {
-        my $mesg = $self->{ldap}->bind
-          if ( $self->{ldap} = Lemonldap::NG::Portal::_LDAP->new($self) );
-        if ( $mesg->code != 0 ) {
-            return 0;
-        }
-    }
-    return $self->{ldap};
 }
 
 ## @method string error(string language)
@@ -134,7 +130,7 @@ sub error {
     return $error_string;
 }
 
-*error_type = *Lemonldap::NG::Portal::Simple::error_type;
+*error_type = \&Lemonldap::NG::Portal::Simple::error_type;
 
 ## @method boolean displayModule(string modulename)
 # Return true if the user can see the module.
@@ -219,10 +215,8 @@ sub _getXML {
     my $parser = XML::LibXML->new();
     $parser->validation('1');
     my $xml;
-    eval {
-        $xml = $parser->parse_file( $self->{apps}->{xmlfile} );
-    };
-    $self->{portalObject}->abort("Bad XML file", $@) if($@);
+    eval { $xml = $parser->parse_file( $self->{apps}->{xmlfile} ); };
+    $self->{portalObject}->abort( "Bad XML file", $@ ) if ($@);
     my $root = $xml->documentElement;
 
     # Filter XML file with user's authorizations
@@ -397,110 +391,6 @@ sub _hideEmptyCategory {
     return;
 }
 
-## @method private int _changePassword(string newpassword,string confirmpassword,string oldpassword)
-# Change user's password.
-# @param $newpassword New password
-# @param $confirmpassword New password
-# @param $oldpassword Current password
-# @return Lemonldap::NG::Portal constant
-sub _changePassword {
-    # TODO: Check used Auth module and change password for LDAP or DBI
-    my $self = shift;
-    my ( $newpassword, $confirmpassword, $oldpassword ) = @_;
-    my $err;
-
-    # Verify confirmation password matching
-    return PE_PASSWORD_MISMATCH unless ( $newpassword eq $confirmpassword );
-
-    # Connect to LDAP
-    unless ( $self->{portalObject}->ldap ) {
-        return PE_LDAPCONNECTFAILED;
-    }
-
-    my $ldap = $self->{portalObject}->{ldap};
-    my $dn   = $self->{portalObject}->{sessionInfo}->{"dn"};
-
-    # First case: no ppolicy
-    if ( !$self->{portalObject}->{ldapPpolicyControl} ) {
-
-        my $mesg =
-          $ldap->modify( $dn, replace => { userPassword => $newpassword } );
-
-        return PE_WRONGMANAGERACCOUNT
-          if ( $mesg->code == 50 || $mesg->code == 8 );
-        return PE_LDAPERROR unless ( $mesg->code == 0 );
-        $self->_storePassword($newpassword);
-        return PE_PASSWORD_OK;
-    }
-    else {
-
-        # require Perl module
-        eval 'require Net::LDAP::Control::PasswordPolicy';
-        if ($@) {
-            print STDERR
-              "Module Net::LDAP::Control::PasswordPolicy not found in @INC\n";
-            return PE_LDAPERROR;
-        }
-        no strict 'subs';
-
-        # Create Control object
-        my $pp = Net::LDAP::Control::PasswordPolicy->new;
-
-        my $mesg = $ldap->modify(
-            $dn,
-            replace => { userPassword => $newpassword },
-            control => [$pp]
-        );
-
-        # TODO: use setPassword with oldpassword if needed
-
-        # Get server control response
-        my ($resp) = $mesg->control("1.3.6.1.4.1.42.2.27.8.5.1");
-
-        return PE_WRONGMANAGERACCOUNT
-          if ( $mesg->code == 50 || $mesg->code == 8 );
-        $self->_storePassword($newpassword) && return PE_PASSWORD_OK
-          if ( $mesg->code == 0 );
-
-        if ( defined $resp ) {
-            my $pp_error = $resp->pp_error;
-            if ( defined $pp_error ) {
-                return [
-                    PE_PP_PASSWORD_EXPIRED,
-                    PE_PP_ACCOUNT_LOCKED,
-                    PE_PP_CHANGE_AFTER_RESET,
-                    PE_PP_PASSWORD_MOD_NOT_ALLOWED,
-                    PE_PP_MUST_SUPPLY_OLD_PASSWORD,
-                    PE_PP_INSUFFICIENT_PASSWORD_QUALITY,
-                    PE_PP_PASSWORD_TOO_SHORT,
-                    PE_PP_PASSWORD_TOO_YOUNG,
-                    PE_PP_PASSWORD_IN_HISTORY,
-                ]->[$pp_error];
-            }
-        }
-        else {
-            return PE_LDAPERROR;
-        }
-    }
-}
-
-## @method private boolean _storePassword(string password)
-# Store new password in session if storePassword parameter is set.
-# @param $password Password used in form
-# @return True
-sub _storePassword {
-    my $self = shift;
-    my ($password) = @_;
-    if ( $self->{portalObject}->{storePassword} ) {
-        $self->{portalObject}->{sessionInfo}->{_password} = $password;
-
-        # Update session
-        &Lemonldap::NG::Portal::Simple::updateSession( $self->{portalObject},
-            { _password => $password } );
-    }
-    return 1;
-}
-
 ## @method private int function _ppolicyWarning()
 # Return ppolicy warnings get in AuthLDAP.pm
 # @return Lemonldap::NG::Portal constant
@@ -549,8 +439,9 @@ sub _grant {
         }
     }
     unless ( $defaultCondition->{$vhost} ) {
-        print STDERR
-          "Application $uri did not match any configured virtual host\n";
+        $self->{portalObject}
+          ->lmLog( "Application $uri did not match any configured virtual host",
+            'warn' );
         return 0;
     }
     return &{ $defaultCondition->{$vhost} }($self);
@@ -672,7 +563,8 @@ L<http://forge.objectweb.org/project/showfiles.php?group_id=274>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2005-2007 by Xavier Guimard E<lt>x.guimard@free.frE<gt>
+Copyright (C) 2005-2007 by Clement OUDOT E<lt>clement@oodo.netE<gt>
+E<lt>coudot@linagora.comE<gt>
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.4 or,

@@ -11,9 +11,9 @@ use Lemonldap::NG::Portal::AuthLDAP;
 
 use base qw(Lemonldap::NG::Portal::AuthLDAP);
 
-our $VERSION = '0.11';
+our $VERSION = '0.2';
 
-## @method int authInit()
+## @apmethod int authInit()
 # Check if SSL environment variables are set.
 # @return Lemonldap::NG::Portal constant
 sub authInit {
@@ -28,7 +28,7 @@ sub authInit {
 # Directory.
 # So authenticate is overloaded to return only PE_OK.
 
-## @method int extractFormInfo()
+## @apmethod int extractFormInfo()
 # Read username in SSL environment variables.
 # If $ENV{$self->{SSLVar}} is not set and SSLRequire is not set to 1, call
 # Lemonldap::NG::Portal::AuthLDAP::extractFormInfo()
@@ -40,18 +40,31 @@ sub extractFormInfo {
     if ($user) {
         $self->{sessionInfo}->{authenticationLevel} = 5;
         $self->{user} = $user;
-        $self->{authFilter} =
+        $self->{AuthLDAPFilter} ||=
           '(&(' . $self->{SSLLDAPField} . "=$user)(objectClass=inetOrgPerson))";
         return PE_OK;
     }
     elsif ( $self->{SSLRequire} ) {
+        $self->_sub('userError',"No certificate found for $ENV{REMOTE_ADDR}");
         return PE_CERTIFICATEREQUIRED;
     }
-    $self->{authFilter} = '';
+    $self->{AuthLDAPFilter} = '';
     return $self->SUPER::extractFormInfo(@_);
 }
 
-## @method int authenticate()
+## @apmethod int setAuthSessionInfo()
+# Store user.
+# @return Lemonldap::NG::Portal constant
+sub setAuthSessionInfo {
+    my $self = shift;
+
+    # Store user certificate login for basic rules
+    $self->{sessionInfo}->{'_user'} = $self->{'user'};
+
+    PE_OK;
+}
+
+## @apmethod int authenticate()
 # Call Lemonldap::NG::Portal::AuthLDAP::authenticate() if user was not
 # authenticated by SSL.
 # @return Lemonldap::NG::Portal constant

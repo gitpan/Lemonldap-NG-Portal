@@ -18,7 +18,7 @@ my $tmp;
 my $perl = "perl -I" . join( ' -I', @INC );
 
 $tmp =
-`$perl -MLemonldap::NG::Portal::Menu -e '\$a=Lemonldap::NG::Portal::Menu->new()'`;
+`$perl -MLemonldap::NG::Portal::Menu -e '\$a=Lemonldap::NG::Portal::Menu->new()' 2>/dev/null`;
 ok( $tmp =~ /Portal object required/, 'Portal object required' );
 
 my ( $m, $p );

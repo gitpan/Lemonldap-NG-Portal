@@ -5,11 +5,34 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 1;
+package My::Portal;
+
+use Test::More tests => 3;
 BEGIN { use_ok('Lemonldap::NG::Portal::CDA') }
+our @ISA = ('Lemonldap::NG::Portal::CDA');
 
-#########################
+# skipping SharedConf::getConf
+sub getConf {
+    return Lemonldap::NG::Portal::Simple::getConf(@_);
+}
 
-# Insert your test code below, the Test::More module is use()ed here so read
-# its man page ( perldoc Test::More ) for help writing this test script.
+# CGI Environment
+$ENV{SCRIPT_NAME}     = '/test.pl';
+$ENV{SCRIPT_FILENAME} = '/tmp/test.pl';
+$ENV{REQUEST_METHOD}  = 'GET';
+$ENV{REQUEST_URI}     = '/';
+$ENV{QUERY_STRING}    = '';
+
+ok(
+    $p = My::Portal->new(
+        {
+            globalStorage => 'Apache::Session::File',
+            domain        => 'example.com',
+            cookieName    => 'lemonldap',
+        }
+    ),
+    'Portal object'
+);
+
+ok( $p->{cda}, 'CDA is set' );
 

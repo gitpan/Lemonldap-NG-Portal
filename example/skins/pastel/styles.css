@@ -1,4 +1,5 @@
-/* Default CSS */
+/* CSS for skin PASTEL */
+/* Shipped with LemonLDAP::NG */
 
 body {
 font-family:Arial, Helvetica, Verdana;
@@ -10,8 +11,12 @@ padding:0;
 }
 
 h1, h2, h3, h4 {
-margin: 0;
-padding: 0 0 5px 0;
+margin:0;
+padding:0 0 5px 0;
+}
+
+h3 {
+margin:20px;
 }
 
 a img,:link img,:visited img {
@@ -20,13 +25,23 @@ border:none
 
 a, a:link, a:visited {
 text-decoration:none;
+color:#336699;
 }
 
 #page {
 margin:20px 40px;
-padding:5px;
+padding:0;
 background:#fff;
 border:1px solid #C6D880;
+text-align:center;
+}
+
+#footer {
+clear:both;
+padding:5px;
+margin:0;
+text-align:center;
+font-size:10pt;
 }
 
 div.loginlogo {
@@ -36,11 +51,17 @@ height:250px;
 float:left;
 }
 
-#footer {
-clear:both;
-margin-top:40px;
-text-align:center;
+div.menulogo {
+display:none;
+}
+
+div.user {
+float:right;
+text-align:right;
+color:#529214;
 font-size:10pt;
+font-weight:bold;
+margin:13px 5px 0 0;
 }
 
 div.message {
@@ -51,6 +72,7 @@ border-left:1px solid #eee;
 margin:20px 50px;
 padding:0;
 display:none;
+text-align:left;
 }
 
 ul {
@@ -72,41 +94,39 @@ background-position:0% 60%;
 padding:3px 0 3px 30px;
 }
 
-.message.negative li{
-background-image:url(warning.png);
+.message.negative li {
+background-image:url("../common/warning.png");
 }
 
-.message.positive li{
-background-image:url(ok.png);
+.message.positive li {
+background-image:url("../common/ok.png");
 }
 
-.message.warning li{
-background-image:url(warning_triangle.png);
+.message.warning li {
+background-image:url("../common/warning_triangle.png");
 }
 
 form {
 display:block;
 overflow:visible;
-padding:20px;
+padding:0;
+margin:10px;
+text-align:center;
 background-color:#dff4ff;
 border:1px solid #c2e1ef;
 color:#336699;
 }
 
-form.login {
-margin:40px 50px 0 200px;
+form.login, form.password {
+margin:40px 200px;
 }
 
-form.password {
-margin:40px 50px;
-}
-
-form table{
+form table {
 border:0;
-margin: 20px 0 0 20px;
+margin:0 auto;
 }
 
-form th{
+form th {
 text-align: right;
 }
 
@@ -116,25 +136,33 @@ padding:5px;
 width: 200px;
 }
 
-form.login input[type=text] {
-background: white url("user_suit.png") 5px 5px no-repeat;
-padding-left: 25px;
+form input[name=user] {
+background:#FFFFFF url("../common/user_suit.png") 5px 5px no-repeat;
+padding-left:25px;
 }
 
 form input[type=password] {
-background: white url("key.png") 5px 5px no-repeat;
+background:#FFFFFF url("../common/key.png") 5px 5px no-repeat;
+padding-left: 25px;
+}
+
+form input[name=mail] {
+background:#FFFFFF url("../common/email.png") 5px 5px no-repeat;
 padding-left: 25px;
 }
 
 /* BUTTONS */
 /* See http://particletree.com/features/rediscovering-the-button-element/ */
-.buttons{
-margin:30px 40% 0 0;
+
+.buttons {
+margin:0;
 }
-form .buttons{
+
+form .buttons {
 margin:10px 0 0 0;
 }
-.buttons a, .buttons button{
+
+.buttons a, .buttons button {
 display:block;
 float:right;
 margin:0 0 0 7px;
@@ -148,18 +176,22 @@ color:#565656;
 cursor:pointer;
 padding:5px 10px 6px 7px; /* Links */
 }
-.buttons button{
+
+.buttons button {
 width:auto;
 overflow:visible;
 padding:4px 10px 3px 7px; /* IE6 */
 }
+
 .buttons button[type]{
 padding:5px 10px 5px 7px; /* Firefox */
 line-height:17px; /* Safari */
 }
+
 *:first-child+html button[type]{
 padding:4px 10px 3px 7px; /* IE7 */
 }
+
 .buttons button img, .buttons a img{
 margin:0 3px -3px 0 !important;
 padding:0;
@@ -167,45 +199,55 @@ border:none;
 width:16px;
 height:16px;
 }
+
 /* STANDARD */
+
 button:hover, .buttons a:hover, .message{
 background-color:#dff4ff;
 border:1px solid #c2e1ef;
 color:#336699;
 }
+
 .buttons a:active{
 background-color:#6299c5;
 border:1px solid #6299c5;
 color:#fff;
 }
+
 /* POSITIVE */
 button.positive, .buttons a.positive{
 color:#529214;
 }
+
 .buttons a.positive:hover, button.positive:hover, div.positive{
 background-color:#E6EFC2;
 border:1px solid #C6D880;
 color:#529214;
 }
+
 .buttons a.positive:active{
 background-color:#529214;
 border:1px solid #529214;
 color:#fff;
 }
+
 /* NEGATIVE */
 .buttons a.negative, button.negative{
 color:#d12f19;
 }
+
 .buttons a.negative:hover, button.negative:hover, div.negative{
 background:#fbe3e4;
 border:1px solid #fbc2c4;
 color:#d12f19;
 }
+
 .buttons a.negative:active{
 background-color:#d12f19;
 border:1px solid #d12f19;
 color:#fff;
 }
+
 /* WARNING */
 div.warning{
 background-color:#ffe17a; 
@@ -213,53 +255,57 @@ border:1px solid #ffca10;
 color:#a03400;
 }
 
-/* Application list */
+/* Application list (JQuery tabs) */
+
 .ui-tabs-hide {
 display:none;
 }
+
 .ui-tabs-nav {
-text-align: center;
+text-align:left;
 margin:0;
-padding:0 0 4px 0;
-border-bottom:1px solid #c2e1ef;
+padding:10px 5px;
+background-color:#C6D880;
 }
+
 .ui-tabs-nav li{
-display: inline;
-background-color:#c2e1ef;
-border-color:#c2e1ef;
-border-style:solid;
-border-width:1px;
+display:inline;
 margin-left:10px;
-padding:5px 10px 3px 10px;
+padding:9px 10px 6px 10px;
 font-size:10pt;
 }
+
 .ui-tabs-nav li a{
-color:#336699;
+color:#529214;
 font-weight:bold;
 }
+
 li.ui-tabs-selected{
-padding:5px 10px;
-border-bottom-width:0;
-background-color:#dff4ff;
+background-color:#E6EFC2;
 }
+
 #appslist{
 padding: 10px;
 }
+
 ul.cat-level-0 {
-float: left;
-width: 200px;
+float:left;
+width:200px;
 background-color:#dff4ff;
 border:1px solid #c2e1ef;
 }
+
 ul.category {
 text-align:center;
 }
+
 ul.category li.catname span {
 display:block;
 color:#336699;
 font-weight:bold;
 border-bottom:1px solid #c2e1ef;
 }
+
 ul.category li.appname {
 text-align:left;
 margin:2px 0;
@@ -268,35 +314,50 @@ list-style-type:none;
 background-repeat:no-repeat;
 background-position:0% 50%;
 padding:2px 5px 2px 20px;
-background-image:url(bullet_go.png);
+background-image:url("../common/bullet_go.png");
 }
+
 ul.category li.appname span {
 color:#336699;
 font-size:10pt;
 border:0;
 }
+
 div.appsdesc {
-display: none;
-overflow: hidden;
-margin: 0 50px 30px 250px;
+display:none;
+overflow:hidden;
+margin:30px 50px 30px 230px;
+padding:10px;
+background-color:#dff4ff;
 border:1px solid #c2e1ef;
-padding: 10px;
 }
+
+html>body div.appsdesc {
+position:fixed;
+}
+
 div.appsdesc img {
 float:right;
 }
+
 div.appsdesc p.appname{
 font-size:16pt;
 font-variant:small-caps;
 }
+
 div.appsdesc p.appdesc{
 font-style:italic;
 }
+
 /* Logout */
-#logout{
-padding:10px;
-text-align:center;
+
+#logout .buttons a, #logout .buttons button, #error .buttons a, #error .buttons button{
+display:block;
+display:inline !important;
+float:none;
+margin:0;
+width:150px;
 }
-#logout h3{
-margin:10px;
+#logout {
+margin-bottom:20px;
 }

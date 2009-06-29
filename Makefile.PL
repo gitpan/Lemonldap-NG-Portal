@@ -11,9 +11,15 @@ WriteMakefile(
         'CGI'                    => 3.08,
         'CGI::Session'           => 0,
         'HTML::Template'         => 0,
-        'Lemonldap::NG::Common'  => 0.9,
-        'Lemonldap::NG::Handler' => 0.9,
+        'IO::String'             => 0,
+        'Lemonldap::NG::Common'  => 0.93,
+        'Lemonldap::NG::Handler' => 0.91,
         'XML::LibXML'            => 0,
+        'XML::LibXSLT'           => 0,
+        'MIME::Lite'             => 0,
+        'Email::Date::Format'    => 0,
+        'String::Random'         => 0,
+        'HTML::Template'         => 0,
     },
     (
         $] >= 5.005

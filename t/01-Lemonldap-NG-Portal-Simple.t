@@ -38,6 +38,8 @@ ok(
             globalStorage  => 'Apache::Session::File',
             domain         => 'example.com',
             authentication => 'LDAP test=1',
+	    user           => '',
+	    password       => '',
         }
     ),
     'Portal object'
@@ -67,8 +69,8 @@ ok( $p->{error} == PE_FORMEMPTY, 'Error code: missing password' );
 # No ldap
 $p->{extractFormInfo} = sub {
     my $self = shift;
-    $self->{user}     = 'user';
-    $self->{password} = '';
+    $self->{user}        = 'user';
+    $self->{password}    = '';
     PE_OK;
 };
 

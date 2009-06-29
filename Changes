@@ -1,5 +1,12 @@
 Revision history for Perl extension Lemonldap::NG::Portal.
 
+0.88  Mon jun 29 12:00:15 2009
+	- New auth and userDB modules : Multi, Remote, Null (userDB only)
+	- New module system for passwords
+	- Notification system
+	- Pre-compilation in Apache's configuration files
+	- Double session mechanism (1 secured and the other not)
+
 0.87  Sun feb 8 8:05:02 2009
 	- ldap+tls was broken
 	- fix security problem when running on Apache with thread support:
