@@ -20,7 +20,7 @@ use Lemonldap::NG::Portal::PasswordDBLDAP; #inherits
 *_modifyPassword = *Lemonldap::NG::Portal::PasswordDBLDAP::modifyPassword;
 *_passwordDBInit = *Lemonldap::NG::Portal::PasswordDBLDAP::passwordDBInit;
 
-our $VERSION = '0.1';
+our $VERSION = '0.11';
 
 ### ACCESS CONTROL DISPLAY SYSTEM
 
@@ -100,15 +100,22 @@ sub new {
     ( $self->{error}, $self->{error_value} ) = $self->_ppolicyWarning;
 
     # Store POST data in $self->{portalObject}
-    $self->{portalObject}->{'newpassword'} = $self->{portalObject}->param('newpassword');
-    $self->{portalObject}->{'confirmpassword'} = $self->{portalObject}->param('confirmpassword');
-    $self->{portalObject}->{'oldpassword'} = $self->{portalObject}->param('oldpassword');
-    $self->{portalObject}->{'dn'} = $self->{portalObject}->{sessionInfo}->{'dn'};
-    $self->{portalObject}->{'user'} = $self->{portalObject}->{sessionInfo}->{'_user'};
+    $self->{portalObject}->{'newpassword'} =
+      $self->{portalObject}->param('newpassword');
+    $self->{portalObject}->{'confirmpassword'} =
+      $self->{portalObject}->param('confirmpassword');
+    $self->{portalObject}->{'oldpassword'} =
+      $self->{portalObject}->param('oldpassword');
+    $self->{portalObject}->{'dn'} =
+      $self->{portalObject}->{sessionInfo}->{'dn'};
+    $self->{portalObject}->{'user'} =
+      $self->{portalObject}->{sessionInfo}->{'_user'};
 
     # Change password (only if newpassword submitted)
-    $self->{error} = &_passwordDBInit( $self->{portalObject} ) if $self->{portalObject}->{'newpassword'};
-    $self->{error} = &_modifyPassword( $self->{portalObject} ) if $self->{portalObject}->{'newpassword'};
+    $self->{error} = &_passwordDBInit( $self->{portalObject} )
+      if $self->{portalObject}->{'newpassword'};
+    $self->{error} = &_modifyPassword( $self->{portalObject} )
+      if $self->{portalObject}->{'newpassword'};
 
     return $self;
 }
@@ -210,6 +217,7 @@ sub appslistDescription {
 # @return XML root element object
 sub _getXML {
     my $self = shift;
+    return $self->{_xml} if($self->{_xml});
 
     # Parse XML file
     my $parser = XML::LibXML->new();
@@ -222,7 +230,7 @@ sub _getXML {
     # Filter XML file with user's authorizations
     $self->_filterXML($root);
 
-    return $root;
+    return $self->{_xml} = $root;
 }
 
 ## @method string _displayCategory()
@@ -244,11 +252,13 @@ sub _displayCategory {
 
     # Display applications first
     my @appnodes = $cat->findnodes("application");
-    $html .= "<ul>" if scalar @appnodes;
-    foreach (@appnodes) {
-        $html .= $self->_displayApplication($_);
+    if (@appnodes) {
+        $html .= "<ul>";
+        foreach (@appnodes) {
+            $html .= $self->_displayApplication($_);
+        }
+        $html .= "</ul>";
     }
-    $html .= "</ul>" if scalar @appnodes;
 
     # Display subcategories
     my @catnodes = $cat->findnodes("category");
@@ -283,16 +293,25 @@ sub _displayApplication {
     my $html;
 
     # Get application items
-    my $appid   = $app->getAttribute('id');
-    my $appname = $app->getElementsByTagName('name')->string_value() || $appid;
+    my $appid = $app->getAttribute('id');
+    my $appname = $app->getChildrenByTagName('name')->string_value() || $appid;
     my $appuri =
-      $self->_userParam( $app->getElementsByTagName('uri')->string_value()
-          || "#" );
+      $self->_userParam( $app->getChildrenByTagName('uri')->string_value()
+          || "" );
 
     # Display application
-    $html .=
-"<li title=\"$appid\" class=\"appname\"><span><a href=\"$appuri\">$appname</a></span></li>\n";
-
+    $html .= "<li title=\"$appid\" class=\"appname\"><span>"
+     . ($appuri ? "<a href=\"$appuri\">$appname</a>" : "<a>$appname</a>")
+     . "</span>\n";
+    my @appnodes = $app->findnodes("application");
+    if (@appnodes) {
+        $html .= "<ul>";
+        foreach (@appnodes) {
+            $html .= $self->_displayApplication($_);
+        }
+        $html .= "</ul>";
+    }
+    $html .= "</li>";
     return $html;
 }
 
@@ -310,12 +329,12 @@ sub _displayDescription {
 
         # Get application items
         my $appid   = $_->getAttribute('id');
-        my $appname = $_->getElementsByTagName('name')->string_value();
+        my $appname = $_->getChildrenByTagName('name')->string_value();
         my $appuri =
-          $self->_userParam( $_->getElementsByTagName('uri')->string_value()
+          $self->_userParam( $_->getChildrenByTagName('uri')->string_value()
               || "#" );
-        my $appdesc = $_->getElementsByTagName('description')->string_value();
-        my $applogofile = $_->getElementsByTagName('logo')->string_value();
+        my $appdesc = $_->getChildrenByTagName('description')->string_value();
+        my $applogofile = $_->getChildrenByTagName('logo')->string_value();
         my $applogo     = $self->{apps}->{imgpath} . $applogofile;
 
         # Display application
@@ -341,9 +360,9 @@ sub _filterXML {
 
     my @apps = $root->getElementsByTagName('application');
     foreach (@apps) {
-        my $appdisplay = $_->getElementsByTagName('display')->string_value();
+        my $appdisplay = $_->getChildrenByTagName('display')->string_value();
         my $appuri =
-          $self->_userParam( $_->getElementsByTagName('uri')->string_value() );
+          $self->_userParam( $_->getChildrenByTagName('uri')->string_value() );
 
         # Remove node if display is "no"
         $_->unbindNode if ( $appdisplay eq "no" );

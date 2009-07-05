@@ -80,7 +80,6 @@ lib/Lemonldap/NG/Portal/_i18n.pm
 lib/Lemonldap/NG/Portal/_LDAP.pm
 lib/Lemonldap/NG/Portal/_Multi.pm
 lib/Lemonldap/NG/Portal/_Remote.pm
-lib/Lemonldap/NG/Portal/_SAML.pm
 lib/Lemonldap/NG/Portal/_SOAP.pm
 lib/Lemonldap/NG/Portal/_WebForm.pm
 lib/Lemonldap/NG/Portal/AuthApache.pm
@@ -89,7 +88,6 @@ lib/Lemonldap/NG/Portal/AuthLA.pm
 lib/Lemonldap/NG/Portal/AuthLDAP.pm
 lib/Lemonldap/NG/Portal/AuthMulti.pm
 lib/Lemonldap/NG/Portal/AuthRemote.pm
-lib/Lemonldap/NG/Portal/AuthSAML.pm
 lib/Lemonldap/NG/Portal/AuthSSL.pm
 lib/Lemonldap/NG/Portal/CDA.pm
 lib/Lemonldap/NG/Portal/Error.pm
@@ -98,14 +96,12 @@ lib/Lemonldap/NG/Portal/Notification.pm
 lib/Lemonldap/NG/Portal/Notification/DBI.pm
 lib/Lemonldap/NG/Portal/Notification/File.pm
 lib/Lemonldap/NG/Portal/PasswordDBLDAP.pm
-lib/Lemonldap/NG/Portal/SAMLIssuer.pm
 lib/Lemonldap/NG/Portal/SharedConf.pm
 lib/Lemonldap/NG/Portal/Simple.pm
 lib/Lemonldap/NG/Portal/UserDBLDAP.pm
 lib/Lemonldap/NG/Portal/UserDBMulti.pm
 lib/Lemonldap/NG/Portal/UserDBNull.pm
 lib/Lemonldap/NG/Portal/UserDBRemote.pm
-lib/Lemonldap/NG/Portal/UserDBSAML.pm
 Makefile.PL
 MANIFEST			This list of files
 META.yml
@@ -124,7 +120,4 @@ t/25-Lemonldap-NG-Portal-Multi.t
 t/30-Lemonldap-NG-Portal-UserDBNull.t
 t/40-Lemonldap-NG-Portal-CDA.t
 t/50-Lemonldap-NG-Portal-Menu.t
-t/60-Lemonldap-NG-Portal-SAMLIssuer.t
-t/63-Lemonldap-NG-Portal-AuthSAML.t
-t/64-Lemonldap-NG-Portal-UserDBSAML.t
 t/99-pod.t

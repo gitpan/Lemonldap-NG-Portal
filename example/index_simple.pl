@@ -10,7 +10,7 @@ my $portal = Lemonldap::NG::Portal::SharedConf->new(
         # where to find its configuration
         # (generaly /etc/lemonldap-ng/storage.conf)
         # You can specify by yourself this file :
-        #configStorage => { File => '/path/to/my/file' },
+        #configStorage => { confFile => '/path/to/my/file' },
         # or set explicitely parameters :
         #configStorage => {
         #  Type => 'File',
@@ -18,13 +18,6 @@ my $portal = Lemonldap::NG::Portal::SharedConf->new(
         #},
         # Note that YOU HAVE TO SET configStorage here if you've declared this
         # portal as SOAP configuration server in the manager
-
-        # You can also specify directly the configuration
-        # (see Lemonldap::NG::Handler::SharedConf(3))
-        #configStorage => {
-        #      type => 'File',
-        #      directory => '/usr/local/lemonldap-ng/conf/'
-        #},
 
         # LOG
         # By default, all is logged in Apache file. To log user actions by
@@ -131,14 +124,14 @@ my $portal = Lemonldap::NG::Portal::SharedConf->new(
 );
 
 if ( $portal->process() ) {
-    print $portal->header('text/html; charset=utf8');
+    print $portal->header('text/html; charset=utf-8');
     print $portal->start_html;
-    print "<h1>Your well authenticated !</h1>";
+    print "<h1>You are well authenticated !</h1>";
     print "Click <a href=\"$ENV{SCRIPT_NAME}?logout=1\">here</a> to logout";
     print $portal->end_html;
 }
 else {
-    print $portal->header('text/html; charset=utf8');
+    print $portal->header('text/html; charset=utf-8');
     print $portal->start_html;
     print 'Error: ' . $portal->error . '<br />';
     print '<form method="post" action="' . $ENV{SCRIPTNAME} . '">';

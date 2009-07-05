@@ -25,7 +25,7 @@ my $portal = Lemonldap::NG::Portal::SharedConf->new(
         # where to find its configuration
         # (generaly /etc/lemonldap-ng/storage.conf)
         # You can specify by yourself this file :
-        #configStorage => { File => '/path/to/my/file' },
+        #configStorage => { confFile => '/path/to/my/file' },
         # or set explicitely parameters :
         #configStorage => {
         #  Type => 'File',
@@ -33,13 +33,6 @@ my $portal = Lemonldap::NG::Portal::SharedConf->new(
         #},
         # Note that YOU HAVE TO SET configStorage here if you've declared this
         # portal as SOAP configuration server in the manager
-
-        # You can also specify directly the configuration
-        # (see Lemonldap::NG::Handler::SharedConf(3))
-        #configStorage => {
-        #      type => 'File',
-        #      directory => '/usr/local/lemonldap-ng/conf/'
-        #},
 
         # LOG
         # By default, all is logged in Apache file. To log user actions by

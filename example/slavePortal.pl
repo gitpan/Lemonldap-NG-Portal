@@ -99,17 +99,17 @@ my $portal = Lemonldap::NG::Portal::SharedConf->new(
 # Else, we process as usual, but without prompting users with a form
 
 if ( $portal->process() ) {
-    print $portal->header('text/html; charset=utf8');
+    print $portal->header('text/html; charset=utf-8');
     print $portal->start_html;
-    print "<h1>Your well authenticated !</h1>";
+    print "<h1>You are well authenticated !</h1>";
     print $portal->end_html;
 }
 else {
-    print $portal->header('text/html; charset=utf8');
+    print $portal->header('text/html; charset=utf-8');
     print $portal->start_html;
     print qq#<h2>Authentication failed</h2>
     Portal is not able to recognize you
-    <br>
+    <br />
     Contact your administrator (Error: # . $portal->error . ')';
     print $portal->end_html;
 }
