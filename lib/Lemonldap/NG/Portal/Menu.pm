@@ -20,7 +20,7 @@ use Lemonldap::NG::Portal::PasswordDBLDAP; #inherits
 *_modifyPassword = *Lemonldap::NG::Portal::PasswordDBLDAP::modifyPassword;
 *_passwordDBInit = *Lemonldap::NG::Portal::PasswordDBLDAP::passwordDBInit;
 
-our $VERSION = '0.11';
+our $VERSION = '0.2';
 
 ### ACCESS CONTROL DISPLAY SYSTEM
 
@@ -171,7 +171,7 @@ sub displayTab {
       if (
         (
             scalar(
-                grep { /^$self->{error}$/ } (
+                grep { $_ == $self->{error} } (
                     25,    #PE_PP_CHANGE_AFTER_RESET
                     27,    #PE_PP_MUST_SUPPLY_OLD_PASSWORD
                     28,    #PE_PP_INSUFFICIENT_PASSWORD_QUALITY
@@ -357,9 +357,23 @@ sub _displayDescription {
 sub _filterXML {
     my $self = shift;
     my ($root) = @_;
+    my @cat = $root->getElementsByTagName('category');
+    foreach my $cat (@cat) {
+        $self->_filterApp($cat);
+    }
 
-    my @apps = $root->getElementsByTagName('application');
-    foreach (@apps) {
+    # Hide empty categories
+    $self->_hideEmptyCategory($root);
+
+    return;
+}
+
+sub _filterApp {
+    my($self,$node)=@_;
+    my @apps = $node->getChildrenByTagName('application');
+    my $tag = 0;
+    foreach(@apps) {
+        my $stag = $self->_filterApp($_);
         my $appdisplay = $_->getChildrenByTagName('display')->string_value();
         my $appuri =
           $self->_userParam( $_->getChildrenByTagName('uri')->string_value() );
@@ -368,17 +382,26 @@ sub _filterXML {
         $_->unbindNode if ( $appdisplay eq "no" );
 
         # Keep node if display is "yes"
-        next if ( $appdisplay eq "yes" );
+        if ( $appdisplay eq "yes" ) {
+            $tag++;
+            next;
+        }
 
         # Check grant function if display is "auto" (this is the default)
-        $_->unbindNode unless ( $self->_grant($appuri) );
-
+        unless ( $self->_grant($appuri) ) {
+            if($stag) {
+                eval {$_->getChildrenByTagName('uri')->unbindNode() };
+                $tag++;
     }
-
-    # Hide empty categories
-    $self->_hideEmptyCategory($root);
-
-    return;
+            else {
+                $_->unbindNode;
+            }
+        }
+        else {
+            $tag++;
+        }
+    }
+    return $tag;
 }
 
 ## @method private void _hideEmptyCategory(XML::LibXML::Element cat)
@@ -443,7 +466,7 @@ sub _ppolicyWarning {
 sub _grant {
     my $self = shift;
     my ($uri) = @_;
-    $uri =~ m{(\w+)://([^/:]+)(:\d+)?(/.*)?$};
+    $uri =~ m{(\w+)://([^/:]+)(:\d+)?(/.*)?$} or return 0;
     my ( $protocol, $vhost, $port );
     ( $protocol, $vhost, $port, $path ) = ( $1, $2, $3, $4 );
     $path ||= '/';

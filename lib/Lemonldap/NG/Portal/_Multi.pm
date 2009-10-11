@@ -12,7 +12,7 @@ package Lemonldap::NG::Portal::_Multi;
 
 use Lemonldap::NG::Portal::Simple;
 
-our $VERSION = '0.1';
+our $VERSION = '0.11';
 
 ## @cmethod Lemonldap::NG::Portal::_Multi new(Lemonldap::NG::Portal::Simple portal)
 # Constructor
@@ -33,7 +33,7 @@ sub new {
             $cond = 1 unless ( defined $cond );
             $mod = "Lemonldap::NG::Portal::" . [ 'Auth', 'UserDB' ]->[$i] . $mod
               unless ( $mod =~ /::/ );
-            eval { require $mod };
+            eval "require $mod";
             $portal->abort( 'Bad configuration', "Unable to load $mod ($@)" )
               if ($@);
             push @{ $self->{stack}->[$i] },

@@ -9,7 +9,7 @@ use strict;
 use Lemonldap::NG::Portal::Simple;
 use AuthCAS;
 
-our $VERSION = '0.1';
+our $VERSION = '0.11';
 
 ## @apmethod int authInit()
 # Does nothing.
@@ -36,9 +36,9 @@ sub extractFormInfo {
     unless ( $self->{user} =
         $cas->validateST( $self->{CAS_validationUrl}, $ticket ) )
     {
-        print $self->SUPER::redirect(
+        print $self->redirect(
             -uri    => $login_url,
-            -status => '302 Moved Temporary'
+            -status => '303 See Other'
         );
         exit;
     }

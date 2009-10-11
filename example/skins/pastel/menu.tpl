@@ -8,13 +8,13 @@
 
 		<ul>
 		<TMPL_IF NAME="DISPLAY_APPSLIST">
-		<li><a href="#appslist"><span><img src="skins/common/application_cascade.png" alt="appslist" /> <lang en="Your applications" fr="Vos applications" /></span></a></li>
+		<li><a href="#appslist"><span><img src="skins/common/application_cascade.png" width="16" height="16" alt="appslist" /> <lang en="Your applications" fr="Vos applications" /></span></a></li>
 		</TMPL_IF>
 		<TMPL_IF NAME="DISPLAY_PASSWORD">
-		<li><a href="#password"><span><img src="skins/common/vcard_edit.png" alt="password" /> <lang en="Password" fr="Mot de passe" /></span></a></li>
+		<li><a href="#password"><span><img src="skins/common/vcard_edit.png" width="16" height="16" alt="password" /> <lang en="Password" fr="Mot de passe" /></span></a></li>
 		</TMPL_IF>
 		<TMPL_IF NAME="DISPLAY_LOGOUT">
-		<li><a href="#logout"><span><img src="skins/common/door_out.png" alt="logout" /> <lang en="Logout" fr="D&eacute;connexion" /></span></a></li>
+		<li><a href="#logout"><span><img src="skins/common/door_out.png" width="16" height="16" alt="logout" /> <lang en="Logout" fr="D&eacute;connexion" /></span></a></li>
 		</TMPL_IF>
 		</ul>
 

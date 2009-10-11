@@ -5,7 +5,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 4;
+use Test::More tests => 3;
 BEGIN { use_ok('Lemonldap::NG::Portal::Menu') }
 
 #########################
@@ -14,12 +14,6 @@ BEGIN { use_ok('Lemonldap::NG::Portal::Menu') }
 # its man page ( perldoc Test::More ) for help writing this test script.
 
 my $tmp;
-
-my $perl = "perl -I" . join( ' -I', @INC );
-
-$tmp =
-`$perl -MLemonldap::NG::Portal::Menu -e '\$a=Lemonldap::NG::Portal::Menu->new()' 2>/dev/null`;
-ok( $tmp =~ /Portal object required/, 'Portal object required' );
 
 my ( $m, $p );
 

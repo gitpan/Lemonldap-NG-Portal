@@ -34,7 +34,7 @@ use Safe;
 #inherits Apache::Session
 #link Lemonldap::NG::Common::Apache::Session::SOAP protected globalStorage
 
-our $VERSION = '0.89';
+our $VERSION = '0.90';
 
 use base qw(Lemonldap::NG::Common::CGI Exporter);
 our @ISA;
@@ -140,12 +140,12 @@ sub new {
 
     # Authentication and userDB module are required and have to be in @ISA
     foreach (qw(authentication userDB passwordDB)) {
-        my $tmp =
-          'Lemonldap::NG::Portal::'
-          . ( $_ eq 'userDB'
+        my $tmp = 'Lemonldap::NG::Portal::'
+          . (
+            $_ eq 'userDB'
             ? 'UserDB'
-            : ( $_ eq 'passwordDB' ? 'PasswordDB' : 'Auth' ) )
-          . $self->{$_};
+            : ( $_ eq 'passwordDB' ? 'PasswordDB' : 'Auth' )
+          ) . $self->{$_};
         $tmp =~ s/\s.*$//;
         eval "require $tmp";
         $self->abort( "Configuration error", $@ ) if ($@);
@@ -201,7 +201,10 @@ sub new {
     unless ( defined( $self->{trustedDomains} ) ) {
         $self->{trustedDomains} = $self->{domain};
     }
-    if ( $self->{trustedDomains} ) {
+    if ( $self->{trustedDomains} eq '*' ) {
+        $self->{trustedDomains} = '|\w[\w\-\.]*\w';
+    }
+    elsif ( $self->{trustedDomains} ) {
         $self->{trustedDomains} = '|(?:[^/]*)?' . join '|',
           map { s/\./\\\./g; $_ } split /\s+/, $self->{trustedDomains};
     }
@@ -231,6 +234,7 @@ sub setDefaultValues {
     my $self = shift;
     $self->{whatToTrace} ||= 'uid';
     $self->{whatToTrace} =~ s/^\$//;
+    $self->{httpOnly} = 1 unless ( defined( $self->{httpOnly} ) );
 }
 
 =begin WSDL
@@ -501,7 +505,8 @@ sub _deleteSession {
     my ( $self, $h ) = @_;
     if ( my $id2 = $h->{_httpSession} ) {
         my $h2 = $self->getApacheSession($id2);
-        tied(%$h2)->delete();
+        eval {tied(%$h2)->delete()};
+        $self->lmLog( $@, 'error' ) if ($@);
 
         # Delete cookie
         push @{ $self->{cookie} },
@@ -515,7 +520,9 @@ sub _deleteSession {
             @_,
           );
     }
-    my $r = tied(%$h)->delete();
+    my $r;
+    eval {$r = tied(%$h)->delete()};
+    $self->lmLog( $@, 'error' ) if ($@);
 
     # Delete cookie
     push @{ $self->{cookie} },
@@ -825,21 +832,23 @@ sub buildCookie {
     my $self = shift;
     push @{ $self->{cookie} },
       $self->cookie(
-        -name   => $self->{cookieName},
-        -value  => $self->{id},
-        -domain => $self->{domain},
-        -path   => "/",
-        -secure => $self->{securedCookie},
+        -name     => $self->{cookieName},
+        -value    => $self->{id},
+        -domain   => $self->{domain},
+        -path     => "/",
+        -secure   => $self->{securedCookie},
+        -httponly => $self->{httpOnly},
         @_,
       );
     if ( $self->{securedCookie} == 2 ) {
         push @{ $self->{cookie} },
           $self->cookie(
-            -name   => $self->{cookieName} . "http",
-            -value  => $self->{sessionInfo}->{_httpSession},
-            -domain => $self->{domain},
-            -path   => "/",
-            -secure => 0,
+            -name     => $self->{cookieName} . "http",
+            -value    => $self->{sessionInfo}->{_httpSession},
+            -domain   => $self->{domain},
+            -path     => "/",
+            -secure   => 0,
+            -httponly => $self->{httpOnly},
             @_,
           );
     }
@@ -903,7 +912,7 @@ sub autoRedirect {
         print $self->SUPER::redirect(
             -uri    => $self->{urldc},
             -cookie => $self->{cookie},
-            -status => '302 Moved Temporary'
+            -status => '303 See Other'
         );
 
         # Remove this lines if your browsers does not support redirections
