@@ -7,28 +7,32 @@ package Lemonldap::NG::Portal::_SOAP;
 
 use strict;
 use Lemonldap::NG::Portal::Simple;
+use Lemonldap::NG::Portal::_LibAccess;
 require SOAP::Lite;
+use Safe;
+use constant SAFEWRAP => ( Safe->can("wrap_code_ref") ? 1 : 0 );
+use base qw(Lemonldap::NG::Portal::_LibAccess);
 
-our $VERSION = '0.1';
+our $VERSION = '0.99';
 
 ## @method void startSoapServices()
 # Check the URI requested (PATH_INFO environment variable) and launch the
 # corresponding SOAP methods using soapTest().
-# If "soapOnly" is set, reject otehr request. Else, simply return.
+# If "soapOnly" is set, reject other request. Else, simply return.
 sub startSoapServices {
     my $self = shift;
-    $self->{CustomSOAPServices} ||= {};
 
-    # TODO: insert here the SAML SOAP functions
-    $self->{CustomSOAPServices}->{'/SAMLAuthority'} = '' if($self->{SAMLIssuer});
+    # Load SOAP services
+    $self->{CustomSOAPServices} ||= {};
     if (
         $ENV{PATH_INFO}
         and my $tmp = {
-            %{$self->{CustomSOAPServices}},
-            '/sessions'      => 'getAttributes',
-            '/adminSessions' => 'getAttributes setAttributes '
+            %{ $self->{CustomSOAPServices} },
+            '/sessions' =>
+              'getCookies getAttributes isAuthorizedURI getMenuApplications',
+            '/adminSessions' => 'getAttributes setAttributes isAuthorizedURI '
               . 'newSession deleteSession get_key_from_all_sessions',
-            '/config'        => 'getConfig lastCfg'
+            '/config' => 'getConfig lastCfg'
         }->{ $ENV{PATH_INFO} }
       )
     {
@@ -56,16 +60,19 @@ _RETURN $getCookiesResponse Response
 
 =cut
 
-##@method SOAP::Data getCookies(string user,string password)
+##@method SOAP::Data getCookies(string user,string password, string sessionid)
 # Called in SOAP context, returns cookies in an array.
 # This subroutine works only for portals working with user and password
 #@param user uid
 #@param password password
+#@param sessionid optional session identifier
 #@return session => { error => code , cookies => { cookieName1 => value ,... } }
 sub getCookies {
-    my $self = shift;
-    $self->{error} = PE_OK;
-    ( $self->{user}, $self->{password} ) = ( shift, shift );
+    my ( $self, $user, $password, $sessionid ) = splice @_;
+    $self->{user}     = $user;
+    $self->{password} = $password;
+    $self->{id}       = $sessionid if ( defined($sessionid) && $sessionid );
+    $self->{error}    = PE_OK;
     $self->lmLog( "SOAP authentication request for $self->{user}", 'debug' );
     unless ( $self->{user} && $self->{password} ) {
         $self->{error} = PE_FORMEMPTY;
@@ -73,8 +80,10 @@ sub getCookies {
     else {
         $self->{error} = $self->_subProcess(
             qw(authInit userDBInit getUser setAuthSessionInfo setSessionInfo
-              setMacros setGroups authenticate store buildCookie)
+              setMacros setLocalGroups setGroups authenticate removeOther grantSession
+              store authFinish buildCookie)
         );
+        $self->updateSession();
     }
     my @tmp = ();
     push @tmp, SOAP::Data->name( error => $self->{error} );
@@ -83,6 +92,8 @@ sub getCookies {
         foreach ( @{ $self->{cookie} } ) {
             push @cookies, SOAP::Data->name( $_->name, $_->value );
         }
+        push @cookies,
+          SOAP::Data->name( $self->{cookieName} . 'update', time() );
     }
     else {
         my @cookieNames = split /\s+/, $self->{cookieName};
@@ -110,7 +121,7 @@ _RETURN $getAttributesResponse Response
 # @param $id Cookie value
 # @return SOAP::Data sequence
 sub getAttributes {
-    my ( $self, $id ) = @_;
+    my ( $self, $id ) = splice @_;
     die 'id is required' unless ($id);
     my $h = $self->getApacheSession( $id, 1 );
     my @tmp = ();
@@ -138,7 +149,7 @@ sub getAttributes {
 # @param $args datas to store
 # @return true if succeed
 sub setAttributes {
-    my ( $self, $id, $args ) = @_;
+    my ( $self, $id, $args ) = splice @_;
     die 'id is required' unless ($id);
     my $h = $self->getApacheSession($id);
     unless ($h) {
@@ -172,6 +183,119 @@ sub lastCfg {
     return $self->{lmConf}->lastCfg();
 }
 
+## @method SOAP::Data newSession(hashref args)
+# Store a new session.
+# @return Session datas
+sub newSession {
+    my ( $self, $args ) = splice @_;
+    my $h = $self->getApacheSession();
+    if ($@) {
+        $self->lmLog( "Unable to create session", 'error' );
+        return 0;
+    }
+    $h->{$_} = $args->{$_} foreach ( keys %{$args} );
+    $h->{_utime} = time();
+    $args->{$_} = $h->{$_} foreach ( keys %$h );
+    untie %$h;
+    $self->lmLog( "SOAP request to store $args->{_session_id} ($args->{uid})",
+        'debug' );
+    return SOAP::Data->name( attributes => _buildSoapHash($args) );
+}
+
+## @method SOAP::Data deleteSession()
+# Deletes an existing session
+sub deleteSession {
+    my ( $self, $id ) = splice @_;
+    die('id parameter is required') unless ($id);
+    my $h = $self->getApacheSession($id);
+    return 0 if ($@);
+    $self->lmLog( "SOAP request to delete session $id", 'debug' );
+    return $self->_deleteSession($h);
+}
+
+##@method SOAP::Data get_key_from_all_sessions
+# Returns key from all sessions
+sub get_key_from_all_sessions {
+    my $self = shift;
+    shift;
+    require Lemonldap::NG::Common::Apache::Session;
+
+    #die $self->{globalStorage};
+    my $tmp = $self->{globalStorage};
+    no strict 'refs';
+    return $self->{globalStorage}
+      ->get_key_from_all_sessions( $self->{globalStorageOptions}, @_ );
+    return &{"$tmp\::get_key_from_all_sessions"}( $self->{globalStorage},
+        $self->{globalStorageOptions}, @_ );
+}
+
+=begin WSDL
+
+_IN id $string Cookie value
+_IN uri $string URI to test
+_RETURN $isAuthorizedURIResponse Response
+
+=end WSDL
+
+=cut
+
+## @method boolean isAuthorizedURI (string id, string uri)
+# Check user's authorization for uri.
+# @param $id Id of the session
+# @param $uri URL string
+# @return True if granted
+sub isAuthorizedURI {
+    my $self = shift;
+    my ( $id, $uri ) = @_;
+    die 'id is required'  unless ($id);
+    die 'uri is required' unless ($uri);
+
+    # Get user session.
+    my $h = $self->getApacheSession( $id, 1 );
+    unless ($h) {
+        $self->lmLog( "Session $id does not exists ($@)", 'warn' );
+        return 0;
+    }
+    $self->{sessionInfo} = $h;
+    my $r = $self->_grant($uri);
+    untie %$h;
+    return $r;
+}
+
+=begin WSDL
+
+_IN id $string Cookie value
+_RETURN $getMenuApplicationsResponse Response
+
+=end WSDL
+
+=cut
+
+##@method SOAP::Data getMenuApplications(string id)
+# @param $id Id of the session
+#@return SOAP::Data
+sub getMenuApplications {
+    my ( $self, $id ) = splice @_;
+    die 'id is required' unless ($id);
+
+    $self->lmLog( "SOAP getMenuApplications request for id $id", 'debug' );
+
+    # Get user session.
+    my $h = $self->getApacheSession( $id, 1 );
+    unless ($h) {
+        $self->lmLog( "Session $id does not exists ($@)", 'warn' );
+        return 0;
+    }
+
+    $self->{sessionInfo} = $h;
+    return _buildSoapHash( { menu => $self->appslist() } );
+
+}
+
+#######################
+# Private subroutines #
+#######################
+
 ##@fn private SOAP::Data _buildSoapHash()
 # Serialize a hashref into SOAP::Data. Types are fixed to "string".
 # @return SOAP::Data serialized datas
@@ -193,51 +317,6 @@ sub _buildSoapHash {
         }
     }
     return \SOAP::Data->value(@tmp);
-}
-
-## @method SOAP::Data newSession(hashref args)
-# Store a new session.
-# @return Session datas
-sub newSession {
-    my ( $self, $args ) = @_;
-    my $h = $self->getApacheSession();
-    if ($@) {
-        $self->lmLog( "Unable to create session", 'error' );
-        return 0;
-    }
-    $h->{$_} = $args->{$_} foreach ( keys %{$args} );
-    $h->{_utime} = time();
-    $args->{$_} = $h->{$_} foreach ( keys %$h );
-    untie %$h;
-    $self->lmLog( "SOAP request to store $args->{_session_id} ($args->{uid})",
-        'debug' );
-    return SOAP::Data->name( attributes => _buildSoapHash($args) );
-}
-
-## @method SOAP::Data deleteSession()
-# Deletes an existing session
-sub deleteSession {
-    my ( $self, $id ) = @_;
-    die('id parameter is required') unless ($id);
-    my $h = $self->getApacheSession($id);
-    return 0 if ($@);
-    $self->lmLog( "SOAP request to delete session $id", 'debug' );
-    return $self->_deleteSession($h);
-}
-
-##@method SOAP::Data getConfig()
-sub get_key_from_all_sessions {
-    my $self = shift;
-    shift;
-    require Lemonldap::NG::Common::Apache::Session;
-
-    #die $self->{globalStorage};
-    my $tmp = $self->{globalStorage};
-    no strict 'refs';
-    return $self->{globalStorage}
-      ->get_key_from_all_sessions( $self->{globalStorageOptions}, @_ );
-    return &{"$tmp\::get_key_from_all_sessions"}( $self->{globalStorage},
-        $self->{globalStorageOptions}, @_ );
 }
 
 1;

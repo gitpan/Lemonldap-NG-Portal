@@ -37,7 +37,7 @@ use UNIVERSAL qw( isa can VERSION );
 *EXPORT_TAGS = *Lemonldap::NG::Portal::SharedConf::EXPORT_TAGS;
 *EXPORT      = *Lemonldap::NG::Portal::SharedConf::EXPORT;
 
-our $VERSION = '0.33';
+our $VERSION = '0.99';
 use base qw(Lemonldap::NG::Portal::SharedConf);
 
 #===============================================================================
@@ -241,16 +241,15 @@ sub process {
     }
     elsif ( $urldir eq $self->PC_LA_URLFT ) {
 
-        $self->{error} = $self->_subProcess(
-            qw( libertyFederationTermination autoRedirect ));
+        $self->{error} =
+          $self->_subProcess(qw( libertyFederationTermination autoRedirect ));
 
         # federationTerminationReturn
     }
     elsif ( $urldir eq $self->PC_LA_URLFTR ) {
 
         $self->{error} = $self->_subProcess(
-            qw( libertyFederationTerminationReturn autoRedirect )
-        );
+            qw( libertyFederationTerminationReturn autoRedirect ));
 
         # singleLogout : called when IDP request Logout.
     }
@@ -268,8 +267,7 @@ sub process {
     }
     elsif ( $urldir eq $self->PC_LA_URLSLR ) {
 
-        $self->{error} =
-          $self->_subProcess(qw( libertySingleLogoutReturn ));
+        $self->{error} = $self->_subProcess(qw( libertySingleLogoutReturn ));
 
         # soapCall
     }
@@ -362,6 +360,27 @@ sub store {
       unless defined $self->{userNameIdentifier};
 
     return $self->_assertionSessionStore( $self->{userNameIdentifier} );
+}
+
+## @apmethod int authFinish()
+# Does nothing.
+# @return Lemonldap::NG::Portal constant
+sub authFinish {
+    PE_OK;
+}
+
+## @apmethod int authLogout()
+# Does nothing
+# @return Lemonldap::NG::Portal constant
+sub authLogout {
+    PE_OK;
+}
+
+## @apmethod boolean authForce()
+# Does nothing
+# @return result
+sub authForce {
+    return 0;
 }
 
 #===============================================================================
@@ -799,6 +818,9 @@ sub libertySetSessionInfo {
 
     $self->{user} = $uidValues[0]
       if (@uidValues);
+
+    # authenticationLevel 1 for external authentication
+    $self->{sessionInfo}->{authenticationLevel} = 1;
 
     return PE_OK;
 }
@@ -1371,6 +1393,8 @@ sub _debug {
 __END__
 
 =head1 NAME
+
+=encoding utf8
 
 Lemonldap::NG::Portal::AuthLA - Provide Liberty Alliance Authentication for
 FederID project.

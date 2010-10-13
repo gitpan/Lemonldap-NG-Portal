@@ -1,9 +1,14 @@
+## @file
+# Deprecated: use "cda" parameter instead
+
+## @class
+# Deprecated: use "cda" parameter instead
 package Lemonldap::NG::Portal::CDA;
 
 use strict;
 use Lemonldap::NG::Portal::SharedConf qw(:all);
 
-our $VERSION = '0.1';
+our $VERSION = '0.99';
 use base ('Lemonldap::NG::Portal::SharedConf');
 
 *EXPORT_OK   = *Lemonldap::NG::Portal::SharedConf::EXPORT_OK;
@@ -14,9 +19,13 @@ use base ('Lemonldap::NG::Portal::SharedConf');
 # OVERLOADED SUB #
 ##################
 
+## @cmethod Lemonldap::NG::Portal::CDA new(array params)
+# Call Lemonldap::NG::Portal::SharedConf::new() with "cda" parameter set to 1
+# @param params Lemonldap::NG::Portal::SharedConf::new() parameters
+# @return New Lemonldap::NG::Portal::CDA object
 sub new {
     my $class = shift;
-    my $self = $class->SUPER::new(@_);
+    my $self  = $class->SUPER::new(@_);
     $self->{cda} = 1;
     return $self;
 }
@@ -25,6 +34,8 @@ sub new {
 __END__
 
 =head1 NAME
+
+=encoding utf8
 
 Lemonldap::NG::Portal::CDA - Perl extension for building Lemonldap::NG
 compatible portals with Cross Domain Authentication.

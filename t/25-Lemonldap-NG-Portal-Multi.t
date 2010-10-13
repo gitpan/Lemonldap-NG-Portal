@@ -23,6 +23,11 @@ our $buf;
 tie *STDOUT, 'IO::String', $buf;
 our $lastpos = 0;
 
+sub lmLog {
+    my ( $self, $mess, $level ) = @_;
+    print STDERR "$mess\n" unless ( $level =~ /^(?:debug|info)$/ );
+}
+
 sub diff {
     my $str = $buf;
     $str =~ s/^.{$lastpos}//s if ($lastpos);
@@ -34,6 +39,7 @@ sub diff {
 sub abort {
     shift;
     local $, = ' ';
+
     #print STDERR @_;
 }
 
@@ -55,139 +61,139 @@ $ENV{SCRIPT_FILENAME} = '/tmp/test.pl';
 $ENV{REQUEST_METHOD}  = 'GET';
 $ENV{REQUEST_URI}     = '/';
 $ENV{QUERY_STRING}    = '';
-$ENV{REMOTE_ADDR} = '127.0.0.1';
+$ENV{REMOTE_ADDR}     = '127.0.0.1';
 
-my($test,$testU);
+my ( $test, $testU );
 {
-$INC{'Lemonldap/NG/Portal/Auth1.pm'}   = 't/25-Lemonldap-NG-Portal-Multi.t';
-$INC{'Lemonldap/NG/Portal/Auth2.pm'}   = 't/25-Lemonldap-NG-Portal-Multi.t';
-$INC{'Lemonldap/NG/Portal/UserDB1.pm'} = 't/25-Lemonldap-NG-Portal-Multi.t';
-$INC{'Lemonldap/NG/Portal/UserDB2.pm'} = 't/25-Lemonldap-NG-Portal-Multi.t';
-$INC{'Lemonldap/NG/Portal/UserDB3.pm'} = 't/25-Lemonldap-NG-Portal-Multi.t';
-$INC{'Lemonldap/NG/Portal/UserDB4.pm'} = 't/25-Lemonldap-NG-Portal-Multi.t';
+    $INC{'Lemonldap/NG/Portal/Auth1.pm'}   = 't/25-Lemonldap-NG-Portal-Multi.t';
+    $INC{'Lemonldap/NG/Portal/Auth2.pm'}   = 't/25-Lemonldap-NG-Portal-Multi.t';
+    $INC{'Lemonldap/NG/Portal/UserDB1.pm'} = 't/25-Lemonldap-NG-Portal-Multi.t';
+    $INC{'Lemonldap/NG/Portal/UserDB2.pm'} = 't/25-Lemonldap-NG-Portal-Multi.t';
+    $INC{'Lemonldap/NG/Portal/UserDB3.pm'} = 't/25-Lemonldap-NG-Portal-Multi.t';
+    $INC{'Lemonldap/NG/Portal/UserDB4.pm'} = 't/25-Lemonldap-NG-Portal-Multi.t';
 
-open LOG, '>/tmp/log';
-print LOG Dumper(\%INC);use Data::Dumper;
-$|=1;
-close LOG;
+    open LOG, '>/tmp/log';
+    print LOG Dumper( \%INC );
+    use Data::Dumper;
+    $| = 1;
+    close LOG;
 
-ok(
-    $p = My::Portal->new(
-        {
-            globalStorage  => 'Apache::Session::File',
-            domain         => 'example.com',
-            authentication => 'Multi 1;2',
-            userDB         => 'Multi 1;2',
-            getUser        => sub { PE_OK },
-            setSessionInfo => sub { PE_OK },
-            portal         => 'http://abc',
-            sessionInfo    => { uid => 't', },
-            userNotice     => sub { },
-        }
-    ),
-    'Portal object'
-);
+    ok(
+        $p = My::Portal->new(
+            {
+                globalStorage  => 'Apache::Session::File',
+                domain         => 'example.com',
+                authentication => 'Multi 1;2',
+                userDB         => 'Multi 1;2',
+                getUser        => sub { PE_OK },
+                setSessionInfo => sub { PE_OK },
+                portal         => 'http://abc',
+                sessionInfo    => { uid => 't', },
+                userNotice     => sub { },
+            }
+        ),
+        'Portal object'
+    );
 
-$test = 0;
+    $test = 0;
 
-ok( ( $p->process() == 1 and $p->{error} == PE_OK and $test == 1 ),
-    'Second module was called' );
+    ok( ( $p->process() == 1 and $p->{error} == PE_OK and $test == 1 ),
+        'Second module was called' );
 
-ok(
-    $p = My::Portal->new(
-        {
-            globalStorage  => 'Apache::Session::File',
-            domain         => 'example.com',
-            authentication => 'Multi 1;2',
-            userDB         => 'Multi 1;2',
-            portal         => 'http://abc',
-            sessionInfo    => { uid => 't', },
-            userNotice     => sub { },
-        }
-    ),
-    'Portal object'
-);
+    ok(
+        $p = My::Portal->new(
+            {
+                globalStorage  => 'Apache::Session::File',
+                domain         => 'example.com',
+                authentication => 'Multi 1;2',
+                userDB         => 'Multi 1;2',
+                portal         => 'http://abc',
+                sessionInfo    => { uid => 't', },
+                userNotice     => sub { },
+            }
+        ),
+        'Portal object'
+    );
 
-$test = 0;
-$testU = 0;
+    $test  = 0;
+    $testU = 0;
 
-ok( ( $p->process() == 1 and $p->{error} == PE_OK and $testU == 1 ),
-    'Second userDB module was called' );
+    ok( ( $p->process() == 1 and $p->{error} == PE_OK and $testU == 1 ),
+        'Second userDB module was called' );
 
-ok(
-    $p = My::Portal->new(
-        {
-            globalStorage  => 'Apache::Session::File',
-            domain         => 'example.com',
-            authentication => 'Multi 1;2',
-            userDB         => 'Multi 3;4',
-            portal         => 'http://abc',
-            sessionInfo    => { uid => 't', },
-            userNotice     => sub { },
-        }
-    ),
-    'Portal object'
-);
+    ok(
+        $p = My::Portal->new(
+            {
+                globalStorage  => 'Apache::Session::File',
+                domain         => 'example.com',
+                authentication => 'Multi 1;2',
+                userDB         => 'Multi 3;4',
+                portal         => 'http://abc',
+                sessionInfo    => { uid => 't', },
+                userNotice     => sub { },
+            }
+        ),
+        'Portal object'
+    );
 
-$test  = 0;
-$testU = 0;
+    $test  = 0;
+    $testU = 0;
 
-ok( ( $p->process() == 1 and $p->{error} == PE_OK and $testU == 1 ),
-    'Second userDB module was not called' );
+    ok( ( $p->process() == 1 and $p->{error} == PE_OK and $testU == 1 ),
+        'Second userDB module was not called' );
 
-ok(
-    $p = My::Portal->new(
-        {
-            globalStorage  => 'Apache::Session::File',
-            domain         => 'example.com',
-            authentication => 'Multi 1 1==0;2 1==0',
-            userDB         => 'Multi 3;4',
-            portal         => 'http://abc',
-            sessionInfo    => { uid => 't', },
-            userNotice     => sub { },
-        }
-    ),
-    'Portal object'
-);
+    ok(
+        $p = My::Portal->new(
+            {
+                globalStorage  => 'Apache::Session::File',
+                domain         => 'example.com',
+                authentication => 'Multi 1 1==0;2 1==0',
+                userDB         => 'Multi 3;4',
+                portal         => 'http://abc',
+                sessionInfo    => { uid => 't', },
+                userNotice     => sub { },
+            }
+        ),
+        'Portal object'
+    );
 
-ok( ( $p->process() == 0 and $p->{error} == PE_NOSCHEME ),
-    'No scheme available' );
+    ok( ( $p->process() == 0 and $p->{error} == PE_NOSCHEME ),
+        'No scheme available' );
 
-ok(
-    $p = My::Portal->new(
-        {
-            globalStorage  => 'Apache::Session::File',
-            domain         => 'example.com',
-            authentication => 'Multi 1;2 1==0',
-            userDB         => 'Multi 3;4',
-            portal         => 'http://abc',
-            sessionInfo    => { uid => 't', },
-            userNotice     => sub { },
-        }
-    ),
-    'Portal object'
-);
+    ok(
+        $p = My::Portal->new(
+            {
+                globalStorage  => 'Apache::Session::File',
+                domain         => 'example.com',
+                authentication => 'Multi 1;2 1==0',
+                userDB         => 'Multi 3;4',
+                portal         => 'http://abc',
+                sessionInfo    => { uid => 't', },
+                userNotice     => sub { },
+            }
+        ),
+        'Portal object'
+    );
 
-ok( ( $p->process() == 0 and $p->{error} == PE_ERROR ),
-    'Error from previous module' );
+    ok( ( $p->process() == 0 and $p->{error} == PE_ERROR ),
+        'Error from previous module' );
 
-ok(
-    $p = My::Portal->new(
-        {
-            globalStorage  => 'Apache::Session::File',
-            domain         => 'example.com',
-            authentication => 'Multi 1;2 1==1',
-            userDB         => 'Multi 3;4',
-            portal         => 'http://abc',
-            sessionInfo    => { uid => 't', },
-            userNotice     => sub { },
-        }
-    ),
-    'Portal object'
-);
+    ok(
+        $p = My::Portal->new(
+            {
+                globalStorage  => 'Apache::Session::File',
+                domain         => 'example.com',
+                authentication => 'Multi 1;2 1==1',
+                userDB         => 'Multi 3;4',
+                portal         => 'http://abc',
+                sessionInfo    => { uid => 't', },
+                userNotice     => sub { },
+            }
+        ),
+        'Portal object'
+    );
 
-ok( ( $p->process() == 1 ),
-    '1 failed, 2 succeed' );
+    ok( ( $p->process() == 1 ), '1 failed, 2 succeed' );
 }
 
 package Lemonldap::NG::Portal::Auth1;

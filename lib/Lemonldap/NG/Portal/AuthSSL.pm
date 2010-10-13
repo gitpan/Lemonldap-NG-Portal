@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::AuthLDAP;
 
 use base qw(Lemonldap::NG::Portal::AuthLDAP);
 
-our $VERSION = '0.2';
+our $VERSION = '0.99';
 
 ## @apmethod int authInit()
 # Check if SSL environment variables are set.
@@ -38,14 +38,14 @@ sub extractFormInfo {
     my $self = shift;
     my $user = $self->https ? $ENV{ $self->{SSLVar} } : 0;
     if ($user) {
-        $self->{sessionInfo}->{authenticationLevel} = 5;
         $self->{user} = $user;
         $self->{AuthLDAPFilter} ||=
           '(&(' . $self->{SSLLDAPField} . "=$user)(objectClass=inetOrgPerson))";
         return PE_OK;
     }
     elsif ( $self->{SSLRequire} ) {
-        $self->_sub('userError',"No certificate found for $ENV{REMOTE_ADDR}");
+        $self->_sub( 'userError',
+            "No certificate found for $ENV{REMOTE_ADDR}" );
         return PE_CERTIFICATEREQUIRED;
     }
     $self->{AuthLDAPFilter} = '';
@@ -53,7 +53,7 @@ sub extractFormInfo {
 }
 
 ## @apmethod int setAuthSessionInfo()
-# Store user.
+# Set _user and authenticationLevel.
 # @return Lemonldap::NG::Portal constant
 sub setAuthSessionInfo {
     my $self = shift;
@@ -61,6 +61,7 @@ sub setAuthSessionInfo {
     # Store user certificate login for basic rules
     $self->{sessionInfo}->{'_user'} = $self->{'user'};
 
+    $self->{sessionInfo}->{authenticationLevel} = $self->{SSLAuthnLevel};
     PE_OK;
 }
 
@@ -71,17 +72,42 @@ sub setAuthSessionInfo {
 sub authenticate {
     my $self = shift;
     if (    $self->{sessionInfo}->{authenticationLevel}
-        and $self->{sessionInfo}->{authenticationLevel} > 4 )
+        and $self->{sessionInfo}->{authenticationLevel} >=
+        $self->{SSLAuthnLevel} )
     {
         return PE_OK;
     }
     return $self->SUPER::authenticate(@_);
 }
 
+## @apmethod int authFinish()
+# Does nothing.
+# @return Lemonldap::NG::Portal constant
+sub authFinish {
+    PE_OK;
+}
+
+## @apmethod int authLogout()
+# Does nothing
+# @return Lemonldap::NG::Portal constant
+sub authLogout {
+    PE_OK;
+}
+
+## @apmethod boolean authForce()
+# Does nothing
+# @return result
+sub authForce {
+    return 0;
+}
+
 1;
+
 __END__
 
 =head1 NAME
+
+=encoding utf8
 
 Lemonldap::NG::Portal::AuthSSL - Perl extension for building Lemonldap::NG
 compatible portals with SSL authentication.

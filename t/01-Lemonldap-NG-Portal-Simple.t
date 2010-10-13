@@ -5,7 +5,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 12;
+use Test::More tests => 10;
 
 BEGIN { use_ok( 'Lemonldap::NG::Portal::Simple', ':all' ) }
 
@@ -31,6 +31,7 @@ $ENV{SCRIPT_FILENAME} = '/tmp/test.pl';
 $ENV{REQUEST_METHOD}  = 'GET';
 $ENV{REQUEST_URI}     = '/';
 $ENV{QUERY_STRING}    = '';
+$ENV{REMOTE_ADDR}     = '127.0.0.1';
 
 ok(
     $p = Lemonldap::NG::Portal::Simple->new(
@@ -38,8 +39,8 @@ ok(
             globalStorage  => 'Apache::Session::File',
             domain         => 'example.com',
             authentication => 'LDAP test=1',
-	    user           => '',
-	    password       => '',
+            user           => '',
+            password       => '',
         }
     ),
     'Portal object'
@@ -49,6 +50,8 @@ ok(
 ok( $p->{test}, 'Authentication arguments' );
 
 # Process test: first access
+$ENV{REQUEST_URI}  = '/?user=&password=';
+$ENV{QUERY_STRING} = 'user=&password=';
 ok( $p->process == 0,              'No user' );
 ok( $p->{error} == PE_FIRSTACCESS, 'Error code: first access' );
 
@@ -69,8 +72,8 @@ ok( $p->{error} == PE_FORMEMPTY, 'Error code: missing password' );
 # No ldap
 $p->{extractFormInfo} = sub {
     my $self = shift;
-    $self->{user}        = 'user';
-    $self->{password}    = '';
+    $self->{user}     = 'user';
+    $self->{password} = '';
     PE_OK;
 };
 
@@ -79,18 +82,15 @@ $p->{bind}           = sub { PE_OK };
 $p->{search}         = sub { PE_OK };
 $p->{setSessionInfo} = sub { PE_OK };
 $p->{unbind}         = sub { PE_OK };
-$p->{store}          = sub { PE_OK };
-$p->{authenticate}   = sub { PE_OK };
+$p->{store}          = sub {
+    my $self = shift;
+    $self->{id} = 1;
+    PE_OK;
+};
+$p->{authenticate} = sub { PE_OK };
+$p->{authFinish}   = sub { PE_OK };
 ok( $p->process > 0, 'User OK' );
 
 # Cookie test
-$p->{id} = 1;
-ok( $p->buildCookie == PE_OK, 'Cookie build' );
-ok(
-    (
-        ref( $p->{cookie} ) eq 'ARRAY' and $p->{cookie}->[0]->isa('CGI::Cookie')
-    ),
-    'Valid cookie'
-);
 ok( $p->{cookie}->[0]->value eq '1', 'Cookie value' );
 

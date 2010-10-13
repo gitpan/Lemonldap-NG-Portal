@@ -8,23 +8,11 @@ package Lemonldap::NG::Portal::AuthApache;
 use strict;
 use Lemonldap::NG::Portal::Simple;
 
-our $VERSION = '0.2';
+our $VERSION = '0.99';
 
 ## @apmethod int authInit()
 # @return Lemonldap::NG::Portal constant
 sub authInit {
-    PE_OK;
-}
-
-## @apmethod int setAuthSessionInfo()
-# Store user.
-# @return Lemonldap::NG::Portal constant
-sub setAuthSessionInfo {
-    my $self = shift;
-
-    # Store user submitted login for basic rules
-    $self->{sessionInfo}->{'_user'} = $self->{'user'};
-
     PE_OK;
 }
 
@@ -46,6 +34,20 @@ sub extractFormInfo {
     PE_OK;
 }
 
+## @apmethod int setAuthSessionInfo()
+# Set _user and authenticationLevel.
+# @return Lemonldap::NG::Portal constant
+sub setAuthSessionInfo {
+    my $self = shift;
+
+    # Store user submitted login for basic rules
+    $self->{sessionInfo}->{'_user'} = $self->{'user'};
+
+    $self->{sessionInfo}->{authenticationLevel} = $self->{apacheAuthnLevel};
+
+    PE_OK;
+}
+
 ## @apmethod int authenticate()
 # Does nothing.
 # @return Lemonldap::NG::Portal constant
@@ -53,10 +55,33 @@ sub authenticate {
     PE_OK;
 }
 
+## @apmethod int authFinish()
+# Does nothing.
+# @return Lemonldap::NG::Portal constant
+sub authFinish {
+    PE_OK;
+}
+
+## @apmethod int authLogout()
+# Does nothing
+# @return Lemonldap::NG::Portal constant
+sub authLogout {
+    PE_OK;
+}
+
+## @apmethod boolean authForce()
+# Does nothing
+# @return result
+sub authForce {
+    return 0;
+}
+
 1;
 __END__
 
 =head1 NAME
+
+=encoding utf8
 
 Lemonldap::NG::Portal::Apache - Perl extension for building Lemonldap::NG
 compatible portals with Apache authentication.
@@ -79,7 +104,7 @@ compatible portals with Apache authentication.
     print $portal->redirect( -uri => 'https://portal/menu');
   }
   else {
-    # If the user enters here, IT MEANS THAT CAS REDIRECTION DOES NOT WORK
+    # If the user enters here, IT MEANS THAT APACHE AUTHENTICATION DOES NOT WORK
     print $portal->header('text/html; charset=utf8'); # DON'T FORGET THIS (see CGI(3))
     print "<html><body><h1>Unable to work</h1>";
     print "This server isn't well configured. Contact your administrator.";

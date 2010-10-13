@@ -5,22 +5,27 @@
 # LDAP password backend class
 package Lemonldap::NG::Portal::PasswordDBLDAP;
 
+use strict;
 use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_LDAP 'ldap';    #link protected ldap
 use Lemonldap::NG::Portal::UserDBLDAP;      #inherits
 
-our $VERSION = '0.2';
+#inherits Lemonldap::NG::Portal::_SMTP
+
+our $VERSION = '0.99';
 
 *_formateFilter = *Lemonldap::NG::Portal::UserDBLDAP::formateFilter;
 *_search        = *Lemonldap::NG::Portal::UserDBLDAP::search;
 
-## @apmethod int apasswordDBInit()
-# Load Net::LDAP::Control::PasswordPolicy if needed
+## @apmethod int passwordDBInit()
+# Load SMTP functions
 # @return Lemonldap::NG::Portal constant
 sub passwordDBInit {
     my $self = shift;
-    if ( $self->{ldapPpolicyControl} and not $self->ldap->loadPP()) {
-        return PE_LDAPERROR;
+    eval { use base qw(Lemonldap::NG::Portal::_SMTP) };
+    if ($@) {
+        $self->lmLog( "Unable to load SMTP functions ($@)", 'error' );
+        return PE_ERROR;
     }
     PE_OK;
 }
@@ -44,21 +49,31 @@ sub modifyPassword {
         return $tmp if ($tmp);
     }
 
-    $self->lmLog("Modify password request for ".$self->{dn},'debug');
+    $self->lmLog( "Modify password request for " . $self->{dn}, 'debug' );
 
     # Call the modify password method
-    return $self->ldap->userModifyPassword( $self->{dn}, $self->{newpassword}, $self->{confirmpassword}, $self->{oldpassword} );
-    PE_OK;
+    my $code = $self->ldap->userModifyPassword(
+        $self->{dn},              $self->{newpassword},
+        $self->{confirmpassword}, $self->{oldpassword}
+    );
+
+    # Update password in session if needed
+    my $infos;
+    $infos->{_password} = $self->{newpassword};
+    $self->updateSession($infos)
+      if ( $self->{storePassword} and $code == PE_PASSWORD_OK );
+
+    return $code;
 }
 
-## @apmethod int resetPasswordByMail()
-# Reset the password and send a mail.
+## @apmethod int resetPassword()
+# Reset the password
 # @return Lemonldap::NG::Portal constant
-sub resetPasswordByMail {
+sub resetPassword {
     my $self = shift;
 
-    # Exit method if no mail
-    return PE_OK unless ( $self->{mail} );
+    # Exit method if no mail and mail_token
+    return PE_OK unless ( $self->{mail} && $self->{mail_token} );
 
     unless ( $self->ldap ) {
         return PE_LDAPCONNECTFAILED;
@@ -70,66 +85,38 @@ sub resetPasswordByMail {
         return $tmp if ($tmp);
     }
 
-    $self->lmLog("Reset password request for ".$self->{dn},'debug');
-
-    # Check the required modules before changing password
-    eval {require String::Random};
-    if ($@) {
-        $self->lmLog("Module String::Random not found in @INC",'error' );
-        return PE_ERROR;
-    }
-    eval {require MIME::Lite};
-    if ($@) {
-        $self->lmLog("Module MIME::Lite not found in @INC",'error' );
-        return PE_ERROR;
-    }
+    $self->lmLog( "Reset password request for " . $self->{dn}, 'debug' );
 
     # Generate a complex password
-    my $random = new String::Random;
-    my $password = $random->randregex( $self->{randomPasswordRegexp}  );
+    my $password = $self->gen_password( $self->{randomPasswordRegexp} );
 
-    $self->lmLog("Generated password: ".$password,'debug');
+    $self->lmLog( "Generated password: " . $password, 'debug' );
 
     # Call the modify password method
-    my $pe_error = $self->ldap->userModifyPassword( $self->{dn}, $password, $password );
+    my $pe_error =
+      $self->ldap->userModifyPassword( $self->{dn}, $password, $password );
 
-    return $pe_error unless ($pe_error == PE_PASSWORD_OK);
+    return $pe_error unless ( $pe_error == PE_PASSWORD_OK );
 
     # If Password Policy, set the PwdReset flag
     if ( $self->{ldapPpolicyControl} ) {
-        my $result = $self->ldap->modify( $self->{dn}, replace => { 'pwdReset' => 'TRUE' } );
+        my $result =
+          $self->ldap->modify( $self->{dn},
+            replace => { 'pwdReset' => 'TRUE' } );
 
-        unless ( $result->code == 0) {
-            $self->lmLog("LDAP modify pwdReset error: ".$result->code,'error');
+        unless ( $result->code == 0 ) {
+            $self->lmLog( "LDAP modify pwdReset error: " . $result->code,
+                'error' );
             return PE_LDAPERROR;
         }
 
-        $self->lmLog("pwdReset set to TRUE",'debug');
+        $self->lmLog( "pwdReset set to TRUE", 'debug' );
     }
 
-    # Send new password by mail
-    $self->{mailBody} =~ s/\$password/$password/g;
-    $self->{mailBody} =~ s/\$(\w+)/$self->{sessionInfo}->{$1}/g;
-    $self->lmLog("SMTP From ".$self->{mailFrom},'debug');
-    $self->lmLog("SMTP To ".$self->{mail},'debug');
-    $self->lmLog("SMTP Subject ".$self->{mailSubject},'debug');
-    $self->lmLog("SMTP Body ".$self->{mailBody},'debug');
-    eval {
-        my $message = MIME::Lite->new(
-            From => $self->{mailFrom},
-            To => $self->{mail},
-            Subject => $self->{mailSubject},
-            Type => "TEXT",
-            Data => $self->{mailBody},
-        );
-        $self->{SMTPServer} ? $message->send("smtp",$self->{SMTPServer}) : $message->send();
-    };
-    if ($@) {
-        $self->lmLog("Send message failed: $@",'error');
-        return PE_ERROR;
-    }  
+    # Store password to forward it to the user
+    $self->{reset_password} = $password;
 
-
-    PE_PASSWORD_OK;
+    PE_OK;
 }
+
 1;

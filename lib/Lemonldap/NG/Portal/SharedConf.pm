@@ -7,14 +7,16 @@ package Lemonldap::NG::Portal::SharedConf;
 
 use strict;
 use Lemonldap::NG::Portal::Simple qw(:all);
-use Lemonldap::NG::Common::Conf; #link protected lmConf Configuration
+use Lemonldap::NG::Common::Conf;            #link protected lmConf Configuration
+use Lemonldap::NG::Common::Conf::Constants; #inherits
 
 *EXPORT_OK   = *Lemonldap::NG::Portal::Simple::EXPORT_OK;
 *EXPORT_TAGS = *Lemonldap::NG::Portal::Simple::EXPORT_TAGS;
 *EXPORT      = *Lemonldap::NG::Portal::Simple::EXPORT;
 
-our $VERSION = '0.6';
+our $VERSION = '0.99';
 use base qw(Lemonldap::NG::Portal::Simple);
+our $confCached;
 
 ##################
 # OVERLOADED SUB #
@@ -33,12 +35,15 @@ sub getConf {
     else {
         %args = @_;
     }
-    %$self = ( %$self, %args );
-    my $tmp = $self->_getLmConf;
-        return 0 unless $tmp;
 
-    # Local configuration prepends global
-    $self->{$_} = $args{$_} || $tmp->{$_} foreach ( keys %$tmp );
+    my $num = $self->__lmConf->lastCfg;
+    unless ( $confCached and $confCached->{cfgNum} == $num ) {
+        %$confCached = (
+            %{ $self->__lmConf->getConf( cfgNum => $num ) },
+            %{ $self->__lmConf->getLocalConf(PORTALSECTION) },
+        );
+    }
+    %$self = ( %$self, %$confCached, %args, );
     1;
 }
 
@@ -54,21 +59,23 @@ sub getProtectedSites {
     return ();
 }
 
-## @method private hashref _getLmConf()
-# Call and return Lemonldap::NG::Common::Conf::getConf() value.
-# @return Lemonldap::NG shared configuration
-sub _getLmConf {
+sub __lmConf {
     my $self = shift;
-    $self->{lmConf} = Lemonldap::NG::Common::Conf->new( $self->{configStorage} )
-      unless $self->{lmConf};
-    return 0 unless ( ref( $self->{lmConf} ) );
-    return $self->{lmConf}->getConf;
+    return $self->{lmConf} if ( $self->{lmConf} );
+    my $r = Lemonldap::NG::Common::Conf->new( $self->{configStorage} );
+    $self->abort(
+        "Cannot create configuration object",
+        $Lemonldap::NG::Common::Conf::msg
+    ) unless ( ref($r) );
+    $self->{lmConf} = $r;
 }
 
 1;
 __END__
 
 =head1 NAME
+
+=encoding utf8
 
 Lemonldap::NG::Portal::SharedConf - Module for building Lemonldap::NG
 compatible portals using a central configuration database.

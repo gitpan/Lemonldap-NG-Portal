@@ -41,6 +41,7 @@ use Lemonldap::NG::Portal::SharedConf;
 my $portal = Lemonldap::NG::Portal::SharedConf->new(
     {
         cda => 1,
+
         # SUBROUTINES OVERLOAD
         # 2 cases :
         # 1 - If LDAP search is not needed (the master SSO gives all

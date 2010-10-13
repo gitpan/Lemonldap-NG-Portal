@@ -1,44 +1,135 @@
 #!/usr/bin/perl
-# Cleaner for Lemonldap::NG : removes old sessions from Apache::Session
+#=============================================================================
+# Cleaner for LemonLDAP::NG: removes old sessions from Apache::Session
 #
 # This module is written to be used by cron to clean old sessions from
-# Apache::Session.
+# Apache::Session. It does not works with Apache::Session::Memcached
+#
+# This is part of LemonLDAP::NG product, released under GPL
+#=============================================================================
 
 use Lemonldap::NG::Common::Conf;
 use Lemonldap::NG::Common::Conf::Constants;
 use Lemonldap::NG::Common::Apache::Session;
 use strict;
 
-my $lmconf = Lemonldap::NG::Common::Conf->new();
+my $debug = 0;
+my $nb_purged = 0;
 
+#=============================================================================
+# Load configuration
+#=============================================================================
+my $lmconf = Lemonldap::NG::Common::Conf->new()
+  or die $Lemonldap::NG::Common::Conf::msg;
 my $conf = $lmconf->getConf or die "Unable to get configuration ($!)";
+my $localconf = $lmconf->getLocalConf(PORTALSECTION)
+  or die "Unable to get local configuration ($!)";
 
-my $tmp = $conf->{globalStorage};
+if ($localconf) {
+    $conf->{$_} = $localconf->{$_} foreach ( keys %$localconf );
+}
 
-eval "use $tmp";
-die $@ if ($@);
+print "Configuration loaded\n" if $debug;
 
+#=============================================================================
+# Timeout
+#=============================================================================
 $conf->{timeout} ||= 7200;
+$conf->{timeoutActivity} ||= 0;
 
-my @t;
-$tmp->get_key_from_all_sessions(
-    $conf->{globalStorageOptions},
+print "Timeout value: ".$conf->{timeout}."\n" if $debug;
+
+#=============================================================================
+# Apache::Session backends
+#=============================================================================
+my @backends;
+my $module;
+
+# Sessions
+if ( defined $conf->{globalStorage}
+    and $conf->{globalStorage} ne "Apache::Session::Memcached" )
+{
+
+    # Load module
+    $module = $conf->{globalStorage};
+    eval "use $module";
+    die $@ if ($@);
+
+    # Add module in managed backends
+    push @backends, [ $conf->{globalStorage}, $conf->{globalStorageOptions} ];
+
+    print "Session backend $module will be used\n" if $debug;
+}
+
+# SAML
+if (    defined $conf->{samlStorage}
+    and $conf->{samlStorage} ne $conf->{globalStorage}
+    and $conf->{samlStorage} ne "Apache::Session::Memcached" )
+{
+
+    # Load module
+    $module = $conf->{samlStorage};
+    eval "use $module";
+    die $@ if ($@);
+
+    # Add module in managed backends
+    push @backends, [ $conf->{samlStorage}, $conf->{samlStorageOptions} ];
+
+    print "SAML backend $module will be used\n" if $debug;
+}
+
+#=============================================================================
+# Load and purge sessions
+#=============================================================================
+for my $backend (@backends) {
+
+    my ( $storage, $options ) = splice @$backend;
+    my @t;
+
+    # Get all expired sessions
+    $storage->get_key_from_all_sessions(
+        $options,
     sub {
         my $entry = shift;
         my $id    = shift;
-        push @t, $id if ( time - $entry->{_utime} > $conf->{timeout} );
+	    my $time  = time;
+            # Session expired
+            if ( $time - $entry->{_utime} > $conf->{timeout} ) {
+                push @t, $id;
+            }
+            # User has no activity, so considere the session has expired
+            elsif ( $conf->{timeoutActivity} and $entry->{_lastSeen}
+                and $time - $entry->{_lastSeen} > $conf->{timeoutActivity} )
+            {
+                push @t, $id
+            }
         undef;
     }
-);
+    );
 
-for my $id (@t) {
+    # Delete sessions
+    for my $id (@t) {
     my %h;
-    eval { tie %h, $tmp, $id, $conf->{globalStorageOptions} };
+        eval { tie %h, $storage, $id, $options };
     if ($@) {
         next;
     }
     tied(%h)->delete;
+        print "Session $id has been purged\n" if $debug;
+	$nb_purged++;
+    }
+
+    # Remove lock files for File backend
+    if ( $storage =~ /^Apache::Session::(?:Browseable::)?File$/i ) {
+    require Apache::Session::Lock::File;
+    my $l = new Apache::Session::Lock::File;
+	my $lock_directory = $options->{LockDirectory} || $options->{Directory};
+        $l->clean( $lock_directory, $conf->{timeout} );
+    }
 }
 
-1;
-
+#=============================================================================
+# Exit with success
+#=============================================================================
+print "$nb_purged sessions have been purged\n" if $debug;
+exit 0;

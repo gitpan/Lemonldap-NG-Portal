@@ -12,14 +12,14 @@ package Lemonldap::NG::Portal::_Multi;
 
 use Lemonldap::NG::Portal::Simple;
 
-our $VERSION = '0.11';
+our $VERSION = '0.99';
 
 ## @cmethod Lemonldap::NG::Portal::_Multi new(Lemonldap::NG::Portal::Simple portal)
 # Constructor
 # @param $portal Lemonldap::NG::Portal::Simple object
 # @return new Lemonldap::NG::Portal::_Multi object
 sub new {
-    my ( $class, $portal ) = @_;
+    my ( $class, $portal ) = splice @_;
     my $self = bless { p => $portal, res => PE_NOSCHEME }, $class;
     my @stack = ( $portal->{authentication}, $portal->{userDB} );
     for ( my $i = 0 ; $i < 2 ; $i++ ) {
@@ -33,9 +33,9 @@ sub new {
             $cond = 1 unless ( defined $cond );
             $mod = "Lemonldap::NG::Portal::" . [ 'Auth', 'UserDB' ]->[$i] . $mod
               unless ( $mod =~ /::/ );
-            eval "require $mod";
-            $portal->abort( 'Bad configuration', "Unable to load $mod ($@)" )
-              if ($@);
+
+            $portal->abort( 'Bad configuration', "Unable to load $mod" )
+              unless $self->{p}->loadModule($mod);
             push @{ $self->{stack}->[$i] },
               { m => $mod, c => $cond, n => $name };
         }
@@ -50,14 +50,26 @@ sub new {
 # @param type 0 for authentication, 1 for userDB
 # @return Lemonldap::NG::Portal error code returned by method $sub
 sub try {
-    my ( $self, $sub, $type ) = @_;
+    my ( $self, $sub, $type ) = splice @_;
     my $res;
     my $s   = $self->{stack}->[$type]->[0]->{m} . "::$sub";
     my $old = $self->{stack}->[$type]->[0]->{n};
     my $ci;
+
     if ( $ci = $self->{p}->safe->reval( $self->{stack}->[$type]->[0]->{c} ) ) {
+
+        # Log used module
+        $self->{p}->lmLog( "Multi (type $type): trying module $old", 'debug' );
+
+        # Run subroutine
         $res = $self->{p}->$s();
-        return $res if ( $res <= 0 );
+
+        # Stop if no error, or if confirmation needed, or if form not filled
+        return $res
+          if ( $res <= 0
+            or $res == PE_CONFIRM
+            or $res == PE_FIRSTACCESS
+            or $res == PE_FORMEMPTY );
     }
     unless ( $self->next($type) ) {
         return ( $ci ? $res : $self->{res} );
@@ -79,7 +91,7 @@ sub try {
 # @param type 0 for authentication, 1 for userDB
 # return true if an other module is available
 sub next {
-    my ( $self, $type ) = @_;
+    my ( $self, $type ) = splice @_;
     if ( $self->{stack}->[$type]->[0]->{n} eq
             $self->{stack}->[ 1 - $type ]->[0]->{n}
         and $self->{stack}->[ 1 - $type ]->[1] )
@@ -100,11 +112,11 @@ sub next {
 # @param $sub name of the method who has failed
 # @return Lemonldap::NG::Portal error code
 sub replay {
-    my ( $self, $sub ) = @_;
+    my ( $self, $sub ) = splice @_;
     my @subs = ();
     foreach (
-        qw(authInit extractFormInfo setAuthSessionInfo userDBInit getUser
-        setSessionInfo setGroups)
+        qw(authInit extractFormInfo userDBInit getUser setAuthSessionInfo
+        setSessionInfo setGroups authFinish)
       )
     {
         push @subs, $_;

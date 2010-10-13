@@ -15,7 +15,7 @@ use CGI::Cookie;
 #inherits Lemonldap::NG::Portal::Notification::DBI
 #inherits Lemonldap::NG::Portal::Notification::File
 
-our $VERSION = '0.01';
+our $VERSION = '0.99';
 our ( $msg, $stylesheet, $parser );
 
 BEGIN {
@@ -61,7 +61,7 @@ BEGIN {
 # @param $storage same syntax as Lemonldap::NG::Common::Conf object
 # @return Lemonldap::NG::Portal::Notification object
 sub new {
-    my ( $class, $storage ) = @_;
+    my ( $class, $storage ) = splice @_;
     my $self = bless {}, $class;
     (%$self) = (%$storage);
     unless ( $self->{p} ) {
@@ -87,7 +87,7 @@ sub new {
 # @param $mess Text to log
 # @param $level Level (debug|info|notice|error)
 sub lmLog {
-    my ( $self, $mess, $level ) = @_;
+    my ( $self, $mess, $level ) = splice @_;
     $self->{p}->lmLog( "[Notification] $mess", $level );
 }
 
@@ -97,16 +97,23 @@ sub lmLog {
 # @param $portal Lemonldap::NG::Portal object that call
 # @return HTML fragment containing form content
 sub getNotification {
-    my ( $self, $portal ) = @_;
+    my ( $self, $portal ) = splice @_;
     my ( @notifs, $form );
+
+    # Get user datas,
     my $uid = $portal->{notificationField} || $portal->{whatToTrace} || 'uid';
     $uid =~ s/\$//g;
     $uid = $portal->{sessionInfo}->{$uid};
-    my $n = $self->_get($uid);
-    return 0 unless ($n);
-    @notifs = map { $n->{$_} } sort keys %$n;
-    my $i = 0;
 
+    # Check if some notifications have to be done
+    my $n = $self->_get($uid);
+
+    # Return 0 if no notifications were found
+    return 0 unless ($n);
+
+    # Prepare HTML code
+    @notifs = map { $n->{$_} } sort keys %$n;
+    my $i = 0;    # Notification count
     foreach my $notif (@notifs) {
         $i++;
         eval {
@@ -150,7 +157,7 @@ sub getNotification {
 # @param $portal Lemonldap::NG::Portal object that call
 # @return true if all checkboxes have been checked
 sub checkNotification {
-    my ( $self, $portal ) = @_;
+    my ( $self, $portal ) = splice @_, 0, 2;
     my ( $refs, $checks );
 
     # First, rebuild environment (cookies,...)
@@ -253,7 +260,7 @@ sub checkNotification {
 # @param $xml XML string containing notification
 # @return number of notifications done
 sub newNotification {
-    my ( $self, $xml ) = @_;
+    my ( $self, $xml ) = splice @_;
     eval { $xml = $parser->parse_string($xml); };
     if ($@) {
         $self->lmLog( "Unable to read XML file : $@", 'error' );
@@ -366,6 +373,8 @@ sub _newNotif {
 __END__
 
 =head1 NAME
+
+=encoding utf8
 
 Lemonldap::NG::Portal::Notification - Provides notification messages system.
 

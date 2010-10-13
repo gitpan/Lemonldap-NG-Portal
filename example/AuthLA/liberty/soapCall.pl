@@ -10,6 +10,7 @@ use Lemonldap::NG::Portal::AuthLA;
 
 my $portal = Lemonldap::NG::Portal::AuthLA->new(
     {
+
         # Liberty Parameters
         laSp => {
             certificate => "__DIR__/ressources/lemonsp-key-public.pem",

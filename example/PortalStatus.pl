@@ -24,7 +24,7 @@ BEGIN {
         my $table = $args->{TableName} || 'sessions';
         my $sth = $dbh->prepare("SELECT count(*) from $table");
         $sth->execute;
-        return ($sth->fetchrow_array)[0];
+        return ( $sth->fetchrow_array )[0];
     }
 
     *Apache::Session::Postgres::get_sessions_count =

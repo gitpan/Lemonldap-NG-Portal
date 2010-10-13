@@ -5,19 +5,19 @@ use Lemonldap::NG::Portal::SharedConf;
 my $portal = Lemonldap::NG::Portal::SharedConf->new(
     {
 
-        # ACCESS TO CONFIGURATION
-        # By default, Lemonldap::NG uses the default storage.conf file to know
-        # where to find its configuration
-        # (generaly /etc/lemonldap-ng/storage.conf)
-        # You can specify by yourself this file :
-        #configStorage => { confFile => '/path/to/my/file' },
-        # or set explicitely parameters :
-        #configStorage => {
-        #  Type => 'File',
-        #  dirName => '/path/to/config/dir/'
-        #},
-        # Note that YOU HAVE TO SET configStorage here if you've declared this
-        # portal as SOAP configuration server in the manager
+      # ACCESS TO CONFIGURATION
+      # By default, Lemonldap::NG uses the default lemonldap-ng.ini file to know
+      # where to find its configuration
+      # (generaly /etc/lemonldap-ng/lemonldap-ng.ini)
+      # You can specify by yourself this file :
+      #configStorage => { confFile => '/path/to/my/file' },
+      # or set explicitely parameters :
+      #configStorage => {
+      #  type => 'File',
+      #  dirName => '/usr/local/lemonldap-ng/data/conf/'
+      #},
+      # Note that YOU HAVE TO SET configStorage here if you've declared this
+      # portal as SOAP configuration server in the manager
 
         # LOG
         # By default, all is logged in Apache file. To log user actions by
@@ -28,6 +28,7 @@ my $portal = Lemonldap::NG::Portal::SharedConf->new(
         # Remove comment to activate SOAP Functions getCookies(user,pwd) and
         # error(language, code)
         Soap => 1,
+
         # Note that getAttibutes() will be activated but on a different URI
         # (http://auth.example.com/index.pl/sessions)
         # You can also restrict attributes and macros exported by getAttributes
@@ -55,9 +56,9 @@ my $portal = Lemonldap::NG::Portal::SharedConf->new(
         # Mail subject
         #mailSubject => "Password reset",
 
-        # Mail body (can use $password for generated password, and other session infos,
-        # like $cn)
-        #mailBody => 'Hello $cn,\n\nYour new password is $password',
+ # Mail body (can use $password for generated password, and other session infos,
+ # like $cn)
+ #mailBody => 'Hello $cn,\n\nYour new password is $password',
 
         # LDAP filter to use
         #mailLDAPFilter => '(&(mail=$mail)(objectClass=inetOrgPerson))',

@@ -5,7 +5,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 3;
+use Test::More tests => 2;
 BEGIN { use_ok('Lemonldap::NG::Portal::Menu') }
 
 #########################
@@ -13,14 +13,20 @@ BEGIN { use_ok('Lemonldap::NG::Portal::Menu') }
 # Insert your test code below, the Test::More module is use()ed here so read
 # its man page ( perldoc Test::More ) for help writing this test script.
 
-my $tmp;
+$ENV{REQUEST_METHOD} = 'GET';
 
-my ( $m, $p );
+# Build portal
+my $p = Lemonldap::NG::Portal::Simple->new(
+    {
+        globalStorage   => 'Apache::Session::File',
+        domain          => 'example.com',
+        error           => 0,
+        applicationList => {},
+    }
+);
 
-$p = bless { cookieName => 'lemonldap', }, 'Lemonldap::NG::Portal::SharedConf';
+# Init menu
+$p->menuInit();
 
-ok( $m = Lemonldap::NG::Portal::Menu->new( { portalObject => $p } ),
-    'constructor' );
-
-ok( $m->isa('Lemonldap::NG::Portal::Menu'), 'object returned' );
+ok( ref $p->{menuDisplayModules} eq 'ARRAY', 'Modules displayed' );
 

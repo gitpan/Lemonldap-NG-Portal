@@ -1,177 +1,50 @@
 ##@file
-# Menu for Lemonldap::NG portal
+# menu for lemonldap::ng portal
 
 ##@class
-# Menu class for Lemonldap::NG portal
+# menu class for lemonldap::ng portal
 package Lemonldap::NG::Portal::Menu;
 
 use strict;
 use warnings;
-require Lemonldap::NG::Common::CGI;
-use Lemonldap::NG::Portal::SharedConf;
-use Lemonldap::NG::Portal::_LDAP 'ldap';    #link protected ldap Object used to change passwords only
-use XML::LibXML;
-use Lemonldap::NG::Common::Safelib;    #link protected safe Safe object
-use Safe;
-use Lemonldap::NG::Portal::PasswordDBLDAP; #inherits
+use Lemonldap::NG::Portal::Simple;
+use Lemonldap::NG::Portal::_LibAccess;
+use base qw(Lemonldap::NG::Portal::_LibAccess);
 
-#inherits Net::LDAP::Control::PasswordPolicy
+our $VERSION = '0.99';
+our $catlevel = 0;
 
-*_modifyPassword = *Lemonldap::NG::Portal::PasswordDBLDAP::modifyPassword;
-*_passwordDBInit = *Lemonldap::NG::Portal::PasswordDBLDAP::passwordDBInit;
-
-our $VERSION = '0.2';
-
-### ACCESS CONTROL DISPLAY SYSTEM
-
-our ( $defaultCondition, $locationCondition, $locationRegexp, $cfgNum, $path ) =
-  ( undef, undef, undef, 0 );
-
-## @method private Safe _safe()
-# Build and returns security jail.
-# Includes custom functions
-# @return Safe object
-sub _safe {
+## @method void menuInit()
+# Prepare menu template elements
+# @return nothing
+sub menuInit {
     my $self = shift;
-    return $self->{_safe} if ( $self->{_safe} );
-    $self->{_safe} = new Safe;
-    $self->{customFunctions} ||= $self->{portalObject}->{customFunctions};
-    my @t =
-      $self->{customFunctions} ? split( /\s+/, $self->{customFunctions} ) : ();
-    foreach (@t) {
-        my $sub = $_;
-        unless (/::/) {
-            $sub = "$self->{caller}::$_";
-        }
-        else {
-            s/^.*:://;
-        }
-        next if ( __PACKAGE__->can($_) );
-        eval "sub $_ {
-            return $sub(\$path,\@_);
-        }";
-        $self->{portalObject}->lmLog( $@, 'error' ) if ($@);
-    }
-    $self->{_safe}->share_from( 'main', ['%ENV'] );
-    $self->{_safe}->share_from( 'Lemonldap::NG::Common::Safelib',
-        $Lemonldap::NG::Common::Safelib::functions );
-    $self->{_safe}->share( '&encode_base64', @t );
-    return $self->{_safe};
-}
+    $self->{apps}->{imgpath} ||= '/apps/';
 
-my $catlevel = 0;
+    # Modules to display
+    $self->{menuModules} ||= "Appslist ChangePassword Logout";
+    $self->{menuDisplayModules} = $self->displayModules();
 
-##@cmethod Lemonldap::NG::Portal::Menu new(hashRef args)
-# Constructor.
-# $args->{portalObject} is required.
-#@param $args hash reference
-#@return new object
-sub new {
-    my $class = shift;
-    my $self  = {};
-    bless( $self, $class );
+    # Extract password from POST data
+    $self->{oldpassword}     = $self->param('oldpassword');
+    $self->{newpassword}     = $self->param('newpassword');
+    $self->{confirmpassword} = $self->param('confirmpassword');
+    $self->{dn}              = $self->{sessionInfo}->{dn};
+    $self->{user}            = $self->{sessionInfo}->{_user};
 
-    # Get configuration
-    $self->Lemonldap::NG::Portal::Simple::getConf(@_)
-      or Lemonldap::NG::Common::CGI->abort(
-        "Unable to read $class->new() parameters");
+    # Try to change password
+    $self->{menuError} = $self->_subProcess(qw(passwordDBInit modifyPassword));
 
-    # Portal is required
-    Lemonldap::NG::Common::CGI->abort("Portal object required")
-      unless ( $self->{portalObject} );
+    # Default menu error code
+    $self->{menuError} ||= $self->{error};
 
-    # Fill sessionInfo (yet done in portal...)
-    #&Lemonldap::NG::Portal::Simple::getSessionInfo( $self->{portalObject} );
-
-    # Default values
-    $self->{apps}->{xmlfile} ||= 'apps-list.xml';
-    $self->{apps}->{imgpath} ||= 'apps/';
-    $self->{modules}->{appslist} = 0
-      unless defined $self->{modules}->{appslist};
-    $self->{modules}->{password} = 0
-      unless defined $self->{modules}->{password};
-    $self->{modules}->{logout} = 1 unless defined $self->{modules}->{logout};
-    $self->{'caller'} = caller;
-
-    # Set error to 0 by default
-    $self->{error} = PE_OK;
-
-    # Print Ppolicy warning messages
-    ( $self->{error}, $self->{error_value} ) = $self->_ppolicyWarning;
-
-    # Store POST data in $self->{portalObject}
-    $self->{portalObject}->{'newpassword'} =
-      $self->{portalObject}->param('newpassword');
-    $self->{portalObject}->{'confirmpassword'} =
-      $self->{portalObject}->param('confirmpassword');
-    $self->{portalObject}->{'oldpassword'} =
-      $self->{portalObject}->param('oldpassword');
-    $self->{portalObject}->{'dn'} =
-      $self->{portalObject}->{sessionInfo}->{'dn'};
-    $self->{portalObject}->{'user'} =
-      $self->{portalObject}->{sessionInfo}->{'_user'};
-
-    # Change password (only if newpassword submitted)
-    $self->{error} = &_passwordDBInit( $self->{portalObject} )
-      if $self->{portalObject}->{'newpassword'};
-    $self->{error} = &_modifyPassword( $self->{portalObject} )
-      if $self->{portalObject}->{'newpassword'};
-
-    return $self;
-}
-
-## @method string error(string language)
-# Return error string
-# @param $language optional language to use. Default: browser accepted languages
-# @return error string
-sub error {
-
-    # Copied from Simple.pm
-    # Add a value possibility (stored in $self->{error_value}
-    my $self = shift;
-    my $error_string;
-    $error_string .= $self->{error_value} if defined $self->{error_value};
-    $error_string .=
-      &Lemonldap::NG::Portal::_i18n::error( $self->{error},
-        shift || $ENV{HTTP_ACCEPT_LANGUAGE} );
-    return $error_string;
-}
-
-*error_type = \&Lemonldap::NG::Portal::Simple::error_type;
-
-## @method boolean displayModule(string modulename)
-# Return true if the user can see the module.
-# Use for HTML::Template variable.
-# @param $modulename string
-# @return boolean
-sub displayModule {
-    my $self = shift;
-    my ($modulename) = @_;
-
-    # Manage "0" and "1" rules
-    return 1 if ( $self->{modules}->{$modulename} eq "1" );
-    return 0 if ( $self->{modules}->{$modulename} eq "0" );
-
-    # Else parse display condition
-    my $cond = $self->{modules}->{$modulename};
-    $cond =~ s/\$(\w+)/$self->{portalObject}->{sessionInfo}->{$1}/g;
-    return $self->_safe->reval("sub {return ( $cond )}");
-    return 0;
-}
-
-## @method string displayTab()
-# Tells which tab should be selected.
-# Design for Jquery tabs.
-# @return password, appslist or logout
-sub displayTab {
-    my $self = shift;
-
-    # Display password tab if password change is needed or failed
-    return "password"
+    # Tab to display
+    $self->{menuDisplayTab} = "appslist";
+    $self->{menuDisplayTab} = "password"
       if (
         (
             scalar(
-                grep { $_ == $self->{error} } (
+                grep { $_ == $self->{menuError} } (
                     25,    #PE_PP_CHANGE_AFTER_RESET
                     27,    #PE_PP_MUST_SUPPLY_OLD_PASSWORD
                     28,    #PE_PP_INSUFFICIENT_PASSWORD_QUALITY
@@ -181,14 +54,163 @@ sub displayTab {
                     32,    #PE_PP_GRACE
                     33,    #PE_PP_EXP_WARNING
                     34,    #PE_PASSWORD_MISMATCH
+                    39,    #PE_BADOLDPASSWORD
                 )
             )
         )
-        && $self->displayModule("password")
       );
 
-    return "appslist" if ( $self->displayModule("appslist") );
-    return "logout";
+    # Application list
+    $self->{menuAppslist}     = $self->appslist();
+    $self->{menuAppslistMenu} = $self->appslistMenu();    # For old templates
+    $self->{menuAppslistDesc} =
+      $self->appslistDescription();                       # For old templates
+
+    return;
+}
+
+## @method arrayref displayModules()
+# List modules that can be displayed in Menu
+# @return modules list
+sub displayModules {
+    my $self           = shift;
+    my $displayModules = [];
+
+    # Modules list
+    my @modules = split( /\s/, $self->{menuModules} );
+
+    # Foreach module, eval condition
+    # Store module in result if condition is valid
+    foreach my $module (@modules) {
+        my $cond = $self->{ 'portalDisplay' . $module };
+        $cond = 1 unless defined $cond;
+        $cond =~ s/\$(\w+)/$self->{sessionInfo}->{$1}/g;
+
+        $self->lmLog( "Evaluate condition $cond for module $module", 'debug' );
+
+        if ( $self->safe->reval($cond) ) {
+            my $moduleHash = { $module => 1 };
+            $moduleHash->{'APPSLIST_LOOP'} = $self->appslist()
+              if ( $module eq 'Appslist' );
+            push @$displayModules, $moduleHash;
+        }
+    }
+
+    return $displayModules;
+}
+
+## @method arrayref appslist()
+# Returns categories and applications list as HTML::Template loop
+# @return categories and applications list
+sub appslist {
+    my ($self) = splice @_;
+    my $appslist = [];
+
+    return $appslist unless defined $self->{applicationList};
+
+    # Reset level
+    $catlevel = 0;
+
+    my $applicationList = $self->{applicationList};
+    my $filteredList    = $self->_filter($applicationList);
+    push @$appslist,
+      $self->_buildCategoryHash( "", $applicationList, $catlevel );
+
+    return $appslist->[0]->{categories};
+}
+
+## @method private hashref _buildCategoryHash(string catname,hashref cathash, int catlevel)
+# Build hash for a category
+# @param catname Category name
+# @param cathash Hash of category elements
+# @param catlevel Category level
+# @return Category Hash
+sub _buildCategoryHash {
+    my ( $self, $catid, $cathash, $catlevel ) = splice @_;
+    my $catname = $cathash->{catname} || $catid;
+    my $applications;
+    my $categories;
+
+    # Extract applications from hash
+    my $apphash;
+    foreach my $catkey ( sort keys %$cathash ) {
+        next if $catkey =~ /(type|options|catname)/;
+        if ( $cathash->{$catkey}->{type} eq "application" ) {
+            $apphash->{$catkey} = $cathash->{$catkey};
+        }
+    }
+
+    # Display applications first
+    if ( scalar keys %$apphash > 0 ) {
+        foreach my $appkey ( sort keys %$apphash ) {
+            push @$applications,
+              $self->_buildApplicationHash( $appkey, $apphash->{$appkey} );
+        }
+    }
+
+    # Display subcategories
+    foreach my $catkey ( sort keys %$cathash ) {
+        next if $catkey =~ /(type|options|catname)/;
+        if ( $cathash->{$catkey}->{type} eq "category" ) {
+            push @$categories,
+              $self->_buildCategoryHash( $catkey, $cathash->{$catkey},
+                $catlevel + 1 );
+        }
+    }
+
+    my $categoryHash = {
+        category => 1,
+        catname  => $catname,
+        catid    => $catid,
+        catlevel => $catlevel
+    };
+    $categoryHash->{applications} = $applications if $applications;
+    $categoryHash->{categories}   = $categories   if $categories;
+    return $categoryHash;
+}
+
+## @method private hashref _buildApplicationHash(string appid, hashref apphash)
+# Build hash for an application
+# @param $appid Application ID
+# @param $apphash Hash of application elements
+# @return Application Hash
+sub _buildApplicationHash {
+    my ( $self, $appid, $apphash ) = splice @_;
+    my $applications;
+
+    # Get application items
+    my $appname = $apphash->{options}->{name} || $appid;
+    my $appuri  = $apphash->{options}->{uri}  || "";
+    my $appdesc = $apphash->{options}->{description};
+    my $applogo = $apphash->{options}->{logo};
+
+    # Detect sub applications
+    my $subapphash;
+    foreach my $key ( sort keys %$apphash ) {
+        next if $key =~ /(type|options|catname)/;
+        if ( $apphash->{$key}->{type} eq "application" ) {
+            $subapphash->{$key} = $apphash->{$key};
+        }
+    }
+
+    # Display sub applications
+    if ( scalar keys %$subapphash > 0 ) {
+        foreach my $appkey ( sort keys %$subapphash ) {
+            push @$applications,
+              $self->_buildApplicationHash( $appkey, $subapphash->{$appkey} );
+        }
+    }
+
+    my $applicationHash = {
+        application => 1,
+        appname     => $appname,
+        appuri      => $appuri,
+        appdesc     => $appdesc,
+        applogo     => $applogo,
+        appid       => $appid,
+    };
+    $applicationHash->{applications} = $applications if $applications;
+    return $applicationHash;
 }
 
 ## @method string appslistMenu()
@@ -196,10 +218,19 @@ sub displayTab {
 # @return HTML string
 sub appslistMenu {
     my $self = shift;
-    my $root = $self->_getXML;
 
-    # Display all categories and applications
-    return $self->_displayCategory( $root, $catlevel );
+    # We no more use XML file for menu configuration
+    unless ( defined $self->{applicationList} ) {
+        $self->abort(
+            "XML menu configuration is deprecated",
+"Please use lmMigrateConfFiles2ini to migrate your menu configuration"
+        );
+    }
+
+    # Use configuration to get menu parameters
+    my $applicationList = $self->{applicationList};
+    my $filteredList    = $self->_filter($applicationList);
+    return $self->_displayConfCategory( "", $applicationList, $catlevel );
 }
 
 ## @method string appslistDescription()
@@ -207,137 +238,140 @@ sub appslistMenu {
 # @return HTML string
 sub appslistDescription {
     my $self = shift;
-    my $root = $self->_getXML;
 
-    # Display application description
-    return $self->_displayDescription($root);
+    # We no more use XML file for menu configuration
+    unless ( defined $self->{applicationList} ) {
+        $self->lmLog(
+"XML menu configuration is deprecated. Please use lmMigrateConfFiles2ini to migrate your menu configuration",
+            'error'
+        );
+        return "&nbsp;";
+    }
+
+    # Use configuration to get menu parameters
+    my $applicationList = $self->{applicationList};
+    return $self->_displayConfDescription( "", $applicationList );
 }
 
-## @method private XML::LibXML::Document _getXML()
-# @return XML root element object
-sub _getXML {
-    my $self = shift;
-    return $self->{_xml} if($self->{_xml});
-
-    # Parse XML file
-    my $parser = XML::LibXML->new();
-    $parser->validation('1');
-    my $xml;
-    eval { $xml = $parser->parse_file( $self->{apps}->{xmlfile} ); };
-    $self->{portalObject}->abort( "Bad XML file", $@ ) if ($@);
-    my $root = $xml->documentElement;
-
-    # Filter XML file with user's authorizations
-    $self->_filterXML($root);
-
-    return $self->{_xml} = $root;
-}
-
-## @method string _displayCategory()
+## @method string _displayConfCategory(string catname, hashref cathash, int catlevel)
 # Creates and returns HTML code for a category.
+# @param catname Category name
+# @param cathash Hash of category elements
+# @param catlevel Category level
 # @return HTML string
-sub _displayCategory {
-    my $self = shift;
-    my ( $cat, $catlevel ) = @_;
+sub _displayConfCategory {
+    my ( $self, $catname, $cathash, $catlevel ) = splice @_;
     my $html;
-    my $catname;
-
-    # Category name
-    if ( $catlevel > 0 ) { $catname = $cat->getAttribute('name') || " "; }
-    else                 { $catname = "Menu"; }
+    my $key;
 
     # Init HTML list
     $html .= "<ul class=\"category cat-level-$catlevel\">\n";
-    $html .= "<li class=\"catname\"><span>$catname</span>\n";
+    $html .= "<li class=\"catname\">\n";
+    $html .= "<span>$catname</span>\n" if $catname;
 
-    # Display applications first
-    my @appnodes = $cat->findnodes("application");
-    if (@appnodes) {
+    # Increase category level
+    $catlevel++;
+
+    # Extract applications from hash
+    my $apphash;
+    foreach $key ( keys %$cathash ) {
+        next if $key =~ /(type|options|catname)/;
+        if ( $cathash->{$key}->{type} eq "application" ) {
+            $apphash->{$key} = $cathash->{$key};
+        }
+    }
+
+    # display applications first
+    if ( scalar keys %$apphash > 0 ) {
         $html .= "<ul>";
-        foreach (@appnodes) {
-            $html .= $self->_displayApplication($_);
+        foreach $key ( keys %$apphash ) {
+            $html .= $self->_displayConfApplication( $key, $apphash->{$key} );
         }
         $html .= "</ul>";
     }
 
     # Display subcategories
-    my @catnodes = $cat->findnodes("category");
-    $catlevel++;
-    foreach (@catnodes) {
-        $html .= $self->_displayCategory( $_, $catlevel );
+    foreach $key ( keys %$cathash ) {
+        next if $key =~ /(type|options|catname)/;
+        if ( $cathash->{$key}->{type} eq "category" ) {
+            $html .=
+              $self->_displayConfCategory( $key, $cathash->{$key}, $catlevel );
+        }
     }
 
     # Close HTML list
-    $html .= "</li>\n</ul>\n";
+    $html .= "</li>\n";
+    $html .= "</ul>\n";
 
     return $html;
 }
 
-## @method private string _userParam(string arg)
-# Returns value of $arg variable stored in session.
-# @param $arg string to modify
-# @return string modified
-sub _userParam {
-    my ( $self, $arg ) = @_;
-    $arg =~ s/\$([\w]+)/$self->{portalObject}->{sessionInfo}->{$1}/g;
-    return $arg;
-}
-
-## @method private string _displayApplication(XML::LibXML::Element app)
+## @method private string _displayConfApplication(string appid, hashref apphash)
 # Creates HTML code for an application.
-# @param $app XML applications element
+# @param $appid Application ID
+# @param $apphash Hash of application elements
 # @return HTML string
-sub _displayApplication {
+sub _displayConfApplication {
     my $self = shift;
-    my ($app) = @_;
+    my ( $appid, $apphash ) = @_;
     my $html;
+    my $key;
 
     # Get application items
-    my $appid = $app->getAttribute('id');
-    my $appname = $app->getChildrenByTagName('name')->string_value() || $appid;
-    my $appuri =
-      $self->_userParam( $app->getChildrenByTagName('uri')->string_value()
-          || "" );
+    my $appname = $apphash->{options}->{name} || $appid;
+    my $appuri  = $apphash->{options}->{uri}  || "";
 
     # Display application
-    $html .= "<li title=\"$appid\" class=\"appname\"><span>"
-     . ($appuri ? "<a href=\"$appuri\">$appname</a>" : "<a>$appname</a>")
-     . "</span>\n";
-    my @appnodes = $app->findnodes("application");
-    if (@appnodes) {
+    $html .=
+        "<li title=\"$appid\" class=\"appname $appid\"><span>"
+      . ( $appuri ? "<a href=\"$appuri\">$appname</a>" : "<a>$appname</a>" )
+      . "</span>\n";
+
+    # Detect sub applications
+    my $subapphash;
+    foreach $key ( keys %$apphash ) {
+        next if $key =~ /(type|options|catname)/;
+        if ( $apphash->{$key}->{type} eq "application" ) {
+            $subapphash->{$key} = $apphash->{$key};
+        }
+    }
+
+    # Display sub applications
+    if ( scalar keys %$subapphash > 0 ) {
         $html .= "<ul>";
-        foreach (@appnodes) {
-            $html .= $self->_displayApplication($_);
+        foreach $key ( keys %$subapphash ) {
+            $html .=
+              $self->_displayConfApplication( $key, $subapphash->{$key} );
         }
         $html .= "</ul>";
     }
+
     $html .= "</li>";
     return $html;
 }
 
-## @method private string _displayDescription(XML::LibXML::Document root)
+## @method private string _displayConfDescription(string appid, hashref apphash)
 # Create HTML code for application description.
-# @param $root XML root element
-# @return HTML_string
-sub _displayDescription {
+# @param $appid Application ID
+# @param $apphash Hash
+# @return HTML string
+sub _displayConfDescription {
     my $self = shift;
-    my ($root) = @_;
+    my ( $appid, $apphash ) = @_;
     my $html;
+    my $key;
 
-    my @apps = $root->getElementsByTagName('application');
-    foreach (@apps) {
+    if ( defined $apphash->{type} and $apphash->{type} eq "application" ) {
 
         # Get application items
-        my $appid   = $_->getAttribute('id');
-        my $appname = $_->getChildrenByTagName('name')->string_value();
-        my $appuri =
-          $self->_userParam( $_->getChildrenByTagName('uri')->string_value()
-              || "#" );
-        my $appdesc = $_->getChildrenByTagName('description')->string_value();
-        my $applogofile = $_->getChildrenByTagName('logo')->string_value();
-        my $applogo     = $self->{apps}->{imgpath} . $applogofile;
+        my $appname = $apphash->{options}->{name} || $appid;
+        my $appuri  = $apphash->{options}->{uri}  || "";
+        my $appdesc = $apphash->{options}->{description};
+        my $applogofile = $apphash->{options}->{logo};
+        my $applogo     = $self->{apps}->{imgpath} . $applogofile
+          if $applogofile;
 
-        # Display application
+        # Display application description
         $html .= "<div id=\"$appid\" class=\"appsdesc\">\n";
         $html .=
 "<a href=\"$appuri\"><img src=\"$applogo\" alt=\"$appid logo\" /></a>\n"
@@ -347,194 +381,130 @@ sub _displayDescription {
         $html .= "</div>\n";
     }
 
+    # Sublevels
+    foreach $key ( keys %$apphash ) {
+        next if $key =~ /(type|options|catname)/;
+        $html .= $self->_displayConfDescription( $key, $apphash->{$key} );
+    }
+
     return $html;
 }
 
-## @method private string _filterXML(XML::LibXML::Document root)
-# Remove unauthorized nodes.
-# @param $root XML root element
-# @return XML_string
-sub _filterXML {
-    my $self = shift;
-    my ($root) = @_;
-    my @cat = $root->getElementsByTagName('category');
-    foreach my $cat (@cat) {
-        $self->_filterApp($cat);
+## @method private string _filter(hashref apphash)
+# Duplicate hash reference
+# Remove unauthorized menu elements
+# Hide empty categories
+# @param $apphash Menu elements
+# @return filtered hash
+sub _filter {
+    my ( $self, $apphash ) = splice @_;
+    my $filteredHash;
+    my $key;
+
+    # Copy hash reference into a new hash
+    foreach $key ( keys %$apphash ) {
+        $filteredHash->{$key} = $apphash->{$key};
     }
+
+    # Filter hash
+    $self->_filterHash($filteredHash);
 
     # Hide empty categories
-    $self->_hideEmptyCategory($root);
+    $self->_isCategoryEmpty($filteredHash);
 
-    return;
+    return $filteredHash;
 }
 
-sub _filterApp {
-    my($self,$node)=@_;
-    my @apps = $node->getChildrenByTagName('application');
-    my $tag = 0;
-    foreach(@apps) {
-        my $stag = $self->_filterApp($_);
-        my $appdisplay = $_->getChildrenByTagName('display')->string_value();
-        my $appuri =
-          $self->_userParam( $_->getChildrenByTagName('uri')->string_value() );
+## @method private string _filterHash(hashref apphash)
+# Remove unauthorized menu elements
+# @param $apphash Menu elements
+# @return filtered hash
+sub _filterHash {
+    my $self = shift;
+    my ($apphash) = @_;
+    my $key;
+    my $appkey;
 
-        # Remove node if display is "no"
-        $_->unbindNode if ( $appdisplay eq "no" );
+    foreach $key ( keys %$apphash ) {
+        next if $key =~ /(type|options|catname)/;
+        if ( $apphash->{$key}->{type} eq "category" ) {
 
-        # Keep node if display is "yes"
-        if ( $appdisplay eq "yes" ) {
-            $tag++;
+            # Filter the category
+            $self->_filterHash( $apphash->{$key} );
+        }
+        if ( $apphash->{$key}->{type} eq "application" ) {
+
+            # Find sub applications and filter them
+            foreach $appkey ( keys %{ $apphash->{$key} } ) {
+                next if $appkey =~ /(type|options|catname)/;
+
+                # We have sub elements, so we filter them
+                $self->_filterHash( $apphash->{$key} );
+            }
+
+            # Check rights
+            my $appdisplay = $apphash->{$key}->{options}->{display}
+              || "auto";
+            my $appuri = $apphash->{$key}->{options}->{uri};
+
+            # Remove if display is "no" or "off"
+            delete $apphash->{$key} and next if ( $appdisplay =~ /^(no|off)$/ );
+
+            # Keep node if display is "yes" or "on"
+            next if ( $appdisplay =~ /^(yes|on)$/ );
+
+            # Check grant function if display is "auto" (this is the default)
+            delete $apphash->{$key} unless ( $self->_grant($appuri) );
             next;
         }
-
-        # Check grant function if display is "auto" (this is the default)
-        unless ( $self->_grant($appuri) ) {
-            if($stag) {
-                eval {$_->getChildrenByTagName('uri')->unbindNode() };
-                $tag++;
     }
-            else {
-                $_->unbindNode;
-            }
+
+}
+
+## @method private void _isCategoryEmpty(hashref apphash)
+# Check if a category is empty
+# @param $apphash Menu elements
+# @return boolean
+sub _isCategoryEmpty {
+    my $self = shift;
+    my ($apphash) = @_;
+    my $key;
+
+    # Test sub categories
+    foreach $key ( keys %$apphash ) {
+        next if $key =~ /(type|options|catname)/;
+        if ( $apphash->{$key}->{type} eq "category" ) {
+            delete $apphash->{$key}
+              if $self->_isCategoryEmpty( $apphash->{$key} );
+        }
+    }
+
+    # Test this category
+    if ( $apphash->{type} and $apphash->{type} eq "category" ) {
+
+        # Temporary store 'options'
+        my $tmp_options = $apphash->{options};
+
+        delete $apphash->{type};
+        delete $apphash->{options};
+
+        if ( scalar( keys %$apphash ) ) {
+
+            # There are sub categories or sub applications
+            # Restore type and options
+            $apphash->{type}    = "category";
+            $apphash->{options} = $tmp_options;
+
+            # Return false
+            return 0;
         }
         else {
-            $tag++;
+
+            # Return true
+            return 1;
         }
     }
-    return $tag;
-}
-
-## @method private void _hideEmptyCategory(XML::LibXML::Element cat)
-# Hides empty categories for _filterXML().
-# Return nothing $cat is modified directly
-# @param $cat XML element
-sub _hideEmptyCategory {
-    my $self = shift;
-    my ($cat) = @_;
-
-    # Check subnodes
-    my @catnodes = $cat->findnodes("category");
-    my @appnodes = $cat->findnodes("application");
-
-    # Check each subcategory
-    foreach (@catnodes) {
-        $self->_hideEmptyCategory($_);
-    }
-
-    # Update node list
-    @catnodes = $cat->findnodes("category");
-
-    # Remove the node if it contains no category or no application
-    unless ( scalar(@catnodes) || scalar(@appnodes) ) {
-        $cat->unbindNode;
-        return;
-    }
-
-    return;
-}
-
-## @method private int function _ppolicyWarning()
-# Return ppolicy warnings get in AuthLDAP.pm
-# @return Lemonldap::NG::Portal constant
-sub _ppolicyWarning {
-    my $self = shift;
-
-    # Grace
-    if (
-        defined $self->{portalObject}->{ppolicy}
-        ->{grace_authentications_remaining} )
-    {
-        return ( PE_PP_GRACE,
-            $self->{portalObject}->{ppolicy}
-              ->{grace_authentications_remaining} );
-    }
-
-    # Expiration warning
-    if ( defined $self->{portalObject}->{ppolicy}->{time_before_expiration} ) {
-        return ( PE_PP_EXP_WARNING,
-            $self->{portalObject}->{ppolicy}->{time_before_expiration} );
-    }
-
-    # Return PE_OK
-    return ( PE_OK, undef );
-}
-
-## @method private boolean _grant(string uri)
-# Check user's authorization for $uri.
-# @param $uri URL string
-# @return True if granted
-sub _grant {
-    my $self = shift;
-    my ($uri) = @_;
-    $uri =~ m{(\w+)://([^/:]+)(:\d+)?(/.*)?$} or return 0;
-    my ( $protocol, $vhost, $port );
-    ( $protocol, $vhost, $port, $path ) = ( $1, $2, $3, $4 );
-    $path ||= '/';
-    $self->_compileRules() if ( $cfgNum != $self->{portalObject}->{cfgNum} );
-    return -1 unless ( defined( $defaultCondition->{$vhost} ) );
-
-    if ( defined $locationRegexp->{$vhost} ) {    # Not just a default rule
-        for ( my $i = 0 ; $i < @{ $locationRegexp->{$vhost} } ; $i++ ) {
-            if ( $path =~ $locationRegexp->{$vhost}->[$i] ) {
-                return &{ $locationCondition->{$vhost}->[$i] }($self);
-            }
-        }
-    }
-    unless ( $defaultCondition->{$vhost} ) {
-        $self->{portalObject}
-          ->lmLog( "Application $uri did not match any configured virtual host",
-            'warn' );
-        return 0;
-    }
-    return &{ $defaultCondition->{$vhost} }($self);
-    return 1;
-}
-
-## @method private boolean _compileRules()
-# Parse configured rules and compile them
-# @return True
-sub _compileRules {
-    my $self = shift;
-    foreach my $vhost ( keys %{ $self->{portalObject}->{locationRules} } ) {
-        my $i = 0;
-        foreach ( keys %{ $self->{portalObject}->{locationRules}->{$vhost} } ) {
-            if ( $_ eq 'default' ) {
-                $defaultCondition->{$vhost} =
-                  $self->_conditionSub(
-                    $self->{portalObject}->{locationRules}->{$vhost}->{$_} );
-            }
-            else {
-                $locationCondition->{$vhost}->[$i] =
-                  $self->_conditionSub(
-                    $self->{portalObject}->{locationRules}->{$vhost}->{$_} );
-                $locationRegexp->{$vhost}->[$i] = qr/$_/;
-                $i++;
-            }
-        }
-
-        # Default policy
-        $defaultCondition->{$vhost} ||= $self->_conditionSub('accept');
-    }
-    $cfgNum = $self->{portalObject}->{cfgNum};
-    1;
-}
-
-## @method private CODE _conditionSub(string cond)
-# Return subroutine giving authorization condition.
-# @param $cond boolean expression
-# @return Compiled routine
-sub _conditionSub {
-    my $self = shift;
-    my ($cond) = @_;
-    return sub { 1 }
-      if ( $cond =~ /^accept$/i );
-    return sub { 0 }
-      if ( $cond =~ /^(?:deny$|logout)/i );
-    $cond =~ s/\$date/&POSIX::strftime("%Y%m%d%H%M%S",localtime())/e;
-    $cond =~ s/\$(\w+)/\$self->{portalObject}->{sessionInfo}->{$1}/g;
-    my $sub;
-    $sub = $self->_safe->reval("sub {my \$self = shift; return ( $cond )}");
-    return $sub;
+    return 0;
 }
 
 1;
@@ -543,45 +513,25 @@ __END__
 
 =head1 NAME
 
-Lemonldap::NG::Portal::Menu - Enhanced menu to display to authenticated users
+=encoding utf8
+
+Lemonldap::NG::Portal::Menu - Portal menu functions
 
 =head1 SYNOPSIS
 
-    use Lemonldap::NG::Portal::Menu;
-    my $menu = Lemonldap::NG::Portal::Menu->new(
+    use Lemonldap::NG::Portal::Simple;
+    my $portal = Lemonldap::NG::Portal::Simple->new(
       {
-        portalObject => $portal,
-        apps => {
-            xmlfile => "/var/lib/lemonldap-ng/conf/apps-list.xml",
-            imgpath => "apps/",
-        },
-        modules => {
-            appslist => 1,
-            password => 1,
-            logout => 1,
-        },
       }
     );
 
-    # Print HTML code of authorized applications list
-    print $menu->appslistMenu;
+    # Init portal menu
+    $portal->menuInit();
+
 
 =head1 DESCRIPTION
 
-Lemonldap::NG::Portal::Menu provides these web modules:
-
-=over
-
-=item * Application list: display a full menu with all authorized applications
-
-=item * Password: allow the user to change its password (with LDAP auth only)
-
-=item * Logout: display a simple logout confirmation page
-
-=back
-
-These web modules are designed to be used in HTML::Template, with the help of 
-Jquery scripts. Without that, this will only output raw HTML code.
+Lemonldap::NG::Portal::Menu is used to build menu.
 
 =head1 SEE ALSO
 

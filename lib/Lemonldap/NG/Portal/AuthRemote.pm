@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::_Remote;
 use Lemonldap::NG::Portal::Simple;
 use base qw(Lemonldap::NG::Portal::_Remote);
 
-our $VERSION = '0.1';
+our $VERSION = '0.99';
 
 *authInit = *Lemonldap::NG::Portal::_Remote::init;
 
@@ -37,7 +37,8 @@ sub setAuthSessionInfo {
     # Store user login for basic rules
     $self->{sessionInfo}->{'_user'} = $self->{'user'};
 
-    # Store password (deleted in checkRemoteId() if local policy does not accept stored passwords)
+    # Store password (deleted in checkRemoteId() if local policy does not accept
+    #stored passwords)
     $self->{sessionInfo}->{'_password'} = $self->{'password'};
 
     PE_OK;
@@ -50,11 +51,34 @@ sub authenticate {
     PE_OK;
 }
 
+## @apmethod int authFinish()
+# Does nothing.
+# @return Lemonldap::NG::Portal constant
+sub authFinish {
+    PE_OK;
+}
+
+## @apmethod int authLogout()
+# Does nothing
+# @return Lemonldap::NG::Portal constant
+sub authLogout {
+    PE_OK;
+}
+
+## @apmethod boolean authForce()
+# Does nothing
+# @return result
+sub authForce {
+    return 0;
+}
+
 1;
 
 __END__
 
 =head1 NAME
+
+=encoding utf8
 
 Lemonldap::NG::Portal::AuthRemote - Authentication module for Lemonldap::NG
 that delegates authentication to a remote Lemonldap::NG portal.

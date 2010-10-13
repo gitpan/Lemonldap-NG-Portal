@@ -5,15 +5,23 @@
 # LDAP user database backend class
 package Lemonldap::NG::Portal::UserDBLDAP;
 
+use strict;
 use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_LDAP 'ldap';    #link protected ldap
 
-our $VERSION = '0.2';
+our $VERSION = '0.99';
 
 ## @method int userDBInit()
-# Does nothing.
+# Transform ldapGroupAttributeNameSearch in ARRAY ref
 # @return Lemonldap::NG::Portal constant
 sub userDBInit {
+    my $self = shift;
+
+    unless ( ref $self->{ldapGroupAttributeNameSearch} eq 'ARRAY' ) {
+        my @values = split( /\s/, $self->{ldapGroupAttributeNameSearch} );
+        $self->{ldapGroupAttributeNameSearch} = \@values;
+    }
+
     PE_OK;
 }
 
@@ -57,20 +65,25 @@ sub search {
         base   => $self->{ldapBase},
         scope  => 'sub',
         filter => $self->{LDAPFilter},
+        (
+            ref( $self->{exportedVars} )
+            ? ( attrs => values( %{ $self->{exportedVars} } ) )
+            : ()
+        ),
     );
     $self->lmLog(
-        "LDAP Search with base: "
+        'LDAP Search with base: '
           . $self->{ldapBase}
-          . " and filter: "
+          . ' and filter: '
           . $self->{LDAPFilter},
         'debug'
     );
     if ( $mesg->code() != 0 ) {
-        $self->lmLog( "LDAP Search error: " . $mesg->error, 'error' );
+        $self->lmLog( 'LDAP Search error: ' . $mesg->error, 'error' );
         return PE_LDAPERROR;
     }
     unless ( $self->{entry} = $mesg->entry(0) ) {
-        $user = $self->{mail} || $self->{user};
+        my $user = $self->{mail} || $self->{user};
         $self->_sub( 'userError', "$user was not found in LDAP directory" );
         return PE_BADCREDENTIALS;
     }
@@ -81,28 +94,23 @@ sub search {
 ## @apmethod int setSessionInfo()
 # 7) Load all parameters included in exportedVars parameter.
 # Multi-value parameters are loaded in a single string with
-# '; ' separator
+# a separator (param multiValuesSeparator)
 # @return Lemonldap::NG::Portal constant
 sub setSessionInfo {
-    my ($self) = @_;
+    my $self = shift;
     $self->{sessionInfo}->{dn} = $self->{dn};
     unless ( $self->{exportedVars} ) {
         foreach (qw(uid cn mail)) {
             $self->{sessionInfo}->{$_} =
-              join( '; ', $self->{entry}->get_value($_) ) || "";
+              $self->{ldap}->getLdapValue( $self->{entry}, $_ ) || "";
         }
     }
     elsif ( ref( $self->{exportedVars} ) eq 'HASH' ) {
         foreach ( keys %{ $self->{exportedVars} } ) {
-            if ( my $tmp = $ENV{$_} ) {
-                $tmp =~ s/[\r\n]/ /gs;
-                $self->{sessionInfo}->{$_} = $tmp;
-            }
-            else {
-                $self->{sessionInfo}->{$_} = join( '; ',
-                    $self->{entry}->get_value( $self->{exportedVars}->{$_} ) )
-                  || "";
-            }
+            $self->{sessionInfo}->{$_} =
+              $self->{ldap}
+              ->getLdapValue( $self->{entry}, $self->{exportedVars}->{$_} )
+              || "";
         }
     }
     else {
@@ -115,61 +123,67 @@ sub setSessionInfo {
 # Load all groups in $groups.
 # @return Lemonldap::NG::Portal constant
 sub setGroups {
-    my ($self) = @_;
+    my $self   = shift;
     my $groups = $self->{sessionInfo}->{groups};
 
-    $self->{ldapGroupObjectClass}         ||= "groupOfNames";
-    $self->{ldapGroupAttributeName}       ||= "member";
-    $self->{ldapGroupAttributeNameUser}   ||= "dn";
-    $self->{ldapGroupAttributeNameSearch} ||= ["cn"];
+    if ( $self->{ldapGroupBase} ) {
 
-    if (   $self->{ldapGroupBase}
-        && $self->{sessionInfo}->{ $self->{ldapGroupAttributeNameUser} } )
-    {
-        my $searchFilter =
-          "(&(objectClass=" . $self->{ldapGroupObjectClass} . ")(|";
-        foreach (
-            split(
-                /[;]/,
-                $self->{sessionInfo}->{ $self->{ldapGroupAttributeNameUser} }
-            )
+        # Push group attribute value for recursive search
+        push(
+            @{ $self->{ldapGroupAttributeNameSearch} },
+            $self->{ldapGroupAttributeNameGroup}
           )
-        {
-            $searchFilter .=
-              "(" . $self->{ldapGroupAttributeName} . "=" . $_ . ")";
-        }
-        $searchFilter .= "))";
-        my $mesg = $self->{ldap}->search(
-            base   => $self->{ldapGroupBase},
-            filter => $searchFilter,
-            attrs  => $self->{ldapGroupAttributeNameSearch},
+          if (  $self->{ldapGroupRecursive}
+            and $self->{ldapGroupAttributeNameGroup} ne "dn" );
+
+        # Get value for group search
+        my $group_value =
+          $self->{ldap}
+          ->getLdapValue( $self->{entry}, $self->{ldapGroupAttributeNameUser} );
+
+        $self->lmLog(
+            "Searching LDAP groups in "
+              . $self->{ldapGroupBase}
+              . " for $group_value",
+            'debug'
         );
-        if ( $mesg->code() == 0 ) {
-            foreach my $entry ( $mesg->all_entries ) {
-                my $nbAttrs = @{ $self->{ldapGroupAttributeNameSearch} };
-                for ( my $i = 0 ; $i < $nbAttrs ; $i++ ) {
-                    my @data =
-                      $entry->get_value(
-                        $self->{ldapGroupAttributeNameSearch}[$i] );
-                    if (@data) {
-                        $groups .= $data[0];
-                        $groups .= "|"
-                          if (
-                            $i + 1 < $nbAttrs
-                            && $entry->get_value(
-                                $self->{ldapGroupAttributeNameSearch}[ $i + 1 ]
-                            )
-                          );
-                    }
-                }
-                $groups .= "; ";
-            }
-            $groups =~ s/; $//g;
-        }
+
+        # Call searchGroups
+        $groups .= $self->{ldap}->searchGroups(
+            $self->{ldapGroupBase}, $self->{ldapGroupAttributeName},
+            $group_value,           $self->{ldapGroupAttributeNameSearch}
+        );
     }
 
     $self->{sessionInfo}->{groups} = $groups;
     PE_OK;
+}
+
+## @method boolean setUserDBValue(string key, string value)
+# Store a value in UserDB
+# @param key Key in user information
+# @param value Value to store
+# @return result
+sub setUserDBValue {
+    my ( $self, $key, $value ) = splice @_;
+
+    # Mandatory attributes
+    return 0 unless defined $key;
+
+    # Write in LDAP
+    $self->lmLog( "Replace $key attribute in LDAP with value $value", 'debug' );
+    my $modification =
+      $self->{ldap}->modify( $self->{dn}, replace => { $key => $value } );
+
+    # Check result
+    if ( $modification->code ) {
+        $self->lmLog(
+            "LDAP error " . $modification->code . ": " . $modification->error,
+            'error' );
+        return 0;
+    }
+
+    return 1;
 }
 
 1;
