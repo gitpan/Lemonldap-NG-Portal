@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::_Choice;
 
 use Lemonldap::NG::Portal::Simple;
 
-our $VERSION = '0.99';
+our $VERSION = '0.99.1';
 
 ## @cmethod Lemonldap::NG::Portal::_Choice new(Lemonldap::NG::Portal::Simple portal)
 # Constructor

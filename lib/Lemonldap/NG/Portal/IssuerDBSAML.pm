@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_SAML;
 our @ISA = qw(Lemonldap::NG::Portal::_SAML);
 
-our $VERSION = '0.99';
+our $VERSION = '0.99.1';
 
 ## @method void issuerDBInit()
 # Load and check SAML configuration
@@ -1315,8 +1315,8 @@ sub issuerForAuthUser {
                 $self->{error}         = $self->_subProcess(
                     qw(issuerDBInit authInit issuerForUnAuthUser extractFormInfo
                       userDBInit getUser setAuthSessionInfo setSessionInfo
-                      setMacros setLocalGroups setGroups authenticate
-                      store authFinish)
+                      setMacros setLocalGroups setGroups setPersistentSessionInfo
+                      authenticate store authFinish)
                 );
 
                 # Return error if any

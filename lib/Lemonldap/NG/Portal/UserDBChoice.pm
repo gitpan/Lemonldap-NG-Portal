@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::Simple;
 
 #inherits Lemonldap::NG::Portal::_Choice
 
-our $VERSION = '0.99';
+our $VERSION = '0.99.1';
 
 ## @apmethod int userDBInit()
 # Does nothing

@@ -19,7 +19,7 @@ use Encode;            # Encode attribute values
 # Special comments for doxygen
 #inherits Lemonldap::NG::Common::Conf::SAML::Metadata protected service_metadata
 
-our $VERSION = '0.99';
+our $VERSION = '0.99.1';
 our $samlCache;
 our $initGlibDone;
 
@@ -46,11 +46,11 @@ BEGIN {
         no strict 'subs';
         eval 'use constant LASSO => 1';
 
-        # Check Lasso version >= 2.2.91
+        # Check Lasso version >= 2.3.0
         my $lasso_check_version_mode =
           eval 'Lasso::Constants::CHECK_VERSION_NUMERIC';
         my $check_version =
-          Lasso::check_version( 2, 2, 91, $lasso_check_version_mode );
+          Lasso::check_version( 2, 3, 0, $lasso_check_version_mode );
         unless ($check_version) {
             eval 'use constant BADLASSO => 1';
         }

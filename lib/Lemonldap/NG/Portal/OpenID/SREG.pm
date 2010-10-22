@@ -11,8 +11,6 @@ use Lemonldap::NG::Common::Regexp;
 use Lemonldap::NG::Portal::Simple;
 use utf8;
 
-our $VERSION = '0.99';
-
 ## @method protected hash sregHook(hash prm)
 # Hook called to add SREG parameters to the OpenID response
 # @return Hash containing wanted parameters
@@ -21,10 +19,17 @@ sub sregHook {
     my ( @req, @opt );
 
     # Refuse federation if rejected by user
-    return 0 if ( $self->param('confirm') == -1 );
+    if ( $self->param('confirm') == -1 ) {
+        my %h;
+        $h{$_} = undef foreach (
+            qw(fullname nickname language postcode timezone country gender email dob)
+        );
+        $self->updatePersistentSession( \%h );
+        return 0;
+    }
 
     # If identity is not trusted, does nothing
-    return ( 0, $prm ) unless ($is_id and $is_trusted);
+    return ( 0, $prm ) unless ( $is_id and $is_trusted );
 
     $self->lmLog( "SREG start", 'debug' );
 
@@ -61,8 +66,8 @@ sub sregHook {
         # Parse optional attributes
         elsif ( $k eq 'optional' ) {
             $self->lmLog( "Optional attr $v", 'debug' );
-            push @opt,
-              grep { defined $self->{"openIdSreg_$_"} } split( /,/, $v );
+            push @opt, grep { defined $self->{"openIdSreg_$trust_root$_"} }
+              split( /,/, $v );
         }
         else {
             $self->lmLog( "Unknown OpenID SREG request $k", 'error' );
@@ -133,7 +138,7 @@ sub sregHook {
             elsif ( $self->param('confirm') == 1 ) {
                 my $ck = 0;
                 if ( defined( $self->param("sreg_$k") ) ) {
-                    $ck = ( $self->param("sreg_$k") == 'OK' ) || 0;
+                    $ck = ( $self->param("sreg_$k") eq 'OK' ) || 0;
                 }
 
                 # Store the value returned

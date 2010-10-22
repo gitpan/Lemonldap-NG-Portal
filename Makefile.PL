@@ -11,7 +11,7 @@ WriteMakefile(
             'Convert::PEM'          => 0,
             'Crypt::OpenSSL::X509'  => 0,
             'Email::Date::Format'   => 0,
-            'Lasso'                 => 0,
+            'Lasso'                 => '2.3.0',
             'MIME::Lite'            => 0,
             'Net::OpenID::Consumer' => 0,
             'Net::OpenID::Server'   => 0,

@@ -8,6 +8,8 @@
 BEGIN {
     our %tr_err = (
         fr => 'French',
+
+        # Not yet maintained
         ro => 'Romanian',
     );
     our %tr_msg = ( fr => 'French', );
@@ -25,7 +27,7 @@ foreach ( keys %tr_err ) {
     my @tmp;
     ok( @tmp = @{ &{"Lemonldap::NG::Portal::_i18n::error_$_"} },
         "$tr_err{$_} translation" );
-    ok( $#tmp == $#en, "$tr_err{$_} translation count" );
+    ok( $#tmp == $#en, "$tr_err{$_} translation count (" . scalar(@tmp) . ')' );
 }
 
 my $p = bless {}, 'Lemonldap::NG::Portal::Simple';
@@ -43,5 +45,6 @@ foreach ( keys %tr_msg ) {
     my @tmp;
     ok( @tmp = @{ &{"Lemonldap::NG::Portal::_i18n::msg_$_"} },
         "$tr_msg{$_} messages translation" );
-    ok( $#tmp == $#en, "$tr_msg{$_} messages translation count" );
+    ok( $#tmp == $#en,
+        "$tr_msg{$_} messages translation count (" . scalar(@tmp) . ')' );
 }

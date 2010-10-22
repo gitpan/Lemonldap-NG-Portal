@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::CDA;
 use strict;
 use Lemonldap::NG::Portal::SharedConf qw(:all);
 
-our $VERSION = '0.99';
+our $VERSION = '0.99.1';
 use base ('Lemonldap::NG::Portal::SharedConf');
 
 *EXPORT_OK   = *Lemonldap::NG::Portal::SharedConf::EXPORT_OK;

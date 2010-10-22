@@ -13,7 +13,7 @@ background:#000;
 color:#fff;
 font-family:sans-serif;
 font-weight:bold;
-font-size:8pt;
+font-size:9pt;
 margin:0;
 padding:0;
 }
@@ -78,7 +78,7 @@ margin:100px auto 20px auto;
 background:#4B4B4B;
 padding:10px;
 width:600px;
-height:310px;
+height:410px;
 -moz-border-radius:10px 10px 10px 10px;
 -webkit-border-radius:10px 10px 10px 10px;
 }
@@ -94,11 +94,11 @@ color:#000;
 }
 
 #logincontent form {
-height:230px;
+height:330px;
 }
 
 #mailcontent form {
-height:200px;
+height:300px;
 }
 
 #mailcontent div.link {
@@ -283,7 +283,7 @@ div.application {
 margin:10px;
 padding:5px;
 float:left;
-width:30%;
+max-width:250px;
 }
 
 div.application:hover {

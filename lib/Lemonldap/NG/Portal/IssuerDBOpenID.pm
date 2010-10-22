@@ -13,7 +13,7 @@ use Lemonldap::NG::Common::Regexp;
 #inherits Lemonldap::NG::Portal::OpenID::Server
 #link Lemonldap::NG::Portal::OpenID::SREG protected sreg_extension
 
-our $VERSION = '0.99';
+our $VERSION = '0.99.1';
 our $initDone;
 
 ## @method void issuerDBInit()
@@ -191,6 +191,8 @@ sub openIDServer {
                 return 1;
             }
             elsif ( $self->param("confirm") == -1 ) {
+                $self->updatePersistentSession(
+                    { "_openidTrust$trust_root" => 0 } );
                 return 0;
             }
             else {

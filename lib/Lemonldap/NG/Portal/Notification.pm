@@ -15,7 +15,7 @@ use CGI::Cookie;
 #inherits Lemonldap::NG::Portal::Notification::DBI
 #inherits Lemonldap::NG::Portal::Notification::File
 
-our $VERSION = '0.99';
+our $VERSION = '0.99.1';
 our ( $msg, $stylesheet, $parser );
 
 BEGIN {

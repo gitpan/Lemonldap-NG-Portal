@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::MailReset;
 use strict;
 use warnings;
 
-our $VERSION = '0.99';
+our $VERSION = '0.99.1';
 
 use Lemonldap::NG::Portal::Simple qw(:all);
 use base qw(Lemonldap::NG::Portal::SharedConf Exporter);
@@ -48,7 +48,7 @@ sub process {
 
     $self->{error} = $self->_subProcess(
         qw(smtpInit userDBInit passwordDBInit extractMailInfo
-          getUser setSessionInfo setMacros setLocalGroups setGroups
+          getUser setSessionInfo setMacros setLocalGroups setGroups setPersistentSessionInfo
           storeMailSession sendConfirmationMail resetPassword sendPasswordMail)
     );
 

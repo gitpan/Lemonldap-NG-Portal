@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Lemonldap-NG-Portal
-version:            0.99
+version:            0.99.1
 abstract:           The authentication portal part of Lemonldap::NG Web-SSO
 author:
     - Xavier Guimard <x.guimard@free.fr>, Clément Oudot <clement@oodo.net>, Thomas Chemineau <thomas.chemineau@gmail.com>, Mikael Ates <mikael.ates@univ-st-etienne.fr>
@@ -35,7 +35,7 @@ recommends:
     Convert::PEM:         0
     Crypt::OpenSSL::X509:  0
     Email::Date::Format:  0
-    Lasso:                0
+    Lasso:                2.3.0
     MIME::Lite:           0
     Net::OpenID::Consumer:  0
     Net::OpenID::Server:  0

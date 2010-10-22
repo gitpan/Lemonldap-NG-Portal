@@ -38,9 +38,6 @@
       ResponseLocation="<TMPL_VAR NAME="samlIDPSSODescriptorSingleLogoutServiceHTTPPostResponseLocation">"
       </TMPL_IF>/>
     <SingleSignOnService
-      Binding="<TMPL_VAR NAME="samlIDPSSODescriptorSingleSignOnServiceSOAPBinding">"
-      Location="<TMPL_VAR NAME="samlIDPSSODescriptorSingleSignOnServiceSOAPLocation">" />
-    <SingleSignOnService
       Binding="<TMPL_VAR NAME="samlIDPSSODescriptorSingleSignOnServiceHTTPRedirectBinding">"
       Location="<TMPL_VAR NAME="samlIDPSSODescriptorSingleSignOnServiceHTTPRedirectLocation">"
       <TMPL_IF NAME="samlIDPSSODescriptorSingleSignOnServiceHTTPRedirectResponseLocation">
@@ -58,6 +55,9 @@
       <TMPL_IF NAME="samlIDPSSODescriptorSingleSignOnServiceHTTPArtifactResponseLocation">
       ResponseLocation="<TMPL_VAR NAME="samlIDPSSODescriptorSingleSignOnServiceHTTPArtifactResponseLocation">"
       </TMPL_IF>/>
+    <SingleSignOnService
+      Binding="<TMPL_VAR NAME="samlIDPSSODescriptorSingleSignOnServiceSOAPBinding">"
+      Location="<TMPL_VAR NAME="samlIDPSSODescriptorSingleSignOnServiceSOAPLocation">" />
     <NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress</NameIDFormat>
     <NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:X509SubjectName</NameIDFormat>
     <NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:WindowsDomainQualifiedName</NameIDFormat>

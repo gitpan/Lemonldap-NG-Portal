@@ -10,7 +10,7 @@ use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_CAS;
 use base qw(Lemonldap::NG::Portal::_CAS);
 
-our $VERSION = '0.99';
+our $VERSION = '0.99.1';
 
 ## @method void issuerDBInit()
 # Nothing to do
@@ -179,7 +179,8 @@ sub issuerForUnAuthUser {
         }
 
         # Get username
-        my $username = $localSession->{ $self->{casAttr} || $self->{whatToTrace} };
+        my $username =
+          $localSession->{ $self->{casAttr} || $self->{whatToTrace} };
 
         $self->lmLog( "Get username $username", 'debug' );
 
@@ -388,7 +389,8 @@ sub issuerForUnAuthUser {
         }
 
         # Get username
-        my $username = $localSession->{ $self->{casAttr} || $self->{whatToTrace} };
+        my $username =
+          $localSession->{ $self->{casAttr} || $self->{whatToTrace} };
 
         $self->lmLog( "Get username $username", 'debug' );
 
@@ -528,8 +530,8 @@ sub issuerForAuthUser {
             $self->{error}         = $self->_subProcess(
                 qw(issuerDBInit authInit issuerForUnAuthUser extractFormInfo
                   userDBInit getUser setAuthSessionInfo setSessionInfo
-                  setMacros setLocalGroups setGroups authenticate
-                  store authFinish)
+                  setMacros setLocalGroups setGroups setPersistentSessionInfo
+                  authenticate store authFinish)
             );
 
             # Return error if any

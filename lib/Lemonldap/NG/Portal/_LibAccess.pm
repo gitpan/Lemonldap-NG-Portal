@@ -10,8 +10,6 @@ use Lemonldap::NG::Common::Safelib;    #link protected safe Safe object
 use Safe;
 use constant SAFEWRAP => ( Safe->can("wrap_code_ref") ? 1 : 0 );
 
-our $VERSION = '0.99';
-
 # Global variables
 our ( $defaultCondition, $locationCondition, $locationRegexp, $cfgNum ) =
   ( undef, undef, undef, 0 );

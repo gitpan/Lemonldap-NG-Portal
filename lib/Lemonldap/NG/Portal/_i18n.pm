@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::_i18n;
 # Developpers warning : this file must stay UTF-8 encoded
 
 use AutoLoader qw(AUTOLOAD);
-our $VERSION = '0.99';
+our $VERSION = '0.99.1';
 
 ## @fn string error(int error,string lang)
 # @param $error Number of error to resolve
@@ -348,9 +348,9 @@ sub error_ro {
         'Problemă la încărcarea unui furnizor de servicii',
         'A apărut o eroare în timpul schimbului de SAML atribute',
         'Această pagină este proiectat pentru servere OpenID',
-'Când încercaţi să utilizaţi o identitate OpenID care nu este a ta',
 'Când încercaţi să utilizaţi o identitate OpenID care nu vă aparţine',
         'Un atribut solicitate nu sunt disponibile',
+        'Federation forbidden by security policy',
     ];
 }
 

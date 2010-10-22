@@ -28,7 +28,6 @@ use Digest::MD5;
 #inherits Lemonldap::NG::Portal::AuthCAS;
 #inherits Lemonldap::NG::Portal::AuthChoice;
 #inherits Lemonldap::NG::Portal::AuthDBI;
-#inherits Lemonldap::NG::Portal::AuthLA;
 #inherits Lemonldap::NG::Portal::AuthLDAP;
 #inherits Lemonldap::NG::Portal::AuthMulti;
 #inherits Lemonldap::NG::Portal::AuthNull;
@@ -63,7 +62,7 @@ use Digest::MD5;
 #inherits Apache::Session
 #link Lemonldap::NG::Common::Apache::Session::SOAP protected globalStorage
 
-our $VERSION = '0.99';
+our $VERSION = '0.99.1';
 
 use base qw(Lemonldap::NG::Common::CGI Exporter);
 our @ISA;
@@ -212,25 +211,37 @@ sub new {
       or $self->abort( "Configuration error",
         "Unable to get configuration: $Lemonldap::NG::Common::Conf::msg" );
 
-    # Default values
-    $self->setDefaultValues();
-
     # Test mandatory elements
+
+    # 1. Sessions backend
     $self->abort( "Configuration error",
         "You've to indicate a an Apache::Session storage module !" )
       unless ( $self->{globalStorage} );
+    unless ( $self->{globalStorage}->can('populate') ) {
     eval "require " . $self->{globalStorage};
     $self->abort( "Configuration error",
         "Module " . $self->{globalStorage} . " not found in \@INC" )
       if ($@);
+    }
+
+    # Use LemonLDAP::NG custom Apache::Session
     $self->{globalStorageOptions}->{backend} = $self->{globalStorage};
     $self->{globalStorage} = 'Lemonldap::NG::Common::Apache::Session';
-    if ( $self->{samlStorage} ne $self->{globalStorage} ) {
-        eval "require " . $self->{samlStorage};
+
+    # Default values
+    $self->setDefaultValues();
+
+    # Load other storages if needed
+    foreach my $otherStorage ( $self->{samlStorage}, $self->{casStorage} ) {
+        if ( $otherStorage ne $self->{globalStorage} ) {
+            eval "require " . $otherStorage;
         $self->abort( "Configuration error",
-            "Module " . $self->{samlStorage} . " not found in \@INC" )
+                "Module " . $otherStorage . " not found in \@INC" )
           if ($@);
     }
+    }
+
+    # 2. Domain
     $self->abort( "Configuration error",
         "You've to indicate a domain for cookies" )
       unless ( $self->{domain} );
@@ -529,7 +540,9 @@ sub setDefaultValues {
     # SAML
     $self->{samlIdPResolveCookie} ||= $self->{cookieName} . "idp";
     $self->{samlStorage}          ||= $self->{globalStorage};
-    $self->{samlStorageOptions}   ||= $self->{globalStorageOptions};
+    if ( !$self->{samlStorageOptions} or !%{ $self->{samlStorageOptions} } ) {
+        $self->{samlStorageOptions} = $self->{globalStorageOptions};
+    }
     $self->{samlMetadataForceUTF8} = 1
       unless ( defined( $self->{samlMetadataForceUTF8} ) );
     $self->{samlAuthnContextMapPassword} = 2
@@ -543,7 +556,9 @@ sub setDefaultValues {
 
     # CAS
     $self->{casStorage}        ||= $self->{globalStorage};
-    $self->{casStorageOptions} ||= $self->{globalStorageOptions};
+    if ( !$self->{casStorageOptions} or !%{ $self->{casStorageOptions} } ) {
+        $self->{casStorageOptions} = $self->{globalStorageOptions};
+    }
 
     # Authentication levels
     $self->{ldapAuthnLevel}   = 2 unless defined $self->{ldapAuthnLevel};
@@ -834,7 +849,7 @@ sub updatePersistentSession {
         if ( defined( $infos->{$_} ) ) {
             $self->lmLog(
                 "Update persistent session key $_ with " . $infos->{$_},
-            'debug' );
+                'debug' );
             $h->{$_} = $infos->{$_};
         }
         else {
@@ -873,8 +888,8 @@ sub updateSession {
     $id ||= $self->{id};
     unless ($id) {
         my %cookies = fetch CGI::Cookie;
-    $id ||= $cookies{ $self->{cookieName} }->value
-      if ( defined $cookies{ $self->{cookieName} } );
+        $id ||= $cookies{ $self->{cookieName} }->value
+          if ( defined $cookies{ $self->{cookieName} } );
     }
 
     if ($id) {
@@ -885,8 +900,8 @@ sub updateSession {
             if ( defined( $infos->{$_} ) ) {
                 $self->lmLog( "Update session key $_ with " . $infos->{$_},
                     'debug' );
-            $h->{$_} = $infos->{$_};
-        }
+                $h->{$_} = $infos->{$_};
+            }
             else {
                 $self->lmLog( "Delete session key $_", 'debug' );
                 delete $h->{$_};
@@ -1229,6 +1244,7 @@ sub stamp {
 #    - controlExistingSession
 #    - setMacros
 #    - setLocalGroups
+#    - setPersistentSessionInfo
 #    - removeOther
 #    - grantSession
 #    - store
@@ -1263,8 +1279,8 @@ sub process {
         qw(controlUrlOrigin checkNotifBack controlExistingSession issuerDBInit
           authInit issuerForUnAuthUser extractFormInfo userDBInit getUser
           setAuthSessionInfo passwordDBInit modifyPassword setSessionInfo
-          setMacros setLocalGroups setGroups authenticate removeOther
-          grantSession store authFinish buildCookie checkNotification
+          setMacros setLocalGroups setGroups setPersistentSessionInfo authenticate
+          removeOther grantSession store authFinish buildCookie checkNotification
           issuerForAuthUser autoRedirect)
     );
     $self->updateStatus;
@@ -1278,8 +1294,13 @@ sub process {
 sub controlUrlOrigin {
     my $self = shift;
     if ( my $c = $self->param('confirm') ) {
+
+        # Replace confirm stamp by 1 or -1
         $c =~ s/^(-?)(.*)$/${1}1/;
-        if ( $self->{cipher} ) {
+
+        # Decrypt confirm stamp if cipher available
+        # and confirm not already decrypted
+        if ( $self->{cipher} and $2 ne "1" ) {
             my $time = time() - $self->{cipher}->decrypt($2);
             if ( $time < 600 ) {
                 $self->lmLog( "Confirm parameter accepted $c", 'debug' );
@@ -1584,8 +1605,8 @@ sub existingSession {
             $self->{error} = $self->_subProcess(
                 qw(issuerDBInit authInit issuerForUnAuthUser extractFormInfo
                   userDBInit getUser setAuthSessionInfo setSessionInfo
-                  setMacros setLocalGroups setGroups authenticate
-                  store authFinish)
+                  setMacros setLocalGroups setGroups setPersistentSessionInfo
+                  authenticate store authFinish)
             );
             return $self->{error} || PE_DONE;
         }
@@ -1683,19 +1704,6 @@ sub setSessionInfo {
         return $res;
     }
 
-    # Restore persistent datas for
-    unless ( $self->{id} ) {
-        my $h2 =
-          $self->getApacheSession(
-            $self->_md5hash( $self->{sessionInfo}->{ $self->{whatToTrace} } ),
-            1 );
-        if ($h2) {
-            foreach my $k ( keys %$h2 ) {
-                $self->{sessionInfo}->{$k} = $h2->{$k};
-            }
-        untie %$h2;
-    }
-    }
     PE_OK;
 }
 
@@ -1731,6 +1739,29 @@ sub setLocalGroups {
 }
 
 # setGroups(): must be implemented in UserDB* module
+
+##@apmethod int setPersistentSessionInfo()
+# Restore persistent session info
+#@return Lemonldap::NG::Portal constant
+sub setPersistentSessionInfo {
+    my $self = shift;
+
+    # Do not restore infos if session already opened
+    unless ( $self->{id} ) {
+        my $h =
+          $self->getApacheSession(
+            $self->_md5hash( $self->{sessionInfo}->{ $self->{whatToTrace} } ),
+            1 );
+        if ($h) {
+            foreach my $k ( keys %$h ) {
+                $self->{sessionInfo}->{$k} = $h->{$k};
+            }
+            untie %$h;
+        }
+    }
+
+    PE_OK;
+}
 
 ##@apmethod int authenticate()
 # Call authenticate() in Auth* module and call userNotice().

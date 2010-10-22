@@ -12,7 +12,7 @@ use Lemonldap::NG::Common::Regexp;
 use LWP::UserAgent;
 use Cache::FileCache;
 
-our $VERSION = '0.99';
+our $VERSION = '0.99.1';
 our $initDone;
 
 ## @apmethod int authInit()

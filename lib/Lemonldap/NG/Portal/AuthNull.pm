@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::AuthNull;
 use strict;
 use Lemonldap::NG::Portal::Simple;
 
-our $VERSION = '0.99';
+our $VERSION = '0.99.1';
 
 ## @apmethod int authInit()
 # Does nothing

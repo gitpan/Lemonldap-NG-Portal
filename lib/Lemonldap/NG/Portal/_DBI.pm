@@ -12,7 +12,7 @@ use strict;
 
 our @EXPORT = qw(dbh);
 
-our $VERSION = '0.99';
+our $VERSION = '0.99.1';
 
 ## @method protected Lemonldap::NG::Portal::_DBI dbh(string dbiChain, string dbiUser, string dbiPassword)
 # Create connection to database

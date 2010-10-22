@@ -13,7 +13,7 @@ use Safe;
 use constant SAFEWRAP => ( Safe->can("wrap_code_ref") ? 1 : 0 );
 use base qw(Lemonldap::NG::Portal::_LibAccess);
 
-our $VERSION = '0.99';
+our $VERSION = '0.99.1';
 
 ## @method void startSoapServices()
 # Check the URI requested (PATH_INFO environment variable) and launch the
@@ -80,8 +80,8 @@ sub getCookies {
     else {
         $self->{error} = $self->_subProcess(
             qw(authInit userDBInit getUser setAuthSessionInfo setSessionInfo
-              setMacros setLocalGroups setGroups authenticate removeOther grantSession
-              store authFinish buildCookie)
+              setMacros setLocalGroups setGroups setPersistentSessionInfo authenticate
+              removeOther grantSession store authFinish buildCookie)
         );
         $self->updateSession();
     }
