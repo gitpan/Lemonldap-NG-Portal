@@ -9,7 +9,7 @@ use strict;
 use Lemonldap::NG::Portal::Simple;
 use utf8;
 
-our $VERSION = '0.99.1';
+our $VERSION = '0.991';
 
 ## @method array display()
 # Call portal process and set template parameters

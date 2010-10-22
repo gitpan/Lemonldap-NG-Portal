@@ -13,7 +13,7 @@ use Lemonldap::NG::Common::Regexp;
 #inherits Lemonldap::NG::Portal::OpenID::Server
 #link Lemonldap::NG::Portal::OpenID::SREG protected sreg_extension
 
-our $VERSION = '0.99.1';
+our $VERSION = '0.991';
 our $initDone;
 
 ## @method void issuerDBInit()

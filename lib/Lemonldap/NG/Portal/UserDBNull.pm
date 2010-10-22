@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::UserDBNull;
 use strict;
 use Lemonldap::NG::Portal::Simple;
 
-our $VERSION = '0.99.1';
+our $VERSION = '0.991';
 
 ## @apmethod int userDBInit()
 # Do nothing

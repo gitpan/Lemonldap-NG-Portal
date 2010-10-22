@@ -9,7 +9,7 @@ use strict;
 use String::Random;
 use MIME::Lite;
 
-our $VERSION = '0.99.1';
+our $VERSION = '0.991';
 
 ## @method string gen_password(string regexp)
 # Generate a complex password based on a regular expression

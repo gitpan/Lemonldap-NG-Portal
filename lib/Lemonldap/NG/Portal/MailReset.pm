@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::MailReset;
 use strict;
 use warnings;
 
-our $VERSION = '0.99.1';
+our $VERSION = '0.991';
 
 use Lemonldap::NG::Portal::Simple qw(:all);
 use base qw(Lemonldap::NG::Portal::SharedConf Exporter);

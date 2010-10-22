@@ -12,7 +12,7 @@ use base qw(Lemonldap::NG::Portal::_DBI );
 
 #inherits Lemonldap::NG::Portal::_SMTP
 
-our $VERSION = '0.99.1';
+our $VERSION = '0.991';
 
 ## @apmethod int passwordDBInit()
 # Load SMTP functions and call DBI authInit()

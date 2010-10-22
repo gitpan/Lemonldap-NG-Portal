@@ -14,7 +14,7 @@ use strict;
 
 our @EXPORT = qw(ldap);
 
-our $VERSION = '0.99.1';
+our $VERSION = '0.991';
 
 ## @cmethod Lemonldap::NG::Portal::_LDAP new(Lemonldap::NG::Portal::Simple portal)
 # Build a Net::LDAP object using parameters issued from $portal

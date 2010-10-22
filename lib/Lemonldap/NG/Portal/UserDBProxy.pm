@@ -10,7 +10,7 @@ use Lemonldap::NG::Portal::_Proxy;
 use Lemonldap::NG::Portal::Simple;
 use base qw(Lemonldap::NG::Portal::_Proxy);
 
-our $VERSION = '0.99.1';
+our $VERSION = '0.991';
 
 ## @apmethod int userDBInit()
 # Call Lemonldap::NG::Portal::_Proxy::proxyInit();

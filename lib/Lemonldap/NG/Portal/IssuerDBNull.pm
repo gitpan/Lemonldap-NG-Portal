@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::IssuerDBNull;
 use strict;
 use Lemonldap::NG::Portal::Simple;
 
-our $VERSION = '0.99.1';
+our $VERSION = '0.991';
 
 ## @method void issuerDBInit()
 # Do nothing

@@ -10,7 +10,7 @@ use Lemonldap::NG::Portal::Simple;
 use MIME::Base64;
 use SOAP::Lite;
 
-our $VERSION = '0.99.1';
+our $VERSION = '0.991';
 our $initDone;
 
 ## @apmethod int proxyInit()
