@@ -9,7 +9,7 @@ use strict;
 use Lemonldap::NG::Portal::Simple;
 use MIME::Base64;
 
-our $VERSION = '0.991';
+our $VERSION = '0.992';
 our $initDone;
 
 ## @apmethod int init()

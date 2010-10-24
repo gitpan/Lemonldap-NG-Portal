@@ -23,6 +23,7 @@
             var autocomplete='<TMPL_VAR NAME="AUTOCOMPLETE">';
             var login='<TMPL_VAR NAME="LOGIN">';
             var newwindow='<TMPL_VAR NAME="NEWWINDOW">';
+            var antiframe='<TMPL_VAR NAME="ANTIFRAME">';
         //]]></script>
         <script type="text/javascript" src="/skins/common/portal.js"></script>
 </head>

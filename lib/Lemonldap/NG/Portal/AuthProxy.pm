@@ -12,7 +12,7 @@ use Lemonldap::NG::Portal::_WebForm;
 use Lemonldap::NG::Portal::Simple;
 use base qw(Lemonldap::NG::Portal::_WebForm Lemonldap::NG::Portal::_Proxy);
 
-our $VERSION = '0.991';
+our $VERSION = '0.992';
 
 ## @apmethod int authInit()
 # Call Lemonldap::NG::Portal::_Proxy::proxyInit();
@@ -100,7 +100,7 @@ Xavier Guimard, E<lt>x.guimard@free.frE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009 by Xavier Guimard
+Copyright (C) 2009, 2010 by Xavier Guimard
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.10.0 or,

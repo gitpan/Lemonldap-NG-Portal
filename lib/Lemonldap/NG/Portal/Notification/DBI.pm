@@ -9,7 +9,7 @@ use strict;
 use Time::Local;
 use DBI;
 
-our $VERSION = '0.991';
+our $VERSION = '0.992';
 
 ## @method boolean prereq()
 # Check if DBI parameters are set.

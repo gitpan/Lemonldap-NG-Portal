@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_SAML;
 our @ISA = qw(Lemonldap::NG::Portal::_SAML);
 
-our $VERSION = '0.991';
+our $VERSION = '0.992';
 
 ## @method void issuerDBInit()
 # Load and check SAML configuration
@@ -2075,7 +2075,7 @@ Clément Oudot, E<lt>coudot@linagora.comE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009 by Clément Oudot
+Copyright (C) 2009, 2010 by Clément Oudot
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.10.0 or,

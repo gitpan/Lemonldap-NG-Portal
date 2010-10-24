@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_LibAccess;
 use base qw(Lemonldap::NG::Portal::_LibAccess);
 
-our $VERSION = '0.991';
+our $VERSION = '0.992';
 our $catlevel = 0;
 
 ## @method void menuInit()
@@ -555,7 +555,7 @@ L<http://forge.objectweb.org/project/showfiles.php?group_id=274>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2005-2007 by Clement OUDOT E<lt>clement@oodo.netE<gt>
+Copyright (C) 2005, 2007, 2010 by Clement OUDOT E<lt>clement@oodo.netE<gt>
 E<lt>coudot@linagora.comE<gt>
 
 This library is free software; you can redistribute it and/or modify

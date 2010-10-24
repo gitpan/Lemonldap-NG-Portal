@@ -9,7 +9,7 @@ use strict;
 use Lemonldap::NG::Portal::Simple;
 use utf8;
 
-our $VERSION = '0.991';
+our $VERSION = '0.992';
 
 ## @method array display()
 # Call portal process and set template parameters
@@ -37,6 +37,7 @@ sub display {
         %templateParams = (
             PORTAL_URL => $self->{portal},
             LOGOUT_URL => $self->{portal} . "?logout=1",
+            ANTIFRAME  => $self->{portalAntiFrame},
             URL        => $self->{urldc},
             SKIN       => $self->{portalSkin},
             ERROR403   => $error403,
@@ -65,6 +66,7 @@ sub display {
             $skinfile       = 'info.tpl';
             %templateParams = (
                 AUTH_ERROR_TYPE => $self->error_type,
+                ANTIFRAME       => $self->{portalAntiFrame},
                 MSG             => $info,
                 SKIN            => $skin,
                 URL             => $self->{urldc},
@@ -87,6 +89,7 @@ sub display {
             %templateParams = (
                 AUTH_USER       => $auth_user,
                 AUTOCOMPLETE    => $self->{portalAutocomplete},
+                ANTIFRAME       => $self->{portalAntiFrame},
                 SKIN            => $skin,
                 AUTH_ERROR      => $self->error( undef, $self->{menuError} ),
                 AUTH_ERROR_TYPE => $self->error_type( $self->{menuError} ),
@@ -109,6 +112,7 @@ sub display {
         $skinfile       = 'notification.tpl';
         %templateParams = (
             AUTH_ERROR_TYPE => $self->error_type,
+            ANTIFRAME       => $self->{portalAntiFrame},
             NOTIFICATION    => $notif,
             SKIN            => $skin,
             HIDDEN_INPUTS   => $self->buildHiddenForm(),
@@ -124,6 +128,7 @@ sub display {
             AUTH_ERROR      => $self->error,
             AUTH_ERROR_TYPE => $self->error_type,
             AUTH_URL        => $self->get_url,
+            ANTIFRAME       => $self->{portalAntiFrame},
             MSG             => $self->info(),
             SKIN            => $skin,
             HIDDEN_INPUTS   => $self->buildHiddenForm(),
@@ -141,6 +146,7 @@ sub display {
         %templateParams = (
             AUTH_ERROR      => $self->error,
             AUTH_ERROR_TYPE => $self->error_type,
+            ANTIFRAME       => $self->{portalAntiFrame},
             MSG             => $info,
             SKIN            => $skin,
             URL             => $self->{urldc},
@@ -162,6 +168,7 @@ sub display {
         %templateParams = (
             AUTH_ERROR      => $self->error,
             AUTH_ERROR_TYPE => $self->error_type,
+            ANTIFRAME       => $self->{portalAntiFrame},
             SKIN            => $skin,
             PROVIDERURI     => $p,
             ID              => $self->{_openidPortal}
@@ -179,6 +186,7 @@ sub display {
             AUTH_ERROR            => $self->error,
             AUTH_ERROR_TYPE       => $self->error_type,
             AUTH_URL              => $self->get_url,
+            ANTIFRAME             => $self->{portalAntiFrame},
             LOGIN                 => $self->get_user,
             AUTOCOMPLETE          => $self->{portalAutocomplete},
             SKIN                  => $skin,
@@ -252,6 +260,10 @@ sub display {
             or $self->{error} == PE_SAML_SESSION_ERROR
             or $self->{error} == PE_SAML_LOAD_SP_ERROR
             or $self->{error} == PE_SAML_ATTR_ERROR
+            or $self->{error} == PE_OPENID_EMPTY
+            or $self->{error} == PE_OPENID_BADID
+            or $self->{error} == PE_MISSINGREQATTR
+            or $self->{error} == PE_BADPARTNER
             or $self->{error} == PE_LOGOUT_OK )
         {
             %templateParams = (
@@ -326,7 +338,7 @@ L<http://forge.objectweb.org/project/showfiles.php?group_id=274>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2005-2010 by Xavier Guimard E<lt>x.guimard@free.frE<gt>,
+Copyright (C) 2005, 2010 by Xavier Guimard E<lt>x.guimard@free.frE<gt>,
 Clement Oudot E<lt>clement@oodo.netE<gt>
 
 This library is free software; you can redistribute it and/or modify

@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::UserDBDBI;
 use strict;
 use Lemonldap::NG::Portal::Simple;
 
-our $VERSION = '0.991';
+our $VERSION = '0.992';
 
 ## @apmethod int userDBInit()
 # Set default values
@@ -52,8 +52,8 @@ sub getUser {
     my $sth;
 
     eval {
-        $sth = $dbh->prepare("SELECT * FROM $table WHERE $pivot='$user'");
-        $sth->execute();
+        $sth = $dbh->prepare("SELECT * FROM $table WHERE $pivot=?");
+        $sth->execute($user);
     };
     if ($@) {
         $self->lmLog( "DBI error: $@", 'error' );
@@ -122,9 +122,8 @@ sub setUserDBValue {
     my $sth;
 
     eval {
-        $sth =
-          $dbh->prepare("UPDATE $table SET $key = $value WHERE $pivot='$user'");
-        $sth->execute();
+        $sth = $dbh->prepare("UPDATE $table SET $key = $value WHERE $pivot=?");
+        $sth->execute($user);
     };
 
     # Check result

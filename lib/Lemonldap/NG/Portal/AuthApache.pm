@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::AuthApache;
 use strict;
 use Lemonldap::NG::Portal::Simple;
 
-our $VERSION = '0.991';
+our $VERSION = '0.992';
 
 ## @apmethod int authInit()
 # @return Lemonldap::NG::Portal constant
@@ -143,7 +143,7 @@ L<http://forge.objectweb.org/project/showfiles.php?group_id=274>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2007 by Thomas Chemineau,
+Copyright (C) 2007, 2010 by Thomas Chemineau,
 E<lt>thomas.chemineau@linagora.comE<gt> and
 Xavier Guimard E<lt>x.guimard@free.frE<gt>
 

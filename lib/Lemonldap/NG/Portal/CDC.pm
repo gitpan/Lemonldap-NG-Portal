@@ -11,7 +11,7 @@ use MIME::Base64;
 use Lemonldap::NG::Portal::SharedConf;    # inherits
 use Lemonldap::NG::Portal::_SAML;         # inherits
 
-our $VERSION = '0.991';
+our $VERSION = '0.992';
 our @ISA = qw(Lemonldap::NG::Portal::_SAML Lemonldap::NG::Portal::SharedConf);
 
 ## @method int process()
@@ -194,8 +194,7 @@ L<http://forge.objectweb.org/project/showfiles.php?group_id=274>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2005-2009 by Xavier Guimard E<lt>x.guimard@free.frE<gt> and
-Clement Oudot, E<lt>clement@oodo.netE<gt>
+Copyright (C) 2010 by Clement Oudot, E<lt>clement@oodo.netE<gt>
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.4 or,

@@ -62,7 +62,7 @@ use Digest::MD5;
 #inherits Apache::Session
 #link Lemonldap::NG::Common::Apache::Session::SOAP protected globalStorage
 
-our $VERSION = '0.991';
+our $VERSION = '0.992';
 
 use base qw(Lemonldap::NG::Common::CGI Exporter);
 our @ISA;
@@ -812,6 +812,7 @@ sub getApacheSession {
 # @return hashed value
 sub _md5hash {
     my ( $self, $s ) = splice @_;
+    $s ||= '';
     return substr( Digest::MD5::md5_hex($s), 0, 32 );
 }
 
@@ -2593,7 +2594,7 @@ L<http://forge.objectweb.org/project/showfiles.php?group_id=274>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2005-2009 by Xavier Guimard E<lt>x.guimard@free.frE<gt> and
+Copyright (C) 2005, 2009, 2010 by Xavier Guimard E<lt>x.guimard@free.frE<gt> and
 Clement Oudot, E<lt>coudot@linagora.comE<gt>
 
 This library is free software; you can redistribute it and/or modify

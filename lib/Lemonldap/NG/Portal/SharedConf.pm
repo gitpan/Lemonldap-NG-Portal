@@ -14,7 +14,7 @@ use Lemonldap::NG::Common::Conf::Constants; #inherits
 *EXPORT_TAGS = *Lemonldap::NG::Portal::Simple::EXPORT_TAGS;
 *EXPORT      = *Lemonldap::NG::Portal::Simple::EXPORT;
 
-our $VERSION = '0.991';
+our $VERSION = '0.992';
 use base qw(Lemonldap::NG::Portal::Simple);
 our $confCached;
 
@@ -205,7 +205,7 @@ L<http://forge.objectweb.org/project/showfiles.php?group_id=274>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2005-2007 by Xavier Guimard E<lt>x.guimard@free.frE<gt> and
+Copyright (C) 2005, 2007, 2010 by Xavier Guimard E<lt>x.guimard@free.frE<gt> and
 Thomas Chemineau, E<lt>thomas.chemineau@linagora.comE<gt>
 
 This library is free software; you can redistribute it and/or modify

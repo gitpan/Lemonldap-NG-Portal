@@ -1,26 +1,42 @@
 /**
- * Lemonldap::NG Portal jQuery scripts
+ * LemonLDAP::NG Portal jQuery scripts
  */
 
 /* Used variables
  * - displaytab
+ * - choicetab
  * - autocomplete
  * - login
  * - newwindow
+ * - antiframe
  */
 
 /* Set autocomplete real value */
 if(autocomplete.match('1')){autocomplete='on';}
 if(autocomplete.match('0')){autocomplete='off';}
 
+/* Set antiframe value (default is true) */
+if(antiframe.match('0')){antiframe=false;}else{antiframe=true};
+
 /* jQuery */
 $(document).ready(function(){
+
+	/* AntiFrame script */
+	if(antiframe && top!=self){
+		top.location.href = location.href;
+	}
+
+	/* Display message */
 	$("div.message").fadeIn('slow');
+
+	/* Set timezone */
 	$("input[name=timezone]").val( -(new Date().getTimezoneOffset()/60) );
+
+	/* Menu tabs */
 	$("#menu").tabs({ fx: { opacity: 'toggle' } });
 	$("#menu").tabs("select",displaytab);
 
-	/* Authentication choice */
+	/* Authentication choice tabs */
 	$("#authMenu").tabs({
 		fx: {opacity: 'toggle'},
 		cookie: {name: 'lemonldapauthchoice'},
@@ -31,32 +47,17 @@ $(document).ready(function(){
 	});
 	$("#authMenu").tabs("select",choicetab);
 
+	/* Focus on first visible input */
 	$("input[type!=hidden]:first").focus();
+	if(login){ $("input[type=password]:first").focus(); }
+
+	/* Password autocompletion */
 	$("input[type='password']").attr("autocomplete",autocomplete);
 
-	/*
-	$("#appslist li[class!=catname]").hover(
-		function(){
-			var appid = $(this).attr("title");
-			$("div.appsdesc").hide();
-			$("div#" + appid).show();
-		},
-		function() {
-			var appid = $(this).attr("title");
-			// Show parent application if this was a sub application
-			if ( $("#appslist li[title="+appid+"]").parent().parent().hasClass("appname") ) {
-				var parentappid = $("#appslist li[title="+appid+"]").parent().parent().attr("title");
-				$("div.appsdesc").hide();
-				$("div#" + parentappid).show();
-			}
-		}
-	);
-	*/
-
-	if(login){ $("input[type=password]:first").focus(); }
+	/* Open links in new windows */
 	if(newwindow){ $('#appslist a[href^="http://"]').attr("target", "_blank"); }
 
-	// Complete removeOther link
+	/* Complete removeOther link */
 	if ($("p.removeOther").length) {
 		var action = $("form.login").attr("action");
 		var method = $("form.login").attr("method");
@@ -81,6 +82,11 @@ $(document).ready(function(){
 	}
 });
 
+/* function boolean isHiddenFormValueSet(string option)
+ * Check if an hidden option is set
+ * @param option Option name
+ * @return true if option is set, false else
+ */
 function isHiddenFormValueSet(option){
 	if($('#lmhidden_'+option).length){
 		return true;
@@ -88,3 +94,4 @@ function isHiddenFormValueSet(option){
 		return false;
 	}
 }
+
