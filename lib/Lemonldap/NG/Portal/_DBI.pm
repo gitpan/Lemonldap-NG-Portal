@@ -12,7 +12,7 @@ use strict;
 
 our @EXPORT = qw(dbh);
 
-our $VERSION = '0.992';
+our $VERSION = '1.0.0';
 
 ## @method protected Lemonldap::NG::Portal::_DBI dbh(string dbiChain, string dbiUser, string dbiPassword)
 # Create connection to database
@@ -55,7 +55,7 @@ sub hash_password {
 
     if ( $hash =~ /^(md5|sha|sha1)$/i ) {
         $self->lmLog( "Using " . uc($hash) . " to hash password", 'debug' );
-        return uc($hash) . "('$password')";
+        return uc($hash) . "($password)";
     }
     else {
         $self->lmLog( "No valid password hash, using clear text for password",
@@ -80,12 +80,12 @@ sub check_password {
     my $passwordCol = $self->{dbiAuthPasswordCol};
 
     # Password hash
-    $password = $self->hash_password( $password, $self->{dbiAuthPasswordHash} );
+    my $passwordsql = $self->hash_password( "?", $self->{dbiAuthPasswordHash} );
 
     my @rows = ();
     eval {
         my $sth = $dbh->prepare(
-            "SELECT $loginCol FROM $table WHERE $loginCol=? AND $passwordCol=?"
+"SELECT $loginCol FROM $table WHERE $loginCol=? AND $passwordCol=$passwordsql"
         );
         $sth->execute( $user, $password );
         @rows = $sth->fetchrow_array();
@@ -122,10 +122,13 @@ sub modify_password {
 
     my $table = $self->{dbiAuthTable};
 
+    # Password hash
+    my $passwordsql = $self->hash_password( "?", $self->{dbiAuthPasswordHash} );
+
     eval {
         my $sth =
-          $self->{_dbh}
-          ->prepare("UPDATE $table SET $passwordCol=? WHERE $userCol=?");
+          $self->{_dbh}->prepare(
+            "UPDATE $table SET $passwordCol=$passwordsql WHERE $userCol=?");
         $sth->execute( $password, $user );
     };
     if ($@) {

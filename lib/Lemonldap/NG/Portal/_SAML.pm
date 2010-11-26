@@ -19,11 +19,16 @@ use Encode;            # Encode attribute values
 # Special comments for doxygen
 #inherits Lemonldap::NG::Common::Conf::SAML::Metadata protected service_metadata
 
-our $VERSION = '0.992';
+our $VERSION = '1.0.0';
 our $samlCache;
 our $initGlibDone;
 
 BEGIN {
+    eval {
+        require threads::shared;
+        threads::shared::share($samlCache);
+        threads::shared::share($initGlibDone);
+    };
 
     # Load Glib if available
     eval 'use Glib;';
@@ -86,7 +91,7 @@ sub loadLasso {
     }
 
     if (BADLASSO) {
-        $self->lmLog( 'Lasso version >= 2.2.91 required', 'error' );
+        $self->lmLog( 'Lasso version >= 2.3.0 required', 'error' );
         return 0;
     }
 

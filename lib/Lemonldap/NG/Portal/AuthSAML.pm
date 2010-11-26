@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_SAML;    #inherits
 use Lemonldap::NG::Common::Conf::SAML::Metadata;
 
-our $VERSION = '0.992';
+our $VERSION = '1.0.0';
 our @ISA     = qw(Lemonldap::NG::Portal::_SAML);
 
 ## @apmethod int authInit()
@@ -1273,7 +1273,7 @@ sub authLogout {
 
     # Get Lasso Server
     unless ( $self->{_lassoServer} ) {
-        $self->_sub('authInit');
+        $self->_sub('Lemonldap::NG::Portal::AuthSAML::authInit');
     }
 
     my $server = $self->{_lassoServer};

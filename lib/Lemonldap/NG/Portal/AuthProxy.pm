@@ -12,7 +12,7 @@ use Lemonldap::NG::Portal::_WebForm;
 use Lemonldap::NG::Portal::Simple;
 use base qw(Lemonldap::NG::Portal::_WebForm Lemonldap::NG::Portal::_Proxy);
 
-our $VERSION = '0.992';
+our $VERSION = '1.0.0';
 
 ## @apmethod int authInit()
 # Call Lemonldap::NG::Portal::_Proxy::proxyInit();
@@ -91,8 +91,7 @@ accept SOAP requests ("Soap=>1").
 
 =head1 SEE ALSO
 
-L<http://lemonldap.objectweb.org/>
-L<http://wiki.lemonldap.objectweb.org/xwiki/bin/view/NG/AuthProxy>
+L<http://lemonldap-ng.org/>
 
 =head1 AUTHOR
 

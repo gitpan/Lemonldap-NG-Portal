@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::Notification::File;
 use strict;
 use MIME::Base64;
 
-our $VERSION = '0.992';
+our $VERSION = '1.0.0';
 
 ## @method boolean prereq()
 # Check if parameters are set and if storage directory exists.

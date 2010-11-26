@@ -54,9 +54,11 @@ if ( defined $conf->{globalStorage}
     $module = $conf->{globalStorage};
     eval "use $module";
     die $@ if ($@);
+    $conf->{globalStorageOptions}->{backend} = $module;
+    $module = 'Lemonldap::NG::Common::Apache::Session';
 
     # Add module in managed backends
-    push @backends, [ $conf->{globalStorage}, $conf->{globalStorageOptions} ];
+    push @backends, [ $module, $conf->{globalStorageOptions} ];
 
     print "Session backend $module will be used\n" if $debug;
 }
@@ -71,9 +73,11 @@ if (    defined $conf->{samlStorage}
     $module = $conf->{samlStorage};
     eval "use $module";
     die $@ if ($@);
+    $conf->{samlStorageOptions}->{backend} = $module;
+    $module = 'Lemonldap::NG::Common::Apache::Session';
 
     # Add module in managed backends
-    push @backends, [ $conf->{samlStorage}, $conf->{samlStorageOptions} ];
+    push @backends, [ $module, $conf->{samlStorageOptions} ];
 
     print "SAML backend $module will be used\n" if $debug;
 }
@@ -120,9 +124,10 @@ for my $backend (@backends) {
     }
 
     # Remove lock files for File backend
-    if ( $storage =~ /^Apache::Session::(?:Browseable::)?File$/i ) {
+    if ( $options->{backend} =~ /^Apache::Session::(?:Browseable::)?File$/i ) {
     require Apache::Session::Lock::File;
     my $l = new Apache::Session::Lock::File;
+	die $options->{LockDirectory} || $options->{Directory};
 	my $lock_directory = $options->{LockDirectory} || $options->{Directory};
         $l->clean( $lock_directory, $conf->{timeout} );
     }

@@ -14,6 +14,16 @@ use constant SAFEWRAP => ( Safe->can("wrap_code_ref") ? 1 : 0 );
 our ( $defaultCondition, $locationCondition, $locationRegexp, $cfgNum ) =
   ( undef, undef, undef, 0 );
 
+BEGIN {
+    eval {
+        require threads::shared;
+        threads::shared::share($defaultCondition);
+        threads::shared::share($locationCondition);
+        threads::shared::share($locationRegexp);
+        threads::shared::share($cfgNum);
+    };
+}
+
 ## @method private boolean _grant(string uri)
 # Check user's authorization for $uri.
 # @param $uri URL string

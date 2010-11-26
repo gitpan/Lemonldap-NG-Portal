@@ -43,7 +43,7 @@ example/skins/common/error.png
 example/skins/common/favicon.ico
 example/skins/common/inputicons.css
 example/skins/common/jquery-1.4.2.min.js
-example/skins/common/jquery-ui-1.7.2.custom.min.js
+example/skins/common/jquery-ui-1.8.5.custom.min.js
 example/skins/common/jquery.base64.js
 example/skins/common/jquery.cookie.js
 example/skins/common/key.png
@@ -82,6 +82,7 @@ example/skins/dark/password.tpl
 example/skins/dark/standardform.tpl
 example/skins/impact/authmessage.tpl
 example/skins/impact/confirm.tpl
+example/skins/impact/css/styles.css
 example/skins/impact/error.tpl
 example/skins/impact/footer.tpl
 example/skins/impact/header.tpl
@@ -92,8 +93,6 @@ example/skins/impact/images/logo-lock.png
 example/skins/impact/images/logo-ok.png
 example/skins/impact/images/logo-warn.png
 example/skins/impact/images/logo_lemonldap-ng_400px.png
-example/skins/impact/impact.css
-example/skins/impact/impact.js
 example/skins/impact/info.tpl
 example/skins/impact/login.tpl
 example/skins/impact/mail.tpl
@@ -121,6 +120,7 @@ example/skins/pastel/openidform.tpl
 example/skins/pastel/password.tpl
 example/skins/pastel/standardform.tpl
 example/slavePortal.pl
+example/soapconfigtest.pl
 example/soaptest.pl
 lib/Lemonldap/NG/Portal.pm
 lib/Lemonldap/NG/Portal/_CAS.pm

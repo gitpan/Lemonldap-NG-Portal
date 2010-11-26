@@ -34,11 +34,6 @@
 	<TMPL_IF NAME="Appslist">
 		<div id="appslist">
 
-		<!-- Plain HTML (no loops)
-		<TMPL_VAR NAME="APPSLIST_MENU">
-		<TMPL_VAR NAME="APPSLIST_DESC">
-		-->
-
 		<TMPL_LOOP NAME="APPSLIST_LOOP">
 		<!-- Template loops -->
 
@@ -166,5 +161,9 @@
 	</div>
 
 	</div>
-
+<!-- Keep session alive -->
+<script type="text/javascript">
+	scriptname='<TMPL_VAR NAME="SCRIPT_NAME">';
+	setTimeout('ping();',60000);
+</script>
 <TMPL_INCLUDE NAME="footer.tpl">

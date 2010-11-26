@@ -10,8 +10,15 @@ use Lemonldap::NG::Portal::Simple;
 use MIME::Base64;
 use SOAP::Lite;
 
-our $VERSION = '0.992';
+our $VERSION = '1.0.0';
 our $initDone;
+
+BEGIN {
+    eval {
+        require threads::shared;
+        threads::shared::share($initDone);
+    };
+}
 
 ## @apmethod int proxyInit()
 # Checks if remote portal parameters are set.

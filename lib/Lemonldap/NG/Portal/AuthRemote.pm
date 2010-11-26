@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::_Remote;
 use Lemonldap::NG::Portal::Simple;
 use base qw(Lemonldap::NG::Portal::_Remote);
 
-our $VERSION = '0.992';
+our $VERSION = '1.0.0';
 
 *authInit = *Lemonldap::NG::Portal::_Remote::init;
 
@@ -115,8 +115,7 @@ a remote portal.
 
 =head1 SEE ALSO
 
-L<http://lemonldap.objectweb.org/>
-L<http://wiki.lemonldap.objectweb.org/xwiki/bin/view/NG/AuthRemote>
+L<http://lemonldap-ng.org/>
 
 =head1 AUTHOR
 

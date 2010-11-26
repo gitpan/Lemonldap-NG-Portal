@@ -12,7 +12,7 @@ use base qw(Lemonldap::NG::Portal::_DBI );
 
 #inherits Lemonldap::NG::Portal::_SMTP
 
-our $VERSION = '0.992';
+our $VERSION = '1.0.0';
 
 ## @apmethod int passwordDBInit()
 # Load SMTP functions and call DBI authInit()
@@ -53,15 +53,10 @@ sub modifyPassword {
 
     my $user = $self->{sessionInfo}->{_user};
 
-    # Check old passord
+    # Check old password
     if ( $self->{oldpassword} ) {
 
-        # Password hash
-        my $password =
-          $self->hash_password( $self->{oldpassword},
-            $self->{dbiAuthPasswordHash} );
-
-        my $result = $self->check_password( $user, $password );
+        my $result = $self->check_password( $user, $self->{oldpassword} );
 
         unless ($result) {
             return PE_BADOLDPASSWORD;
@@ -69,11 +64,7 @@ sub modifyPassword {
     }
 
     # Modify password
-    my $password =
-      $self->hash_password( $self->{newpassword},
-        $self->{dbiAuthPasswordHash} );
-
-    my $result = $self->modify_password( $user, $password );
+    my $result = $self->modify_password( $user, $self->{newpassword} );
 
     unless ($result) {
         return PE_ERROR;
@@ -106,10 +97,8 @@ sub resetPassword {
     $self->lmLog( "Generated password: " . $password, 'debug' );
 
     # Modify password
-    my $hpassword =
-      $self->hash_password( $password, $self->{dbiAuthPasswordHash} );
     my $result =
-      $self->modify_password( $self->{mail}, $hpassword,
+      $self->modify_password( $self->{mail}, $password,
         $self->{dbiPasswordMailCol} );
 
     return PE_ERROR unless $result;

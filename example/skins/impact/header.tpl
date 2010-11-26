@@ -6,7 +6,7 @@
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <meta http-equiv="Content-Script-Type" content="text/javascript" />
 	<meta http-equiv="cache-control" content="no-cache" />
-        <link rel="stylesheet" type="text/css" href="/skins/<TMPL_VAR NAME="SKIN">/impact.css" />
+        <link rel="stylesheet" type="text/css" href="/skins/<TMPL_VAR NAME="SKIN">/css/styles.css" />
         <link href="/skins/common/favicon.ico" rel="icon" type="image/x-icon" />
         <link href="/skins/common/favicon.ico" rel="shortcut icon" />
         <TMPL_IF NAME="PROVIDERURI">
@@ -14,7 +14,7 @@
         <link rel="openid2.provider" href="<TMPL_VAR NAME="PROVIDERURI">" />
         </TMPL_IF>
         <script type="text/javascript" src="/skins/common/jquery-1.4.2.min.js"></script>
-        <script type="text/javascript" src="/skins/common/jquery-ui-1.7.2.custom.min.js"></script>
+        <script type="text/javascript" src="/skins/common/jquery-ui-1.8.5.custom.min.js"></script>
         <script type="text/javascript" src="/skins/common/jquery.base64.js"></script>
         <script type="text/javascript" src="/skins/common/jquery.cookie.js"></script>
         <script type="text/javascript">//<![CDATA[
@@ -24,10 +24,7 @@
             var login='<TMPL_VAR NAME="LOGIN">';
             var newwindow='<TMPL_VAR NAME="NEWWINDOW">';
             var antiframe='<TMPL_VAR NAME="ANTIFRAME">';
-            var confirmlogoutmsg='<lang en="Are your sure you want to disconnect?" fr="&Ecirc;tes vous s&ucirc;r de vouloir vous d&eacute;connecter ?" />';
-            var confirmlogouttitle='<lang en="Confirmation" fr="Confirmation" />';
         //]]></script>
-        <script type="text/javascript" src="/skins/<TMPL_VAR NAME="SKIN">/impact.js"></script>
         <script type="text/javascript" src="/skins/common/portal.js"></script>
 </head>
 <body>

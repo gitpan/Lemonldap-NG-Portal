@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::AuthNull;
 use strict;
 use Lemonldap::NG::Portal::Simple;
 
-our $VERSION = '0.992';
+our $VERSION = '1.0.0';
 
 ## @apmethod int authInit()
 # Does nothing
@@ -108,7 +108,7 @@ See L<Lemonldap::NG::Portal::Simple> for usage and other methods.
 =head1 SEE ALSO
 
 L<Lemonldap::NG::Portal>, L<Lemonldap::NG::Portal::Simple>,
-http://wiki.lemonldap.objectweb.org/xwiki/bin/view/NG/Presentation
+L<http://lemonldap-ng.org/>
 
 =head1 AUTHOR
 
@@ -117,7 +117,7 @@ Clement Oudot, E<lt>clement@oodo.netE<gt>
 =head1 BUG REPORT
 
 Use OW2 system to report bug or ask for features:
-L<http://forge.objectweb.org/tracker/?group_id=274>
+L<http://jira.ow2.org>
 
 =head1 DOWNLOAD
 
@@ -129,7 +129,7 @@ L<http://forge.objectweb.org/project/showfiles.php?group_id=274>
 Copyright (C) 2010 by Clement Oudot
 
 This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.8.4 or,
+it under the same terms as Perl itself, either Perl version 5.10.0 or,
 at your option, any later version of Perl 5 you may have available.
 
 =cut

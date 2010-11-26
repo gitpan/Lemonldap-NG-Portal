@@ -13,8 +13,15 @@ use Encode;
 use strict;
 
 our @EXPORT = qw(ldap);
+our $VERSION = '1.0.0';
+our $ppLoaded = 0;
 
-our $VERSION = '0.992';
+BEGIN {
+    eval {
+        require threads::shared;
+        threads::shared::share($ppLoaded);
+    };
+}
 
 ## @cmethod Lemonldap::NG::Portal::_LDAP new(Lemonldap::NG::Portal::Simple portal)
 # Build a Net::LDAP object using parameters issued from $portal
@@ -104,8 +111,6 @@ sub bind {
     }
     return $mesg;
 }
-
-our $ppLoaded = 0;
 
 ## @method private boolean loadPP ()
 # Load Net::LDAP::Control::PasswordPolicy

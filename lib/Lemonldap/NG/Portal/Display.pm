@@ -9,7 +9,7 @@ use strict;
 use Lemonldap::NG::Portal::Simple;
 use utf8;
 
-our $VERSION = '0.992';
+our $VERSION = '1.0.0';
 
 ## @method array display()
 # Call portal process and set template parameters
@@ -99,6 +99,7 @@ sub display {
                 DISPLAY_MODULES     => $self->{menuDisplayModules},
                 APPSLIST_MENU => $self->{menuAppslistMenu},  # For old templates
                 APPSLIST_DESC => $self->{menuAppslistDesc},  # For old templates
+                SCRIPT_NAME   => $ENV{SCRIPT_NAME},
             );
 
         }
@@ -342,7 +343,7 @@ Copyright (C) 2005, 2010 by Xavier Guimard E<lt>x.guimard@free.frE<gt>,
 Clement Oudot E<lt>clement@oodo.netE<gt>
 
 This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.8.4 or,
+it under the same terms as Perl itself, either Perl version 5.10.0 or,
 at your option, any later version of Perl 5 you may have available.
 
 =cut

@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::UserDBOpenID;
 use strict;
 use Lemonldap::NG::Portal::Simple;
 
-our $VERSION = '0.992';
+our $VERSION = '1.0.0';
 
 ## @apmethod int userDBInit()
 # Check if authentication module is OpenID

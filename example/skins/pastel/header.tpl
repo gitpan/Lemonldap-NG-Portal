@@ -14,7 +14,7 @@
         <link rel="openid2.provider" href="<TMPL_VAR NAME="PROVIDERURI">" />
         </TMPL_IF>
         <script type="text/javascript" src="/skins/common/jquery-1.4.2.min.js"></script>
-        <script type="text/javascript" src="/skins/common/jquery-ui-1.7.2.custom.min.js"></script>
+        <script type="text/javascript" src="/skins/common/jquery-ui-1.8.5.custom.min.js"></script>
         <script type="text/javascript" src="/skins/common/jquery.base64.js"></script>
         <script type="text/javascript" src="/skins/common/jquery.cookie.js"></script>
         <script type="text/javascript">//<![CDATA[

@@ -7,7 +7,7 @@
 
 
 body {
-  background:#F0F0F0 url("images/bg.png") repeat-x;
+  background:#F0F0F0 url("../images/bg.png") repeat-x;
   font-size: 0.8em;
   font-family:Arial, Helvetica, Verdana;
 }
@@ -35,7 +35,7 @@ form input[name=user] {
   border: 1px solid #aaa;
   padding: 5px;
   width: 200px;
-  background: #FFFFFF url("../common/user_suit.png") 5px 5px no-repeat;
+  background: #FFFFFF url("../../common/user_suit.png") 5px 5px no-repeat;
   padding-left: 25px;
 }
 
@@ -43,7 +43,7 @@ form input[type=password] {
   border: 1px solid #aaa;
   padding: 5px;
   width: 200px;
-  background: #FFFFFF url("../common/key.png") 5px 5px no-repeat;
+  background: #FFFFFF url("../../common/key.png") 5px 5px no-repeat;
   padding-left: 25px;
 }
 
@@ -51,7 +51,7 @@ form input[name=mail] {
   border: 1px solid #aaa;
   padding: 5px;
   width: 200px;
-  background: #FFFFFF url("../common/email.png") 5px 5px no-repeat;
+  background: #FFFFFF url("../../common/email.png") 5px 5px no-repeat;
   padding-left: 25px;
 }
 
@@ -59,7 +59,7 @@ form input[name=openid_identifier] {
   border: 1px solid #aaa;
   padding: 5px;
   width: 200px;
-  background: #FFFFFF url("../common/openid-16x16.gif") 5px 5px no-repeat;
+  background: #FFFFFF url("../../common/openid-16x16.gif") 5px 5px no-repeat;
   padding-left: 25px;
 }
 
@@ -144,7 +144,6 @@ div.authLogo {
 
 #content-all {
   padding: 10px;
-  height: 322px;
 }
 
 #content-all table {
@@ -169,7 +168,6 @@ div.authLogo {
 
 #content-all-info2 {
   text-align: center;
-  height: 165px;
   padding: 10px;
   margin-bottom: 15px;
   background-color: #D5EFD1;
@@ -211,7 +209,6 @@ div.authLogo {
 }
 
 #content-right {
-  height: 320px;
   margin-left: 400px;
   padding: 10px;
   background-color: #D5EFD1;
@@ -262,16 +259,56 @@ div.authLogo {
 /* Applications layer                                                         */
 /* -------------------------------------------------------------------------- */
 
-#appslist ul.category {
-  display: none;
+.clearfix {
+	clear:both;
 }
 
-#appslist div.appsdesc {
-  display: none;
+div.category {
+	border:1px solid #B5CFB6;
+	-moz-border-radius:10px 10px 10px 10px;
+	-webkit-border-radius:10px 10px 10px 10px;
+	margin:10px 50px;
+	padding:0;
+	clear:both;
 }
 
-#appsselector {
-  width: 300px;
+div.category h3.catname {
+	background-color:#C7DFC3;
+	-moz-border-radius:10px 10px 0 0;
+	margin:0;
+	padding:10px;
+}
+
+div.application {
+	margin:10px;
+	padding:5px;
+	float:left;
+	width:200px;
+}
+
+div.application:hover {
+	background:#C7DFC3;
+}
+
+div.application img.applogo {
+	width:32px;
+	height:32px;
+	float:left;
+}
+
+div.application h4.appname {
+	text-align:left;
+	padding:0 5px;
+	margin:0 0 0 40px;
+}
+
+div.application p.appdesc {
+	text-align:left;
+	padding:0 5px;
+	margin:0 0 0 40px;
+	text-size:8pt;
+	color:#000;
+	font-style:italic;
 }
 
 /* -------------------------------------------------------------------------- */

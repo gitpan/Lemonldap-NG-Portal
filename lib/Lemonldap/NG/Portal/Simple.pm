@@ -62,7 +62,7 @@ use Digest::MD5;
 #inherits Apache::Session
 #link Lemonldap::NG::Common::Apache::Session::SOAP protected globalStorage
 
-our $VERSION = '0.992';
+our $VERSION = '1.0.0';
 
 use base qw(Lemonldap::NG::Common::CGI Exporter);
 our @ISA;
@@ -191,6 +191,13 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our $safe;
 our $self;    # Safe cannot share a variable declared with my
 
+BEGIN {
+    eval {
+        require threads::shared;
+        threads::shared::share($safe);
+    };
+}
+
 ##@cmethod Lemonldap::NG::Portal::Simple new(hashRef args)
 # Class constructor.
 #@param args hash reference
@@ -218,10 +225,10 @@ sub new {
         "You've to indicate a an Apache::Session storage module !" )
       unless ( $self->{globalStorage} );
     unless ( $self->{globalStorage}->can('populate') ) {
-    eval "require " . $self->{globalStorage};
-    $self->abort( "Configuration error",
-        "Module " . $self->{globalStorage} . " not found in \@INC" )
-      if ($@);
+        eval "require " . $self->{globalStorage};
+        $self->abort( "Configuration error",
+            "Module " . $self->{globalStorage} . " not found in \@INC" )
+          if ($@);
     }
 
     # Use LemonLDAP::NG custom Apache::Session
@@ -235,10 +242,10 @@ sub new {
     foreach my $otherStorage ( $self->{samlStorage}, $self->{casStorage} ) {
         if ( $otherStorage ne $self->{globalStorage} ) {
             eval "require " . $otherStorage;
-        $self->abort( "Configuration error",
+            $self->abort( "Configuration error",
                 "Module " . $otherStorage . " not found in \@INC" )
-          if ($@);
-    }
+              if ($@);
+        }
     }
 
     # 2. Domain
@@ -539,7 +546,7 @@ sub setDefaultValues {
 
     # SAML
     $self->{samlIdPResolveCookie} ||= $self->{cookieName} . "idp";
-    $self->{samlStorage}          ||= $self->{globalStorage};
+    $self->{samlStorage} ||= $self->{globalStorage};
     if ( !$self->{samlStorageOptions} or !%{ $self->{samlStorageOptions} } ) {
         $self->{samlStorageOptions} = $self->{globalStorageOptions};
     }
@@ -555,7 +562,7 @@ sub setDefaultValues {
       unless defined $self->{samlAuthnContextMapKerberos};
 
     # CAS
-    $self->{casStorage}        ||= $self->{globalStorage};
+    $self->{casStorage} ||= $self->{globalStorage};
     if ( !$self->{casStorageOptions} or !%{ $self->{casStorageOptions} } ) {
         $self->{casStorageOptions} = $self->{globalStorageOptions};
     }
@@ -812,7 +819,6 @@ sub getApacheSession {
 # @return hashed value
 sub _md5hash {
     my ( $self, $s ) = splice @_;
-    $s ||= '';
     return substr( Digest::MD5::md5_hex($s), 0, 32 );
 }
 
@@ -1524,6 +1530,7 @@ sub controlExistingSession {
                 $self->_subProcess(qw(autoPost)) if ( $self->{postUrl} );
 
                 # Display logout message
+                untie %$h;
                 return PE_LOGOUT_OK;
             }
 
@@ -1534,6 +1541,13 @@ sub controlExistingSession {
                 $self->_sub( 'removeOther', $id );
             }
             untie %$h;
+
+            # Special ajax request "ping" to check if session is available
+            if ( $self->param('ping') ) {
+                print $self->header( -type => 'application/json' )
+                  . '{"auth":true}';
+                $self->quit();
+            }
             $self->{id} = $id;
 
             # A session has been found => call existingSession
@@ -1552,6 +1566,10 @@ sub controlExistingSession {
 
     # Display logout success if logout asked
     # and we do not have valid session
+    if ( $self->param('ping') ) {
+        print $self->header( -type => 'application/json' ) . '{"auth":false}';
+        $self->quit();
+    }
     return PE_LOGOUT_OK if $self->param('logout');
 
     # Else continue authentication process
@@ -1749,6 +1767,8 @@ sub setPersistentSessionInfo {
 
     # Do not restore infos if session already opened
     unless ( $self->{id} ) {
+        my $key = $self->{sessionInfo}->{ $self->{whatToTrace} };
+        return PE_OK unless ( $key and length($key) );
         my $h =
           $self->getApacheSession(
             $self->_md5hash( $self->{sessionInfo}->{ $self->{whatToTrace} } ),
@@ -2576,7 +2596,7 @@ find the user distinguished name (dn) was refused by the server
 =head1 SEE ALSO
 
 L<Lemonldap::NG::Handler>, L<Lemonldap::NG::Portal::SharedConf>, L<CGI>,
-http://wiki.lemonldap.objectweb.org/xwiki/bin/view/NG/Presentation
+L<http://lemonldap-ng.org/>
 
 =head1 AUTHOR
 
@@ -2585,7 +2605,7 @@ Xavier Guimard, E<lt>x.guimard@free.frE<gt>
 =head1 BUG REPORT
 
 Use OW2 system to report bug or ask for features:
-L<http://forge.objectweb.org/tracker/?group_id=274>
+L<http://jira.ow2.org>
 
 =head1 DOWNLOAD
 
@@ -2598,7 +2618,7 @@ Copyright (C) 2005, 2009, 2010 by Xavier Guimard E<lt>x.guimard@free.frE<gt> and
 Clement Oudot, E<lt>coudot@linagora.comE<gt>
 
 This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.8.4 or,
+it under the same terms as Perl itself, either Perl version 5.10.0 or,
 at your option, any later version of Perl 5 you may have available.
 
 =cut

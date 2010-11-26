@@ -9,8 +9,15 @@ use Lemonldap::NG::Portal::Simple;
 use base qw(Lemonldap::NG::Portal::_WebForm Lemonldap::NG::Portal::_DBI);
 use strict;
 
-our $VERSION = '0.992';
+our $VERSION = '1.0.0';
 our $initDone;
+
+BEGIN {
+    eval {
+        require threads::shared;
+        threads::shared::share($initDone);
+    };
+}
 
 ## @apmethod int authInit()
 # Check DBI paramaters

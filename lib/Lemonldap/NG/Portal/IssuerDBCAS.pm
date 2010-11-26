@@ -10,7 +10,7 @@ use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_CAS;
 use base qw(Lemonldap::NG::Portal::_CAS);
 
-our $VERSION = '0.992';
+our $VERSION = '1.0.0';
 
 ## @method void issuerDBInit()
 # Nothing to do
@@ -726,8 +726,8 @@ CAS Issuer implementation in LemonLDAP::NG
 
 =head1 SEE ALSO
 
-L<Lemonldap::NG::Portal>
-http://www.jasig.org/cas/protocol
+L<Lemonldap::NG::Portal>,
+L<http://www.jasig.org/cas/protocol>
 
 =head1 AUTHOR
 

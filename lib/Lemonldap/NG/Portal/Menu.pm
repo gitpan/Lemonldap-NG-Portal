@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_LibAccess;
 use base qw(Lemonldap::NG::Portal::_LibAccess);
 
-our $VERSION = '0.992';
+our $VERSION = '1.0.0';
 our $catlevel = 0;
 
 ## @method void menuInit()
@@ -535,9 +535,7 @@ Lemonldap::NG::Portal::Menu is used to build menu.
 
 =head1 SEE ALSO
 
-L<Lemonldap::NG::Portal>,
-http://wiki.lemonldap.objectweb.org/xwiki/bin/view/NG/EnhancedMenu
-http://wiki.lemonldap.objectweb.org/xwiki/bin/view/NG/Presentation
+L<Lemonldap::NG::Portal>, L<http://lemonldap-ng.org/>
 
 =head1 AUTHOR
 
@@ -546,7 +544,7 @@ Clement OUDOT E<lt>clement@oodo.netE<gt> E<lt>coudot@linagora.comE<gt>
 =head1 BUG REPORT
 
 Use OW2 system to report bug or ask for features:
-L<http://forge.objectweb.org/tracker/?group_id=274>
+L<http://jira.ow2.org>
 
 =head1 DOWNLOAD
 
@@ -559,7 +557,7 @@ Copyright (C) 2005, 2007, 2010 by Clement OUDOT E<lt>clement@oodo.netE<gt>
 E<lt>coudot@linagora.comE<gt>
 
 This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.8.4 or,
+it under the same terms as Perl itself, either Perl version 5.10.0 or,
 at your option, any later version of Perl 5 you may have available.
 
 =cut

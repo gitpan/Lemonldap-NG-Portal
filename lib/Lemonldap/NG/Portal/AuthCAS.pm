@@ -9,8 +9,15 @@ use strict;
 use Lemonldap::NG::Portal::Simple;
 use URI::Escape;
 
-our $VERSION = '0.992';
+our $VERSION = '1.0.0';
 our $initDone;
+
+BEGIN {
+    eval {
+        require threads::shared;
+        threads::shared::share($initDone);
+    };
+}
 
 ## @apmethod int authInit()
 # Try to load AuthCAS perl module
@@ -58,7 +65,10 @@ sub extractFormInfo {
     }
 
     # Act as a proxy if proxied services configured
-    my $proxy = ref( $self->{CAS_proxiedServices} ) ? 1 : 0;
+    my $proxy =
+      ref( $self->{CAS_proxiedServices} ) eq 'HASH'
+      ? ( %{ $self->{CAS_proxiedServices} } ? 1 : 0 )
+      : 0;
 
     if ($proxy) {
         $self->lmLog( "CAS: Proxy mode activated", 'debug' );
@@ -269,7 +279,7 @@ See L<Lemonldap::NG::Portal::Simple> for usage and other methods.
 =head1 SEE ALSO
 
 L<Lemonldap::NG::Portal>, L<Lemonldap::NG::Portal::Simple>,
-http://wiki.lemonldap.objectweb.org/xwiki/bin/view/NG/Presentation
+L<http://lemonldap-ng.org/>
 
 =head1 AUTHOR
 
@@ -278,7 +288,7 @@ Xavier Guimard, E<lt>x.guimard@free.frE<gt>
 =head1 BUG REPORT
 
 Use OW2 system to report bug or ask for features:
-L<http://forge.objectweb.org/tracker/?group_id=274>
+L<http://jira.ow2.org>
 
 =head1 DOWNLOAD
 
@@ -290,7 +300,7 @@ L<http://forge.objectweb.org/project/showfiles.php?group_id=274>
 Copyright (C) 2007, 2010 by Xavier Guimard E<lt>x.guimard@free.frE<gt>
 
 This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.8.4 or,
+it under the same terms as Perl itself, either Perl version 5.10.0 or,
 at your option, any later version of Perl 5 you may have available.
 
 =cut

@@ -13,7 +13,7 @@ use Safe;
 use constant SAFEWRAP => ( Safe->can("wrap_code_ref") ? 1 : 0 );
 use base qw(Lemonldap::NG::Portal::_LibAccess);
 
-our $VERSION = '0.992';
+our $VERSION = '1.0.0';
 
 ## @method void startSoapServices()
 # Check the URI requested (PATH_INFO environment variable) and launch the
@@ -170,7 +170,7 @@ sub setAttributes {
 # @return hashref serialized in SOAP by SOAP::Lite
 sub getConfig {
     my $self = shift;
-    my $conf = $self->_getLmConf() or die("No configuration available");
+    my $conf = $self->{lmConf}->getConf() or die("No configuration available");
     return $conf;
 }
 
@@ -225,8 +225,9 @@ sub get_key_from_all_sessions {
     no strict 'refs';
     return $self->{globalStorage}
       ->get_key_from_all_sessions( $self->{globalStorageOptions}, @_ );
-    return &{"$tmp\::get_key_from_all_sessions"}( $self->{globalStorage},
-        $self->{globalStorageOptions}, @_ );
+
+    #return &{"$tmp\::get_key_from_all_sessions"}( $self->{globalStorage},
+    #    $self->{globalStorageOptions}, @_ );
 }
 
 =begin WSDL

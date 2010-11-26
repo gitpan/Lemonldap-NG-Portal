@@ -9,15 +9,8 @@
 	<TMPL_IF AUTH_LOOP>
 
 	<!-- Authentication loop -->
-	<form action="#" method="post" class="login">
 		
-	<!-- Hidden fields -->
-		<TMPL_VAR NAME="HIDDEN_INPUTS">
-	<input type="hidden" name="url" value="<TMPL_VAR NAME="AUTH_URL">" />
-	<input type="hidden" name="timezone" />
-	<input type="hidden" id="authKey" name="<TMPL_VAR NAME="CHOICE_PARAM">" value="" />
-
-	<!-- tabs -->
+	<!-- Choice tabs -->
 	<div id="authMenu">
 	<ul>
 	<TMPL_LOOP NAME="AUTH_LOOP">
@@ -30,6 +23,14 @@
 	<TMPL_LOOP NAME="AUTH_LOOP">
 
 	<div id="<TMPL_VAR NAME="key">">
+
+	<form action="#" method="post" class="login">
+
+	<!-- Hidden fields -->
+	<TMPL_VAR NAME="HIDDEN_INPUTS">
+	<input type="hidden" name="url" value="<TMPL_VAR NAME="AUTH_URL">" />
+	<input type="hidden" name="timezone" />
+	<input type="hidden" id="authKey" name="<TMPL_VAR NAME="CHOICE_PARAM">" value="<TMPL_VAR NAME="key">" />
 
         <TMPL_IF NAME="standardform">
 
@@ -69,11 +70,11 @@
 
 	</TMPL_IF>
 
+        </form>
+
 	</div>
 
 	</TMPL_LOOP>
-
-        </form>
 
         </TMPL_IF>
 

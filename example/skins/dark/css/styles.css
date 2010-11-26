@@ -94,11 +94,11 @@ color:#000;
 }
 
 #logincontent form {
-height:330px;
+height:230px;
 }
 
 #mailcontent form {
-height:300px;
+height:200px;
 }
 
 #mailcontent div.link {
@@ -114,8 +114,10 @@ float:left;
 }
 
 #authMenu {
+background:#E4E4E4;
+opacity:0.9;
+margin: 20px -100px 20px 250px;
 text-align:center;
-background:#FFF;
 padding:5px;
 font-size:9pt;
 -moz-border-radius:10px 10px 10px 10px;
