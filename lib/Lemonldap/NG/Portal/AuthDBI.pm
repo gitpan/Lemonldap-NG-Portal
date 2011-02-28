@@ -9,7 +9,7 @@ use Lemonldap::NG::Portal::Simple;
 use base qw(Lemonldap::NG::Portal::_WebForm Lemonldap::NG::Portal::_DBI);
 use strict;
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.0.2';
 our $initDone;
 
 BEGIN {
@@ -38,6 +38,8 @@ sub authInit {
         return PE_ERROR;
     }
 
+    $self->{_authnLevel} = $self->{dbiAuthnLevel};
+
     $initDone = 1;
     PE_OK;
 }
@@ -47,7 +49,6 @@ sub authInit {
 #@return Lemonldap::NG::Portal constant
 sub authenticate {
     my $self = shift;
-    $self->{_authnLevel} = $self->{dbiAuthnLevel};
 
     # Connect
     my $dbh =

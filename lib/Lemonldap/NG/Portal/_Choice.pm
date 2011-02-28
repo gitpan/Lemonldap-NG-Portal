@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::_Choice;
 
 use Lemonldap::NG::Portal::Simple;
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.0.2';
 
 ## @cmethod Lemonldap::NG::Portal::_Choice new(Lemonldap::NG::Portal::Simple portal)
 # Constructor
@@ -131,7 +131,24 @@ package Lemonldap::NG::Portal::Simple;
 # @return Lemonldap::NG::Portal::_Choice object
 sub _choice {
     my $self = shift;
+
+    # Check if choice is already built
     return $self->{_choice} if ( $self->{_choice} );
+
+    # Get authentication choice
+    $self->{_authChoice} = $self->param( $self->{authChoiceParam} );
+
+    # Check XSS Attack
+    $self->{_authChoice} = ""
+      if (  $self->{_authChoice}
+        and
+        $self->checkXSSAttack( $self->{authChoiceParam}, $self->{_authChoice} )
+      );
+
+    $self->lmLog( "Authentication choice found: " . $self->{_authChoice},
+        'debug' )
+      if $self->{_authChoice};
+
     return $self->{_choice} = Lemonldap::NG::Portal::_Choice->new($self);
 }
 

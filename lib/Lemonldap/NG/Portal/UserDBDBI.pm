@@ -7,7 +7,7 @@ package Lemonldap::NG::Portal::UserDBDBI;
 
 use strict;
 use Lemonldap::NG::Portal::Simple;
-use Lemonldap::NG::Portal::_DBI; #inherits
+use Lemonldap::NG::Portal::_DBI;    #inherits
 
 our $VERSION = '1.0.0';
 

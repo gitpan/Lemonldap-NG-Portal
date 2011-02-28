@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::AuthApache;
 use strict;
 use Lemonldap::NG::Portal::Simple;
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.0.1';
 
 ## @apmethod int authInit()
 # @return Lemonldap::NG::Portal constant
@@ -83,7 +83,7 @@ __END__
 
 =encoding utf8
 
-Lemonldap::NG::Portal::Apache - Perl extension for building Lemonldap::NG
+Lemonldap::NG::Portal::AuthApache - Perl extension for building Lemonldap::NG
 compatible portals with Apache authentication.
 
 =head1 SYNOPSIS

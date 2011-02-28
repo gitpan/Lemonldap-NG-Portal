@@ -10,6 +10,7 @@
       <TMPL_IF NAME="DISPLAY_FORM">
       <p class="text-error"><TMPL_VAR NAME="AUTH_ERROR"></p>
       <form action="#" method="post" class="login">
+      <input type="hidden" id="authKey" name="<TMPL_VAR NAME="CHOICE_PARAM">" value="<TMPL_VAR NAME="CHOICE_VALUE">" />
       <div id="content-all-info">
         <table>
           <tr>

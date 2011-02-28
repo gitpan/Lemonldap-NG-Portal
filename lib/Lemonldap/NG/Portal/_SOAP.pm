@@ -9,11 +9,9 @@ use strict;
 use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_LibAccess;
 require SOAP::Lite;
-use Safe;
-use constant SAFEWRAP => ( Safe->can("wrap_code_ref") ? 1 : 0 );
 use base qw(Lemonldap::NG::Portal::_LibAccess);
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.0.2';
 
 ## @method void startSoapServices()
 # Check the URI requested (PATH_INFO environment variable) and launch the

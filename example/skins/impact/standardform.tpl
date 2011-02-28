@@ -19,7 +19,7 @@
 
       <TMPL_IF NAME="DISPLAY_RESETPASSWORD">
       <p>
-        <img src="/skins/<TMPL_VAR NAME="SKIN">/images/arrow.png" /><a href="<TMPL_VAR NAME="MAIL_URL">"><lang en="Reset my password" fr="R&eacute;initialiser mon mot de passe"/></a>
+        <img src="/skins/<TMPL_VAR NAME="SKIN">/images/arrow.png" /><a href="<TMPL_VAR NAME="MAIL_URL"><TMPL_IF NAME="key">?<TMPL_VAR NAME="CHOICE_PARAM">=<TMPL_VAR NAME="key"></TMPL_IF>"><lang en="Reset my password" fr="R&eacute;initialiser mon mot de passe"/></a>
       </p>
       </TMPL_IF>
 

@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::MailReset;
 use strict;
 use warnings;
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.0.2';
 
 use Lemonldap::NG::Portal::Simple qw(:all);
 use base qw(Lemonldap::NG::Portal::SharedConf Exporter);
@@ -152,6 +152,8 @@ sub sendConfirmationMail {
 
     # Build confirmation url
     my $url = $self->{mailUrl} . "?mail_token=" . $self->{id};
+    $url .= '&' . $self->{authChoiceParam} . '=' . $self->{_authChoice}
+      if ( $self->{_authChoice} );
 
     # Build mail content
     my $subject = $self->{mailConfirmSubject};
@@ -166,7 +168,7 @@ sub sendConfirmationMail {
 
         # Use HTML template
         my $template = HTML::Template->new(
-            filename => $ENV{DOCUMENT_ROOT} . "skins/common/mail_confirm.tpl",
+            filename => $self->getApacheHtdocsPath() . "skins/common/mail_confirm.tpl",
             filter   => sub { $self->translate_template(@_) }
         );
         $body = $template->output();
@@ -203,7 +205,7 @@ sub sendPasswordMail {
 
         # Use HTML template
         my $template = HTML::Template->new(
-            filename => $ENV{DOCUMENT_ROOT} . "skins/common/mail_password.tpl",
+            filename => $self->getApacheHtdocsPath() . "skins/common/mail_password.tpl",
             filter   => sub { $self->translate_template(@_) }
         );
         $body = $template->output();

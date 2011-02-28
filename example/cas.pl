@@ -1,3 +1,5 @@
+#!/usr/bin/perl
+
 # CAS sample client
 use strict;
 use CGI;

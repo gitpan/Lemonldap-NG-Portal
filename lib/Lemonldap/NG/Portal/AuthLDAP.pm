@@ -10,7 +10,7 @@ use Lemonldap::NG::Portal::_LDAP 'ldap';    #link protected ldap
 use Lemonldap::NG::Portal::_WebForm;
 use Lemonldap::NG::Portal::UserDBLDAP;      #inherits
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.0.2';
 use base qw(Lemonldap::NG::Portal::_WebForm);
 
 *_formateFilter = *Lemonldap::NG::Portal::UserDBLDAP::formateFilter;
@@ -32,7 +32,6 @@ sub authInit {
 # @return Lemonldap::NG::Portal constant
 sub authenticate {
     my $self = shift;
-    $self->{_authnLevel} = $self->{ldapAuthnLevel};
 
     unless ( $self->ldap ) {
         return PE_LDAPCONNECTFAILED;

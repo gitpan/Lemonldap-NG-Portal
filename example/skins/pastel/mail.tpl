@@ -10,6 +10,8 @@
 
         <form action="#" method="post" class="login">
 
+        <input type="hidden" id="authKey" name="<TMPL_VAR NAME="CHOICE_PARAM">" value="<TMPL_VAR NAME="CHOICE_VALUE">" />
+
         <h3><lang en="Forgot your password?" fr="Mot de passe oubli&eacute; ?"/></h3>
 
                 <table>

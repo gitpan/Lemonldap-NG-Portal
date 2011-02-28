@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::AuthNull;
 use strict;
 use Lemonldap::NG::Portal::Simple;
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.0.1';
 
 ## @apmethod int authInit()
 # Does nothing
@@ -71,8 +71,8 @@ __END__
 
 =encoding utf8
 
-Lemonldap::NG::Portal::Apache - Perl extension for building Lemonldap::NG
-compatible portals with Apache authentication.
+Lemonldap::NG::Portal::AuthNull - Perl extension for building Lemonldap::NG
+compatible portals with no authentication.
 
 =head1 SYNOPSIS
 

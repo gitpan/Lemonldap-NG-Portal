@@ -9,7 +9,7 @@ use strict;
 use Lemonldap::NG::Portal::Simple;
 use utf8;
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.0.2';
 
 ## @method array display()
 # Call portal process and set template parameters
@@ -18,7 +18,7 @@ sub display {
     my $self = shift;
 
     my $skin     = $self->{portalSkin};
-    my $skin_dir = $ENV{DOCUMENT_ROOT} . "/skins";
+    my $skin_dir = $self->getApacheHtdocsPath() . "/skins";
     my ( $skinfile, %templateParams );
     my $http_error = $self->param('lmError');
 
@@ -89,6 +89,7 @@ sub display {
             %templateParams = (
                 AUTH_USER       => $auth_user,
                 AUTOCOMPLETE    => $self->{portalAutocomplete},
+                NEWWINDOW       => $self->{portalOpenLinkInNewWindow},
                 ANTIFRAME       => $self->{portalAntiFrame},
                 SKIN            => $skin,
                 AUTH_ERROR      => $self->error( undef, $self->{menuError} ),
@@ -228,7 +229,10 @@ sub display {
                 REQUIRE_OLDPASSWORD   => 1,
                 DISPLAY_PASSWORD      => 1,
                 DISPLAY_RESETPASSWORD => 0,
-                DISPLAY_FORM          => 0
+                DISPLAY_FORM          => 0,
+                AUTH_LOOP             => [],
+                CHOICE_PARAM          => $self->{authChoiceParam},
+                CHOICE_VALUE          => $self->{_authChoice},
             );
         }
 
@@ -239,6 +243,7 @@ sub display {
                 DISPLAY_RESETPASSWORD => 0,
                 DISPLAY_FORM          => 0,
                 DISPLAY_OPENID_FORM   => 1,
+                AUTH_LOOP             => [],
             );
         }
 

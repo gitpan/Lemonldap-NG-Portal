@@ -127,7 +127,6 @@ for my $backend (@backends) {
     if ( $options->{backend} =~ /^Apache::Session::(?:Browseable::)?File$/i ) {
     require Apache::Session::Lock::File;
     my $l = new Apache::Session::Lock::File;
-	die $options->{LockDirectory} || $options->{Directory};
 	my $lock_directory = $options->{LockDirectory} || $options->{Directory};
         $l->clean( $lock_directory, $conf->{timeout} );
     }

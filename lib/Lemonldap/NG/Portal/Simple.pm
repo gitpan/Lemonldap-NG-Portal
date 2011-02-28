@@ -11,15 +11,16 @@ use warnings;
 use Exporter 'import';
 
 use warnings;
+use File::Basename;
 use MIME::Base64;
 use Lemonldap::NG::Common::CGI;
 use CGI::Cookie;
 require POSIX;
 use Lemonldap::NG::Portal::_i18n;      #inherits
-use Lemonldap::NG::Common::Safelib;    #link protected safe Safe object
 use Lemonldap::NG::Common::Apache::Session
   ;    #link protected session Apache::Session object
-use Safe;
+use Lemonldap::NG::Common::Safe;    #link protected safe Safe object
+use Lemonldap::NG::Common::Safelib;
 use Digest::MD5;
 
 # Special comments for doxygen
@@ -62,7 +63,7 @@ use Digest::MD5;
 #inherits Apache::Session
 #link Lemonldap::NG::Common::Apache::Session::SOAP protected globalStorage
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.0.2';
 
 use base qw(Lemonldap::NG::Common::CGI Exporter);
 our @ISA;
@@ -187,9 +188,8 @@ our %EXPORT_TAGS = ( 'all' => [ @EXPORT, 'import' ], );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
-# Secure jail
+# Share secure jail between threads
 our $safe;
-our $self;    # Safe cannot share a variable declared with my
 
 BEGIN {
     eval {
@@ -480,7 +480,7 @@ sub setDefaultValues {
       unless ( defined( $self->{portalDisplayChangePassword} ) );
     $self->{portalDisplayAppslist} = 1
       unless ( defined( $self->{portalDisplayAppslist} ) );
-    $self->{portalAutocomplete} ||= "off";
+    $self->{portalAutocomplete} ||= 0;
     $self->{portalRequireOldPassword} = 1
       unless ( defined( $self->{portalRequireOldPassword} ) );
     $self->{portalOpenLinkInNewWindow} = 0
@@ -580,6 +580,7 @@ sub setDefaultValues {
 
     # Other
     $self->{logoutServices} ||= {};
+    $self->{useSafeJail} = 1 unless defined $self->{useSafeJail};
 
 }
 
@@ -811,6 +812,15 @@ sub getApacheSession {
         $self->{id} = $h{_session_id};
     }
     return \%h;
+}
+
+##@method string getApacheHtdocsPath()
+# Return the absolute path to the htdocs directory where is portal script.
+# @return path string
+sub getApacheHtdocsPath {
+  my $self = shift;
+  my ( $name, $path, $suffix ) = fileparse( $ENV{SCRIPT_FILENAME} );
+  return $path;
 }
 
 ## @method protected string _md5hash(string s)
@@ -1081,7 +1091,10 @@ sub get_module {
 sub safe {
     my $self = shift;
     return $safe if ($safe);
-    $safe = new Safe;
+
+    $safe = Lemonldap::NG::Common::Safe->new($self);
+
+    # Get custom functions
     my @t =
       $self->{customFunctions}
       ? split( /\s+/, $self->{customFunctions} )
@@ -1100,10 +1113,17 @@ sub safe {
             }";
         $self->lmLog( $@, 'error' ) if ($@);
     }
+
+    # Share %ENV
     $safe->share_from( 'main', ['%ENV'] );
+
+    # Share Safelib
     $safe->share_from( 'Lemonldap::NG::Common::Safelib',
         $Lemonldap::NG::Common::Safelib::functions );
+
+    # Share custom functions and &encode_base64
     $safe->share( '&encode_base64', @t );
+
     return $safe;
 }
 
@@ -1726,15 +1746,13 @@ sub setSessionInfo {
     PE_OK;
 }
 
-##@apmethod int setMacro()
+##@apmethod int setMacros()
 # Macro mechanism.
 # * store macro results in $self->{sessionInfo}
 #@return Lemonldap::NG::Portal constant
 sub setMacros {
-    local $self = shift;
-    $self->safe->share('$self');
+    my $self = shift;
     while ( my ( $n, $e ) = each( %{ $self->{macros} } ) ) {
-        $e =~ s/\$(?!ENV)(\w+)/\$self->{sessionInfo}->{$1}/g;
         $self->{sessionInfo}->{$n} = $self->safe->reval($e);
     }
     PE_OK;
@@ -1745,11 +1763,9 @@ sub setMacros {
 # * store all groups name that the user match in $self->{sessionInfo}->{groups}
 #@return Lemonldap::NG::Portal constant
 sub setLocalGroups {
-    local $self = shift;
+    my $self = shift;
     my $groups;
-    $self->safe->share('$self');
     while ( my ( $group, $expr ) = each %{ $self->{groups} } ) {
-        $expr =~ s/\$(\w+)/\$self->{sessionInfo}->{$1}/g;
         $groups .= $group . $self->{multiValuesSeparator}
           if ( $self->safe->reval($expr) );
     }
@@ -1927,7 +1943,6 @@ sub grantSession {
 
     # Eval grantSessionRule
     my $grantSessionRule = $self->{grantSessionRule};
-    $grantSessionRule =~ s/\$(\w+)/\$self->{sessionInfo}->{$1}/g;
 
     unless ( $self->safe->reval($grantSessionRule) ) {
         $self->lmLog(
@@ -2060,7 +2075,6 @@ sub issuerForAuthUser {
     my $rule = $self->{ 'issuerDB' . $issuerDBtype . 'Rule' };
 
     if ( defined $rule ) {
-        $rule =~ s/\$(\w+)/\$self->{sessionInfo}->{$1}/g;
 
         $self->lmLog( "Applying rule: $rule", 'debug' );
 

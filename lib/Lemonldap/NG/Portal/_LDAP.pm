@@ -12,8 +12,8 @@ use Lemonldap::NG::Portal::Simple;
 use Encode;
 use strict;
 
-our @EXPORT = qw(ldap);
-our $VERSION = '1.0.0';
+our @EXPORT   = qw(ldap);
+our $VERSION  = '1.0.0';
 our $ppLoaded = 0;
 
 BEGIN {

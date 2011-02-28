@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::Simple;
 
 #inherits Lemonldap::NG::Portal::_Choice
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.0.2';
 
 ## @apmethod int authInit()
 # Build authentication loop
@@ -22,20 +22,6 @@ sub authInit {
 
     # Build authLoop
     $self->{authLoop} = $self->_buildAuthLoop();
-
-    # Get authentication choice
-    $self->{_authChoice} = $self->param( $self->{authChoiceParam} );
-
-    # Check XSS Attack
-    $self->{_authChoice} = ""
-      if (  $self->{_authChoice}
-        and
-        $self->checkXSSAttack( $self->{authChoiceParam}, $self->{_authChoice} )
-      );
-
-    $self->lmLog( "Authentication choice found: " . $self->{_authChoice},
-        'debug' )
-      if $self->{_authChoice};
 
     return $self->_choice->try( 'authInit', 0 );
 }

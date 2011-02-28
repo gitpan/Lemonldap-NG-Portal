@@ -1,3 +1,4 @@
+use 5.008;
 use ExtUtils::MakeMaker;
 
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
@@ -24,6 +25,7 @@ WriteMakefile(
     PREREQ_PM => {
         'Apache::Session'        => 0,
         'CGI'                    => 3.08,
+        'File::Basename'         => 0,
         'HTML::Template'         => 0,
         'Lemonldap::NG::Common'  => 0.96,
         'Lemonldap::NG::Handler' => 0.93,

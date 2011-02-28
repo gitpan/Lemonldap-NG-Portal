@@ -26,6 +26,8 @@ $template->param( PORTAL_URL      => "$portal_url" );
 $template->param( SKIN            => "$skin" );
 $template->param( AUTH_ERROR      => $portal->error );
 $template->param( AUTH_ERROR_TYPE => $portal->error_type );
+$template->param( CHOICE_PARAM    => $portal->{authChoiceParam} );
+$template->param( CHOICE_VALUE    => $portal->{_authChoice} );
 
 # Display form the first time
 $template->param( DISPLAY_FORM => 1 )

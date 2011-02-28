@@ -14,7 +14,7 @@ use Lemonldap::NG::Common::Conf::Constants; #inherits
 *EXPORT_TAGS = *Lemonldap::NG::Portal::Simple::EXPORT_TAGS;
 *EXPORT      = *Lemonldap::NG::Portal::Simple::EXPORT;
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.0.2';
 use base qw(Lemonldap::NG::Portal::Simple);
 our $confCached;
 
@@ -44,13 +44,19 @@ sub getConf {
     }
 
     my $num = $self->__lmConf->lastCfg;
+
     unless ( $confCached and $confCached->{cfgNum} == $num ) {
         %$confCached = (
-            %{ $self->__lmConf->getConf( cfgNum => $num ) },
+            %{ $self->__lmConf->getConf( { cfgNum => $num } ) },
             %{ $self->__lmConf->getLocalConf(PORTALSECTION) },
         );
     }
+
     %$self = ( %$self, %$confCached, %args, );
+
+    $self->lmLog( "Now using configuration: " . $confCached->{cfgNum},
+        'debug' );
+
     1;
 }
 

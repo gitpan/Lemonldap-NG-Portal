@@ -6,9 +6,8 @@
 package Lemonldap::NG::Portal::_LibAccess;
 
 use strict;
-use Lemonldap::NG::Common::Safelib;    #link protected safe Safe object
-use Safe;
-use constant SAFEWRAP => ( Safe->can("wrap_code_ref") ? 1 : 0 );
+
+our $VERSION = '1.0.2';
 
 # Global variables
 our ( $defaultCondition, $locationCondition, $locationRegexp, $cfgNum ) =
@@ -94,15 +93,8 @@ sub _conditionSub {
       if ( $cond =~ /^(?:accept|unprotect)$/i );
     return sub { 0 }
       if ( $cond =~ /^(?:deny$|logout)/i );
-    $cond =~ s/\$date/&POSIX::strftime("%Y%m%d%H%M%S",localtime())/e;
-    $cond =~ s/\$(\w+)/\$self->{sessionInfo}->{$1}/g;
     my $sub = "sub {my \$self = shift; return ( $cond )}";
-    $sub = (
-        SAFEWRAP
-        ? $self->safe->wrap_code_ref( $self->safe->reval($sub) )
-        : $self->safe->reval($sub)
-    );
-    return $sub;
+    return $self->safe->reval($sub);
 }
 
 1;

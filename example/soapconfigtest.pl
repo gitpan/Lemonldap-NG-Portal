@@ -16,10 +16,10 @@ my $soap =
 $soap->default_ns('urn:Lemonldap/NG/Common/CGI/SOAPService');
 
 # Call SOAP methods
-my $lastCfg = $soap->call( 'lastCfg' )->result();
-print "Last configuration:\n". Dumper $lastCfg;
+my $lastCfg = $soap->call('lastCfg')->result();
+print "Last configuration:\n" . Dumper $lastCfg;
 
-my $config = $soap->call( 'getConfig' )->result();
-print "Configuration data:\n". Dumper $config;
+my $config = $soap->call('getConfig')->result();
+print "Configuration data:\n" . Dumper $config;
 
 exit;

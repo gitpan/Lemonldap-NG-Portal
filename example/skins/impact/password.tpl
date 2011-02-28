@@ -1,5 +1,6 @@
         <div id="password">
         <form action="#" method="post" class="password">
+        <input type="hidden" id="authKey" name="<TMPL_VAR NAME="CHOICE_PARAM">" value="<TMPL_VAR NAME="CHOICE_VALUE">" />
         <h3><lang en="Change your password" fr="Changez votre mot de passe" /></h3>
         <table>
         <TMPL_IF NAME="LOGIN">

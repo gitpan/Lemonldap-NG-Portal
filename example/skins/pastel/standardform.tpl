@@ -21,10 +21,10 @@
                 <TMPL_IF NAME="DISPLAY_RESETPASSWORD">
                 <tr><td colspan="2">
                 <div class="buttons">
-                <button class="positive" tabindex="5" onclick="$(location).attr('href','<TMPL_VAR NAME="MAIL_URL">');return false">
+                <a class="positive" tabindex="5" href="<TMPL_VAR NAME="MAIL_URL"><TMPL_IF NAME="key">?<TMPL_VAR NAME="CHOICE_PARAM">=<TMPL_VAR NAME="key"></TMPL_IF>">
                         <img src="/skins/common/email.png" alt="" />
                         <lang en="Reset my password" fr="R&eacute;initialiser mon mot de passe"/>
-                </button>
+                </a>
                 </div></td></tr>
                 </TMPL_IF>
                 </table>

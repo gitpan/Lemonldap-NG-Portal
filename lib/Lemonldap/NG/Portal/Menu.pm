@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_LibAccess;
 use base qw(Lemonldap::NG::Portal::_LibAccess);
 
-our $VERSION = '1.0.0';
+our $VERSION  = '1.0.2';
 our $catlevel = 0;
 
 ## @method void menuInit()
@@ -84,7 +84,6 @@ sub displayModules {
     foreach my $module (@modules) {
         my $cond = $self->{ 'portalDisplay' . $module };
         $cond = 1 unless defined $cond;
-        $cond =~ s/\$(\w+)/$self->{sessionInfo}->{$1}/g;
 
         $self->lmLog( "Evaluate condition $cond for module $module", 'debug' );
 
@@ -484,9 +483,11 @@ sub _isCategoryEmpty {
 
         # Temporary store 'options'
         my $tmp_options = $apphash->{options};
+        my $tmp_catname = $apphash->{catname};
 
         delete $apphash->{type};
         delete $apphash->{options};
+        delete $apphash->{catname};
 
         if ( scalar( keys %$apphash ) ) {
 
@@ -494,6 +495,7 @@ sub _isCategoryEmpty {
             # Restore type and options
             $apphash->{type}    = "category";
             $apphash->{options} = $tmp_options;
+            $apphash->{catname} = $tmp_catname;
 
             # Return false
             return 0;
