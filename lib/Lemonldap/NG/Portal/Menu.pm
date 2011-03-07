@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_LibAccess;
 use base qw(Lemonldap::NG::Portal::_LibAccess);
 
-our $VERSION  = '1.0.2';
+our $VERSION  = '1.0.3';
 our $catlevel = 0;
 
 ## @method void menuInit()
@@ -60,11 +60,9 @@ sub menuInit {
         )
       );
 
-    # Application list
-    $self->{menuAppslist}     = $self->appslist();
-    $self->{menuAppslistMenu} = $self->appslistMenu();    # For old templates
-    $self->{menuAppslistDesc} =
-      $self->appslistDescription();                       # For old templates
+    # Application list for old templates
+    $self->{menuAppslistMenu} = $self->appslistMenu();
+    $self->{menuAppslistDesc} = $self->appslistDescription();
 
     return;
 }
@@ -112,10 +110,12 @@ sub appslist {
 
     my $applicationList = $self->{applicationList};
     my $filteredList    = $self->_filter($applicationList);
-    push @$appslist,
-      $self->_buildCategoryHash( "", $applicationList, $catlevel );
+    push @$appslist, $self->_buildCategoryHash( "", $filteredList, $catlevel );
 
-    return $appslist->[0]->{categories};
+    # We must return an ARRAY ref
+    return ( ref $appslist->[0]->{categories} eq "ARRAY" )
+      ? $appslist->[0]->{categories}
+      : [];
 }
 
 ## @method private hashref _buildCategoryHash(string catname,hashref cathash, int catlevel)
@@ -229,7 +229,8 @@ sub appslistMenu {
     # Use configuration to get menu parameters
     my $applicationList = $self->{applicationList};
     my $filteredList    = $self->_filter($applicationList);
-    return $self->_displayConfCategory( "", $applicationList, $catlevel );
+
+    return $self->_displayConfCategory( "", $filteredList, $catlevel );
 }
 
 ## @method string appslistDescription()
@@ -275,7 +276,9 @@ sub _displayConfCategory {
     my $apphash;
     foreach $key ( keys %$cathash ) {
         next if $key =~ /(type|options|catname)/;
-        if ( $cathash->{$key}->{type} eq "application" ) {
+        if (    $cathash->{$key}->{type}
+            and $cathash->{$key}->{type} eq "application" )
+        {
             $apphash->{$key} = $cathash->{$key};
         }
     }
@@ -292,7 +295,9 @@ sub _displayConfCategory {
     # Display subcategories
     foreach $key ( keys %$cathash ) {
         next if $key =~ /(type|options|catname)/;
-        if ( $cathash->{$key}->{type} eq "category" ) {
+        if (    $cathash->{$key}->{type}
+            and $cathash->{$key}->{type} eq "category" )
+        {
             $html .=
               $self->_displayConfCategory( $key, $cathash->{$key}, $catlevel );
         }
@@ -357,7 +362,7 @@ sub _displayConfApplication {
 sub _displayConfDescription {
     my $self = shift;
     my ( $appid, $apphash ) = @_;
-    my $html;
+    my $html = "";
     my $key;
 
     if ( defined $apphash->{type} and $apphash->{type} eq "application" ) {
@@ -426,12 +431,16 @@ sub _filterHash {
 
     foreach $key ( keys %$apphash ) {
         next if $key =~ /(type|options|catname)/;
-        if ( $apphash->{$key}->{type} eq "category" ) {
+        if (    $apphash->{$key}->{type}
+            and $apphash->{$key}->{type} eq "category" )
+        {
 
             # Filter the category
             $self->_filterHash( $apphash->{$key} );
         }
-        if ( $apphash->{$key}->{type} eq "application" ) {
+        if (    $apphash->{$key}->{type}
+            and $apphash->{$key}->{type} eq "application" )
+        {
 
             # Find sub applications and filter them
             foreach $appkey ( keys %{ $apphash->{$key} } ) {
@@ -472,7 +481,9 @@ sub _isCategoryEmpty {
     # Test sub categories
     foreach $key ( keys %$apphash ) {
         next if $key =~ /(type|options|catname)/;
-        if ( $apphash->{$key}->{type} eq "category" ) {
+        if (    $apphash->{$key}->{type}
+            and $apphash->{$key}->{type} eq "category" )
+        {
             delete $apphash->{$key}
               if $self->_isCategoryEmpty( $apphash->{$key} );
         }
