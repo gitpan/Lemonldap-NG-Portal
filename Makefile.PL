@@ -21,14 +21,15 @@ WriteMakefile(
     BUILD_REQUIRES => {
         'Crypt::OpenSSL::X509' => 0,
         'IO::String'           => 0,
+        'SOAP::Lite'           => 0,
     },
     PREREQ_PM => {
         'Apache::Session'        => 0,
         'CGI'                    => 3.08,
         'File::Basename'         => 0,
         'HTML::Template'         => 0,
-        'Lemonldap::NG::Common'  => 1.0.3,
-        'Lemonldap::NG::Handler' => 1.0.3,
+        'Lemonldap::NG::Common'  => '1.0.4',
+        'Lemonldap::NG::Handler' => '1.0.4',
         'MIME::Lite'             => 0,
         'Net::LDAP'              => 0,
         'String::Random'         => 0,

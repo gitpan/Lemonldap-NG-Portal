@@ -16,7 +16,7 @@ use MIME::Base64;
 use Lemonldap::NG::Common::CGI;
 use CGI::Cookie;
 require POSIX;
-use Lemonldap::NG::Portal::_i18n;      #inherits
+use Lemonldap::NG::Portal::_i18n;    #inherits
 use Lemonldap::NG::Common::Apache::Session
   ;    #link protected session Apache::Session object
 use Lemonldap::NG::Common::Safe;    #link protected safe Safe object
@@ -63,7 +63,7 @@ use Digest::MD5;
 #inherits Apache::Session
 #link Lemonldap::NG::Common::Apache::Session::SOAP protected globalStorage
 
-our $VERSION = '1.0.2';
+our $VERSION = '1.0.4';
 
 use base qw(Lemonldap::NG::Common::CGI Exporter);
 our @ISA;
@@ -818,9 +818,9 @@ sub getApacheSession {
 # Return the absolute path to the htdocs directory where is portal script.
 # @return path string
 sub getApacheHtdocsPath {
-  my $self = shift;
-  my ( $name, $path, $suffix ) = fileparse( $ENV{SCRIPT_FILENAME} );
-  return $path;
+    my $self = shift;
+    my ( $name, $path, $suffix ) = fileparse( $ENV{SCRIPT_FILENAME} );
+    return $path;
 }
 
 ## @method protected string _md5hash(string s)
@@ -1090,8 +1090,17 @@ sub get_module {
 #@return Safe object
 sub safe {
     my $self = shift;
-    return $safe if ($safe);
 
+    # Test if safe already exists
+    if ($safe) {
+
+        # Refresh the portal object inside it
+        $safe->{p} = $self;
+
+        return $safe;
+    }
+
+    # Else create it
     $safe = Lemonldap::NG::Common::Safe->new($self);
 
     # Get custom functions
