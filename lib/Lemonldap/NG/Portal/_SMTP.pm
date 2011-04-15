@@ -9,7 +9,7 @@ use strict;
 use String::Random;
 use MIME::Lite;
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.0.5';
 
 ## @method string gen_password(string regexp)
 # Generate a complex password based on a regular expression
@@ -52,7 +52,11 @@ sub send_mail {
         );
         $message->attr( "content-type" => "text/html; charset=utf-8" ) if $html;
         $self->{SMTPServer}
-          ? $message->send( "smtp", $self->{SMTPServer} )
+          ? $message->send(
+            "smtp", $self->{SMTPServer},
+            AuthUser => $self->{SMTPAuthUser},
+            AuthPass => $self->{SMTPAuthPass}
+          )
           : $message->send();
     };
     if ($@) {

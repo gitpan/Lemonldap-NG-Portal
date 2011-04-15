@@ -10,8 +10,9 @@ use warnings;
 use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_LibAccess;
 use base qw(Lemonldap::NG::Portal::_LibAccess);
+use Clone qw(clone);
 
-our $VERSION  = '1.0.3';
+our $VERSION  = '1.0.5';
 our $catlevel = 0;
 
 ## @method void menuInit()
@@ -61,6 +62,7 @@ sub menuInit {
       );
 
     # Application list for old templates
+    # TODO create an option to activate them, off by default
     $self->{menuAppslistMenu} = $self->appslistMenu();
     $self->{menuAppslistDesc} = $self->appslistDescription();
 
@@ -108,7 +110,7 @@ sub appslist {
     # Reset level
     $catlevel = 0;
 
-    my $applicationList = $self->{applicationList};
+    my $applicationList = clone( $self->{applicationList} );
     my $filteredList    = $self->_filter($applicationList);
     push @$appslist, $self->_buildCategoryHash( "", $filteredList, $catlevel );
 
@@ -227,7 +229,7 @@ sub appslistMenu {
     }
 
     # Use configuration to get menu parameters
-    my $applicationList = $self->{applicationList};
+    my $applicationList = clone( $self->{applicationList} );
     my $filteredList    = $self->_filter($applicationList);
 
     return $self->_displayConfCategory( "", $filteredList, $catlevel );
@@ -249,7 +251,7 @@ sub appslistDescription {
     }
 
     # Use configuration to get menu parameters
-    my $applicationList = $self->{applicationList};
+    my $applicationList = clone( $self->{applicationList} );
     return $self->_displayConfDescription( "", $applicationList );
 }
 

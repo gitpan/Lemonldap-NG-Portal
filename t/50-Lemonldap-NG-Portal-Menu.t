@@ -5,7 +5,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 8;
+use Test::More tests => 9;
 BEGIN { use_ok('Lemonldap::NG::Portal::Menu') }
 
 #########################
@@ -126,4 +126,19 @@ ok( $displayOn != 0,  'Display on' );
 ok( $displayOff == 0, 'Display off' );
 ok( $displayOk != 0,  'Display auto ok' );
 ok( $displayNok == 0, 'Display auto nok' );
+
+# Connect as another user with different rights
+$p->{sessionInfo}->{uid} = "toto";
+my $appLoop2 = $p->appslist();
+my $displayOk2 = 0;
+
+foreach (@$appLoop2) {
+    if ( $_->{catid} eq "test" ) {
+        foreach ( @{ $_->{'applications'} } ) {
+            $displayOk2++ if $_->{appid} eq "testautonok";
+        }
+    }
+}
+
+ok( $displayOk2 != 0,  'Display auto ok for different user' );
 

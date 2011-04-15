@@ -28,13 +28,14 @@ WriteMakefile(
         'CGI'                    => 3.08,
         'File::Basename'         => 0,
         'HTML::Template'         => 0,
-        'Lemonldap::NG::Common'  => '1.0.4',
-        'Lemonldap::NG::Handler' => '1.0.4',
+        'Lemonldap::NG::Common'  => '1.0.5',
+        'Lemonldap::NG::Handler' => '1.0.5',
         'MIME::Lite'             => 0,
         'Net::LDAP'              => 0,
         'String::Random'         => 0,
         'XML::LibXML'            => 0,
         'XML::LibXSLT'           => 0,
+        'Clone'                  => 0,
     },
     (
         $] >= 5.005
