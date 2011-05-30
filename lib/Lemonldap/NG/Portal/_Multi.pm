@@ -12,7 +12,7 @@ package Lemonldap::NG::Portal::_Multi;
 
 use Lemonldap::NG::Portal::Simple;
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.0.6';
 
 ## @cmethod Lemonldap::NG::Portal::_Multi new(Lemonldap::NG::Portal::Simple portal)
 # Constructor
@@ -21,10 +21,13 @@ our $VERSION = '1.0.0';
 sub new {
     my ( $class, $portal ) = splice @_;
     my $self = bless { p => $portal, res => PE_NOSCHEME }, $class;
+
+    # Browse authentication and userDB configuration
     my @stack = ( $portal->{authentication}, $portal->{userDB} );
     for ( my $i = 0 ; $i < 2 ; $i++ ) {
         $stack[$i] =~ s/^Multi\s*//;
         foreach my $l ( split /;/, $stack[$i] ) {
+            $l =~ s/^\s+//;                  # Remove first space
             $l =~ /^([\w#]+)(?:\s+(.*))?$/
               or $portal->abort( 'Bad configuration', "Unable to read $l" );
             my ( $mod, $cond ) = ( $1, $2 );
@@ -39,7 +42,16 @@ sub new {
             push @{ $self->{stack}->[$i] },
               { m => $mod, c => $cond, n => $name };
         }
+
+        # Override portal settings
+        %{ $self->{p} } = (
+            %{ $self->{p} },
+            %{ $self->{p}->{multi}->{ $self->{stack}->[$i]->[0]->{n} } }
+        ) if ( $self->{p}->{multi}->{ $self->{stack}->[$i]->[0]->{n} } );
+
     }
+
+    # Return _Multi object
     return $self;
 }
 

@@ -23,6 +23,7 @@ sub info                    { }
 sub _sub                    { }
 sub updatePersistentSession { }
 
+$ENV{HTTP_ACCEPT_LANGUAGE} = 'en';
 SKIP: {
     eval { require Net::OpenID::Server; };
     skip(
