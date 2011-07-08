@@ -8,8 +8,10 @@ package Lemonldap::NG::Portal::_SMTP;
 use strict;
 use String::Random;
 use MIME::Lite;
+use MIME::Base64;
+use Encode;
 
-our $VERSION = '1.0.5';
+our $VERSION = '1.1.0';
 
 ## @method string gen_password(string regexp)
 # Generate a complex password based on a regular expression
@@ -37,20 +39,81 @@ sub send_mail {
     my $body    = shift;
     my $html    = shift;
 
+    # Set charset
+    my $charset = $self->{mailCharset} ? $self->{mailCharset} : "utf-8";
+
+    # Encode the body with the given charset
+    $body = encode( $charset, $body );
+
+    # Debug messages
     $self->lmLog( "SMTP From " . $self->{mailFrom}, 'debug' );
     $self->lmLog( "SMTP To " . $mail,               'debug' );
     $self->lmLog( "SMTP Subject " . $subject,       'debug' );
     $self->lmLog( "SMTP Body " . $body,             'debug' );
     $self->lmLog( "SMTP HTML flag " . ( $html ? "on" : "off" ), 'debug' );
+    $self->lmLog( "SMTP Reply-To " . $self->{mailReplyTo}, 'debug' )
+      if $self->{mailReplyTo};
+
+    # Encode the subject
+    $subject = encode_base64($subject);
+    $subject =~ s/\s//g;
+    $subject = "=?$charset?B?" . $subject . "?=";
+
+    # Detect included images (cid)
+    my %cid = ( $body =~ m/"cid:([^:]+):([^"]+)"/g );
+
+    # Replace cid in body
+    $body =~ s/"cid:([^:]+):([^"]+)"/"cid:$1"/g;
+
     eval {
-        my $message = MIME::Lite->new(
-            From    => $self->{mailFrom},
-            To      => $mail,
-            Subject => $subject,
-            Type    => "TEXT",
-            Data    => $body,
-        );
-        $message->attr( "content-type" => "text/html; charset=utf-8" ) if $html;
+
+        # Create message
+        my $message;
+
+        # HTML case
+        if ($html) {
+            $message = MIME::Lite->new(
+                From       => $self->{mailFrom},
+                To         => $mail,
+                "Reply-To" => $self->{mailReplyTo},
+                Subject    => $subject,
+                Type       => 'multipart/related',
+            );
+
+            # Attach HTML message
+            $message->attach(
+                Type => "text/html; charset=$charset",
+                Data => qq{$body},
+            );
+
+            # Attach included images
+            foreach ( keys %cid ) {
+                $message->attach(
+                    Type => "image/" . ( $cid{$_} =~ m/\.(\w+)/ )[0],
+                    Id => $_,
+                    Path => $self->getApacheHtdocsPath() . "/" . $cid{$_},
+                );
+            }
+        }
+
+        # Plain text case
+        else {
+            $message = MIME::Lite->new(
+                From       => $self->{mailFrom},
+                To         => $mail,
+                "Reply-To" => $self->{mailReplyTo},
+                Subject    => $subject,
+                Type       => 'TEXT',
+                Data       => $body,
+            );
+
+            # Manage content type and charset
+            $message->attr( "content-type"         => "text/plain" );
+            $message->attr( "content-type.charset" => $charset );
+
+        }
+
+        # Send the mail
         $self->{SMTPServer}
           ? $message->send(
             "smtp", $self->{SMTPServer},
@@ -65,6 +128,28 @@ sub send_mail {
     }
 
     return 1;
+}
+
+## @method string getMailSession(string user)
+# Check if a mail session exists
+# @param user the value of the user key in session
+# @return the first session id found or nothing if no session
+sub getMailSession {
+    my ( $self, $user ) = splice @_;
+
+    # Search on mail sessions
+    my $sessions =
+      $self->{globalStorage}
+      ->searchOn( $self->{globalStorageOptions}, "user", $user );
+
+    # Browse found sessions to check if it's a mail session
+    foreach my $id ( keys %$sessions ) {
+        my $h = $self->getApacheSession( $id, 1 ) or next;
+        return $id if ( $h->{_type} =~ /^mail$/ );
+    }
+
+    # No mail session found, return empty string
+    return "";
 }
 
 1;

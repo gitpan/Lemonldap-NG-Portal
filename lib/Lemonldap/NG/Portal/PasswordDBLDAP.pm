@@ -12,7 +12,7 @@ use Lemonldap::NG::Portal::UserDBLDAP;      #inherits
 
 #inherits Lemonldap::NG::Portal::_SMTP
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.1.0';
 
 *_formateFilter = *Lemonldap::NG::Portal::UserDBLDAP::formateFilter;
 *_search        = *Lemonldap::NG::Portal::UserDBLDAP::search;
@@ -63,60 +63,41 @@ sub modifyPassword {
     $self->updateSession($infos)
       if ( $self->{storePassword} and $code == PE_PASSWORD_OK );
 
-    return $code;
-}
+    return $code unless ( $code == PE_PASSWORD_OK );
 
-## @apmethod int resetPassword()
-# Reset the password
-# @return Lemonldap::NG::Portal constant
-sub resetPassword {
-    my $self = shift;
-
-    # Exit method if no mail and mail_token
-    return PE_OK unless ( $self->{mail} && $self->{mail_token} );
-
-    unless ( $self->ldap ) {
-        return PE_LDAPCONNECTFAILED;
-    }
-
-    # Set the dn unless done before
-    unless ( $self->{dn} ) {
-        my $tmp = $self->_subProcess(qw(_formateFilter _search));
-        return $tmp if ($tmp);
-    }
-
-    $self->lmLog( "Reset password request for " . $self->{dn}, 'debug' );
-
-    # Generate a complex password
-    my $password = $self->gen_password( $self->{randomPasswordRegexp} );
-
-    $self->lmLog( "Generated password: " . $password, 'debug' );
-
-    # Call the modify password method
-    my $pe_error =
-      $self->ldap->userModifyPassword( $self->{dn}, $password, $password );
-
-    return $pe_error unless ( $pe_error == PE_PASSWORD_OK );
-
-    # If Password Policy, set the PwdReset flag
-    if ( $self->{ldapPpolicyControl} ) {
-        my $result =
-          $self->ldap->modify( $self->{dn},
-            replace => { 'pwdReset' => 'TRUE' } );
+    # If password policy and force reset, set reset flag
+    if (    $self->{ldapPpolicyControl}
+        and $self->{forceReset}
+        and $self->{ldapUsePasswordResetAttribute} )
+    {
+        my $result = $self->ldap->modify(
+            $self->{dn},
+            replace => {
+                $self->{ldapPasswordResetAttribute} =>
+                  $self->{ldapPasswordResetAttributeValue}
+            }
+        );
 
         unless ( $result->code == 0 ) {
-            $self->lmLog( "LDAP modify pwdReset error: " . $result->code,
-                'error' );
-            return PE_LDAPERROR;
+            $self->lmLog(
+                "LDAP modify "
+                  . $self->{ldapPasswordResetAttribute}
+                  . " error: "
+                  . $result->code,
+                'error'
+            );
+            $code = PE_LDAPERROR;
         }
 
-        $self->lmLog( "pwdReset set to TRUE", 'debug' );
+        $self->lmLog(
+            $self->{ldapPasswordResetAttribute}
+              . " set to "
+              . $self->{ldapPasswordResetAttributeValue},
+            'debug'
+        );
     }
 
-    # Store password to forward it to the user
-    $self->{reset_password} = $password;
-
-    PE_OK;
+    return $code;
 }
 
 1;

@@ -12,7 +12,7 @@ use Lemonldap::NG::Portal::_LibAccess;
 use base qw(Lemonldap::NG::Portal::_LibAccess);
 use Clone qw(clone);
 
-our $VERSION  = '1.0.5';
+our $VERSION  = '1.1.0';
 our $catlevel = 0;
 
 ## @method void menuInit()
@@ -34,13 +34,21 @@ sub menuInit {
     $self->{user}            = $self->{sessionInfo}->{_user};
 
     # Try to change password
-    $self->{menuError} = $self->_subProcess(qw(passwordDBInit modifyPassword));
+    $self->{menuError} = $self->_subProcess(qw(passwordDBInit modifyPassword))
+      unless $self->{ignorePasswordChange};
 
     # Default menu error code
     $self->{menuError} ||= $self->{error};
 
     # Tab to display
-    $self->{menuDisplayTab} = "appslist";
+    # Get the tab URL parameter
+    $self->{menuDisplayTab} = $self->param("tab") || "none";
+
+    # Default to appslist if invalid tab URL parameter
+    $self->{menuDisplayTab} = "appslist"
+      unless ( $self->{menuDisplayTab} =~ /^(password|logout)$/ );
+
+    # Force password tab in case of password error
     $self->{menuDisplayTab} = "password"
       if (
         (
@@ -62,9 +70,10 @@ sub menuInit {
       );
 
     # Application list for old templates
-    # TODO create an option to activate them, off by default
-    $self->{menuAppslistMenu} = $self->appslistMenu();
-    $self->{menuAppslistDesc} = $self->appslistDescription();
+    if ( $self->{useOldMenuItems} ) {
+        $self->{menuAppslistMenu} = $self->appslistMenu();
+        $self->{menuAppslistDesc} = $self->appslistDescription();
+    }
 
     return;
 }

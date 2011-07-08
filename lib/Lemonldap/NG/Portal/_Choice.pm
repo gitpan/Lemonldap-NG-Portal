@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::_Choice;
 
 use Lemonldap::NG::Portal::Simple;
 
-our $VERSION = '1.0.2';
+our $VERSION = '1.1.0';
 
 ## @cmethod Lemonldap::NG::Portal::_Choice new(Lemonldap::NG::Portal::Simple portal)
 # Constructor
@@ -177,6 +177,9 @@ sub _buildAuthLoop {
         # Remove it in displayed name
         $name =~ s/^(\d*)?(\s*)?//;
 
+        # Replace also _ by space for a nice display
+        $name =~ s/\_/ /g;
+
         # Find modules associated to authChoice
         my ( $auth, $userDB, $passwordDB ) =
           split( /\|/, $self->{authChoiceModules}->{$_} );
@@ -184,11 +187,13 @@ sub _buildAuthLoop {
         # What do display
         # -> login/password form (LDAP, DBI, ...)
         # -> OpenID form
+        # -> Yubikey form
         # -> logo with link (ex: CAS, SSL, etc.)
         my $displayType = {
             'standardform' => [qw(LDAP DBI Proxy)],
             'openidform'   => [qw(OpenID)],
-            'logo'         => [qw(CAS Twitter SAML SSL Apache Remote)],
+            'yubikeyform'  => [qw(Yubikey)],
+            'logo'         => [qw(CAS Twitter SAML SSL Apache Remote Slave)],
         };
 
         if ( $auth and $userDB and $passwordDB ) {

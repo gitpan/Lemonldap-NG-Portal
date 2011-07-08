@@ -9,3 +9,6 @@ $ipAddr
 </div>
 
 </div>
+
+</body>
+</html>

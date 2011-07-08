@@ -13,7 +13,7 @@ use Lemonldap::NG::Common::Conf::Constants;
 use Lemonldap::NG::Common::Apache::Session;
 use strict;
 
-my $debug = 0;
+my $debug     = 0;
 my $nb_purged = 0;
 
 #=============================================================================
@@ -34,10 +34,10 @@ print "Configuration loaded\n" if $debug;
 #=============================================================================
 # Timeout
 #=============================================================================
-$conf->{timeout} ||= 7200;
+$conf->{timeout}         ||= 7200;
 $conf->{timeoutActivity} ||= 0;
 
-print "Timeout value: ".$conf->{timeout}."\n" if $debug;
+print "Timeout value: " . $conf->{timeout} . "\n" if $debug;
 
 #=============================================================================
 # Apache::Session backends
@@ -93,41 +93,54 @@ for my $backend (@backends) {
     # Get all expired sessions
     $storage->get_key_from_all_sessions(
         $options,
-    sub {
-        my $entry = shift;
-        my $id    = shift;
-	    my $time  = time;
+        sub {
+            my $entry = shift;
+            my $id    = shift;
+            my $time  = time;
+
+            # Do net check sessions without _utime
+            return undef unless $entry->{_utime};
+
             # Session expired
             if ( $time - $entry->{_utime} > $conf->{timeout} ) {
                 push @t, $id;
+                print "Session $id expired\n" if $debug;
             }
+
             # User has no activity, so considere the session has expired
-            elsif ( $conf->{timeoutActivity} and $entry->{_lastSeen}
+            elsif ( $conf->{timeoutActivity}
+                and $entry->{_lastSeen}
                 and $time - $entry->{_lastSeen} > $conf->{timeoutActivity} )
             {
-                push @t, $id
+                push @t, $id;
+                print "Session $id inactive\n" if $debug;
             }
-        undef;
-    }
+            undef;
+        }
     );
 
     # Delete sessions
     for my $id (@t) {
-    my %h;
+        my %h;
         eval { tie %h, $storage, $id, $options };
-    if ($@) {
-        next;
-    }
-    tied(%h)->delete;
+        if ($@) {
+            print "Error while opening session $id: $@\n" if $debug;
+            next;
+        }
+        eval { tied(%h)->delete; };
+        if ($@) {
+            print "Error while deleting session $id: $@\n" if $debug;
+            next;
+        }
         print "Session $id has been purged\n" if $debug;
-	$nb_purged++;
+        $nb_purged++;
     }
 
     # Remove lock files for File backend
     if ( $options->{backend} =~ /^Apache::Session::(?:Browseable::)?File$/i ) {
-    require Apache::Session::Lock::File;
-    my $l = new Apache::Session::Lock::File;
-	my $lock_directory = $options->{LockDirectory} || $options->{Directory};
+        require Apache::Session::Lock::File;
+        my $l = new Apache::Session::Lock::File;
+        my $lock_directory = $options->{LockDirectory} || $options->{Directory};
         $l->clean( $lock_directory, $conf->{timeout} );
     }
 }

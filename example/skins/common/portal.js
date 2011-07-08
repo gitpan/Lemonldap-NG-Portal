@@ -36,14 +36,11 @@ $(document).ready(function(){
 	$("input[name=timezone]").val( -(new Date().getTimezoneOffset()/60) );
 
 	/* Menu tabs */
-	$("#menu").tabs({ fx: { opacity: 'toggle' } });
+	$("#menu").tabs();
 	$("#menu").tabs("select",displaytab);
 
 	/* Authentication choice tabs */
-	$("#authMenu").tabs({
-		fx: {opacity: 'toggle'},
-		cookie: {name: 'lemonldapauthchoice'},
-	});
+	$("#authMenu").tabs({cookie: {name: 'lemonldapauthchoice'}});
 	$("#authMenu").tabs("select",choicetab);
 
 	/* Focus on first visible input */

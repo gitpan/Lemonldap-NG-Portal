@@ -10,7 +10,7 @@ use Lemonldap::NG::Portal::_LDAP 'ldap';    #link protected ldap
 use Lemonldap::NG::Portal::_WebForm;
 use Lemonldap::NG::Portal::UserDBLDAP;      #inherits
 
-our $VERSION = '1.0.2';
+our $VERSION = '1.1.0';
 use base qw(Lemonldap::NG::Portal::_WebForm);
 
 *_formateFilter = *Lemonldap::NG::Portal::UserDBLDAP::formateFilter;
@@ -43,8 +43,15 @@ sub authenticate {
         $self->{sessionInfo}->{dn} = $self->{dn};
         return $tmp if ($tmp);
     }
-    return $self->ldap->userBind( $self->{dn}, password => $self->{password} );
-    PE_OK;
+
+    my $res =
+      $self->ldap->userBind( $self->{dn}, password => $self->{password} );
+
+    # Remember password if password reset needed
+    $self->{oldpassword} = $self->{password}
+      if ( $res == PE_PP_CHANGE_AFTER_RESET );
+
+    return $res;
 }
 
 ## @apmethod int authFinish()

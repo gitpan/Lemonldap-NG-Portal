@@ -51,6 +51,7 @@ example/skins/common/mail_confirm.tpl
 example/skins/common/mail_footer.tpl
 example/skins/common/mail_header.tpl
 example/skins/common/mail_password.tpl
+example/skins/common/notification.xsl
 example/skins/common/ok.png
 example/skins/common/openid-16x16.gif
 example/skins/common/portal.js
@@ -65,8 +66,12 @@ example/skins/common/vcard_edit.png
 example/skins/common/vcss-blue.gif
 example/skins/common/warning.png
 example/skins/common/warning_triangle.png
+example/skins/common/yubico-icon-small.gif
 example/skins/dark/confirm.tpl
 example/skins/dark/css/styles.css
+example/skins/dark/customfooter.tpl
+example/skins/dark/customhead.tpl
+example/skins/dark/customheader.tpl
 example/skins/dark/error.tpl
 example/skins/dark/footer.tpl
 example/skins/dark/header.tpl
@@ -80,9 +85,13 @@ example/skins/dark/openid.tpl
 example/skins/dark/openidform.tpl
 example/skins/dark/password.tpl
 example/skins/dark/standardform.tpl
+example/skins/dark/yubikeyform.tpl
 example/skins/impact/authmessage.tpl
 example/skins/impact/confirm.tpl
 example/skins/impact/css/styles.css
+example/skins/impact/customfooter.tpl
+example/skins/impact/customhead.tpl
+example/skins/impact/customheader.tpl
 example/skins/impact/error.tpl
 example/skins/impact/footer.tpl
 example/skins/impact/header.tpl
@@ -103,8 +112,12 @@ example/skins/impact/openidform.tpl
 example/skins/impact/password.tpl
 example/skins/impact/README
 example/skins/impact/standardform.tpl
+example/skins/impact/yubikeyform.tpl
 example/skins/pastel/confirm.tpl
 example/skins/pastel/css/styles.css
+example/skins/pastel/customfooter.tpl
+example/skins/pastel/customhead.tpl
+example/skins/pastel/customheader.tpl
 example/skins/pastel/error.tpl
 example/skins/pastel/footer.tpl
 example/skins/pastel/header.tpl
@@ -119,7 +132,7 @@ example/skins/pastel/openid.tpl
 example/skins/pastel/openidform.tpl
 example/skins/pastel/password.tpl
 example/skins/pastel/standardform.tpl
-example/slavePortal.pl
+example/skins/pastel/yubikeyform.tpl
 example/soapconfigtest.pl
 example/soaptest.pl
 lib/Lemonldap/NG/Portal.pm
@@ -147,8 +160,10 @@ lib/Lemonldap/NG/Portal/AuthOpenID.pm
 lib/Lemonldap/NG/Portal/AuthProxy.pm
 lib/Lemonldap/NG/Portal/AuthRemote.pm
 lib/Lemonldap/NG/Portal/AuthSAML.pm
+lib/Lemonldap/NG/Portal/AuthSlave.pm
 lib/Lemonldap/NG/Portal/AuthSSL.pm
 lib/Lemonldap/NG/Portal/AuthTwitter.pm
+lib/Lemonldap/NG/Portal/AuthYubikey.pm
 lib/Lemonldap/NG/Portal/CDA.pm
 lib/Lemonldap/NG/Portal/CDC.pm
 lib/Lemonldap/NG/Portal/Display.pm
@@ -178,6 +193,7 @@ lib/Lemonldap/NG/Portal/UserDBOpenID.pm
 lib/Lemonldap/NG/Portal/UserDBProxy.pm
 lib/Lemonldap/NG/Portal/UserDBRemote.pm
 lib/Lemonldap/NG/Portal/UserDBSAML.pm
+lib/Lemonldap/NG/Portal/UserDBSlave.pm
 Makefile.PL
 MANIFEST			This list of files
 META.yml
@@ -193,6 +209,7 @@ t/21-Lemonldap-NG-Portal-AuthSSL.t
 t/22-Lemonldap-NG-Portal-AuthCAS.t
 t/24-Lemonldap-NG-Portal-AuthRemote.t
 t/25-Lemonldap-NG-Portal-Multi.t
+t/26-Lemonldap-NG-Portal-AuthChoice.t
 t/26-Lemonldap-NG-Portal-AuthProxy.t
 t/27-Lemonldap-NG-Portal-AuthOpenID.t
 t/27-Lemonldap-NG-Portal-IssuerDBOpenID.t

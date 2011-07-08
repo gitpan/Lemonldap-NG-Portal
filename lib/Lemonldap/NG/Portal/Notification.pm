@@ -15,46 +15,8 @@ use CGI::Cookie;
 #inherits Lemonldap::NG::Portal::Notification::DBI
 #inherits Lemonldap::NG::Portal::Notification::File
 
-our $VERSION = '1.0.0';
-our ( $msg, $stylesheet, $parser );
-
-BEGIN {
-    my $xslt = XML::LibXSLT->new();
-    $parser = XML::LibXML->new();
-    my $style_doc = $parser->parse_string(
-        q#<?xml version="1.0" encoding="UTF-8"?>
-<xsl:stylesheet version="1.0"
-                xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
- <xsl:output method="html"
-             encoding="UTF-8"/>
- <xsl:param name="start"/>
- <xsl:template match="/root/notification">
-  <xsl:variable name="level" select="position()"/>
-  <xsl:element name="input">
-   <xsl:attribute name="type">hidden</xsl:attribute>
-     <xsl:attribute name="name">reference<xsl:value-of select="$start"/>x<xsl:value-of select="$level"/></xsl:attribute>
-   <xsl:attribute name="value"><xsl:value-of select="@reference"/></xsl:attribute>
-  </xsl:element>
-  <xsl:for-each select="text">
-  <p class="notifText"><xsl:value-of select="."/></p>
-  </xsl:for-each>
-  <xsl:for-each select="check">
-   <xsl:variable name="sublevel" select="position()"/>
-   <p class="notifCheck">
-    <xsl:element name="input">
-     <xsl:attribute name="type">checkbox</xsl:attribute>
-     <xsl:attribute name="name">check<xsl:value-of select="$start"/>x<xsl:value-of select="$level"/>x<xsl:value-of select="$sublevel"/></xsl:attribute>
-     <xsl:attribute name="id">check<xsl:value-of select="$start"/>x<xsl:value-of select="$level"/>x<xsl:value-of select="$sublevel"/></xsl:attribute>
-    </xsl:element>
-    <xsl:value-of select="."/>
-   </p>
-  </xsl:for-each>
- </xsl:template>
-</xsl:stylesheet>
-#
-    );
-    $stylesheet = $xslt->parse_stylesheet($style_doc);
-}
+our $VERSION = '1.1.0';
+our ( $msg, $parser );
 
 ## @cmethod Lemonldap::NG::Portal::Notification new(hashref storage)
 # Constructor.
@@ -79,6 +41,10 @@ sub new {
     unless ( $self->_prereq ) {
         return 0;
     }
+
+    # Initiate XML parser
+    $parser = XML::LibXML->new();
+
     return $self;
 }
 
@@ -98,7 +64,7 @@ sub lmLog {
 # @return HTML fragment containing form content
 sub getNotification {
     my ( $self, $portal ) = splice @_;
-    my ( @notifs, $form );
+    my ( @files, $form );
 
     # Get user datas,
     my $uid = $portal->{notificationField} || $portal->{whatToTrace} || 'uid';
@@ -106,18 +72,90 @@ sub getNotification {
     $uid = $portal->{sessionInfo}->{$uid};
 
     # Check if some notifications have to be done
-    my $n = $self->_get($uid);
+    # 1. For the user
+    my $user = $self->_get($uid);
 
-    # Return 0 if no notifications were found
+    # 2. For all users
+    my $all = $self->_get( $portal->{notificationWildcard} );
+
+    # 3. Join results
+    my $n = {};
+    if ( $user and $all ) { $n = { %$user, %$all }; }
+    else                  { $n = $user ? $user : $all; }
+
+    # Return 0 if no files were found
     return 0 unless ($n);
 
+    # Create XSLT object
+    my $xslt       = XML::LibXSLT->new();
+    my $style_file = (
+        -e $portal->{notificationXSLTfile}
+        ? $portal->{notificationXSLTfile}
+        : $portal->getApacheHtdocsPath() . "skins/common/notification.xsl"
+    );
+    my $style_doc  = $parser->parse_file($style_file);
+    my $stylesheet = $xslt->parse_stylesheet($style_doc);
+
     # Prepare HTML code
-    @notifs = map { $n->{$_} } sort keys %$n;
-    my $i = 0;    # Notification count
-    foreach my $notif (@notifs) {
-        $i++;
+    @files = map { $n->{$_} } sort keys %$n;
+    my $i = 0;    # Files count
+    foreach my $file (@files) {
         eval {
-            my $xml = $parser->parse_string($notif);
+            my $xml = $parser->parse_string($file);
+            my $j   = 0;                              # Notifications count
+
+            # Browse notifications in file
+            foreach my $notif (
+                $xml->documentElement->getElementsByTagName('notification') )
+            {
+
+                # Get the reference
+                my $reference = $notif->getAttribute('reference');
+
+                $self->lmLog( "Get reference $reference", 'debug' );
+
+                # Check it in session
+                if (
+                    exists $portal->{sessionInfo}
+                    ->{ "notification_" . $reference } )
+                {
+
+                    # The notification was already accepted
+                    $self->lmLog(
+                        "Notification $reference was already accepted",
+                        'debug' );
+
+                    # Remove it from XML
+                    $notif->unbindNode();
+                    next;
+                }
+
+                # Check condition if any
+                my $condition = $notif->getAttribute('condition');
+
+                if ($condition) {
+
+                    $self->lmLog( "Get condition $condition", 'debug' );
+
+                    unless ( $portal->safe->reval($condition) ) {
+                        $self->lmLog( "Notification condition not accepted",
+                            'debug' );
+
+                        # Remove it from XML
+                        $notif->unbindNode();
+                        next;
+
+                    }
+                }
+
+                $j++;
+            }
+
+            # Go to next file if no notification found
+            next unless $j;
+            $i++;
+
+            # Transform XML into HTML
             my $results = $stylesheet->transform( $xml, start => $i );
             $form .= $stylesheet->output_string($results);
         };
@@ -128,6 +166,9 @@ sub getNotification {
             return 0;
         }
     }
+
+    # Stop here if nothing to display
+    return 0 unless $i;
 
     # Now a notification has to be done. Replace cookies by hidden fields
     $i = 0;
@@ -145,10 +186,7 @@ sub getNotification {
         $form .= qq{<input type="hidden" id="cookie$i" name="cookie$i" value="}
           . $tmp->as_string . '" />';
     }
-    $form .=
-        '<input type="hidden" name="type" value="notification"/>'
-      . '<input type="hidden" name="url" value="'
-      . $portal->param('url') . '" />';
+    $form .= '<input type="hidden" name="type" value="notification"/>';
     return $form;
 }
 
@@ -206,13 +244,26 @@ sub checkNotification {
           || 'uid';
         $uid =~ s/\$//g;
         $uid = $portal->{sessionInfo}->{$uid};
-        my $files = $self->_get( $uid, $refs->{$ref} );
+
+        # Get notifications by references
+        # 1. For the user
+        my $user = $self->_get( $uid, $refs->{$ref} );
+
+        # 2. For all users
+        my $all = $self->_get( $portal->{notificationWildcard}, $refs->{$ref} );
+
+        # 3. Join results
+        my $files = {};
+        if ( $user and $all ) { $files = { %$user, %$all }; }
+        else                  { $files = $user ? $user : $all; }
 
         unless ($files) {
-            $self->lmLog( "Can find notification $refs->{$ref} for $uid",
+            $self->lmLog( "Can't find notification $refs->{$ref} for $uid",
                 'error' );
             next;
         }
+
+        # Browse found files
         foreach my $file ( keys %$files ) {
             my $xml;
             eval { $xml = $parser->parse_string( $files->{$file} ) };
@@ -220,6 +271,8 @@ sub checkNotification {
                 $self->lmLog( "Bad XML notification for $uid", 'error' );
                 next;
             }
+
+            # Browse notifications in file
             foreach my $notif (
                 $xml->documentElement->getElementsByTagName('notification') )
             {
@@ -231,16 +284,42 @@ sub checkNotification {
                     ( $checks->{$ref} and $checkCount == @{ $checks->{$ref} } )
                   )
                 {
-                    if ( $self->_delete($file) ) {
-                        $self->lmLog(
-                            "$uid has accepted notification $refs->{$ref}",
-                            'notice' );
-                    }
-                    else {
-                        $self->lmLog(
+
+                    # Notification is accepted
+
+                    $self->lmLog(
+                        "$uid has accepted notification $refs->{$ref}",
+                        'notice' );
+
+                    # 1. Register acceptation in persistent session
+                    my $time     = time();
+                    my $notifkey = "notification_" . $refs->{$ref};
+                    $portal->updatePersistentSession(
+                        { $notifkey => $time },
+
+                    );
+
+                    $self->lmLog(
+                        "Notification "
+                          . $refs->{$ref}
+                          . " registered in persistent session",
+                        'debug'
+                    );
+
+                    # 2. Delete it if not a wildcard notification
+                    if ( exists $user->{$file} ) {
+
+                        if ( $self->_delete($file) ) {
+                            $self->lmLog(
+                                "Notification " . $refs->{$ref} . " deleted",
+                                'debug' );
+                        }
+                        else {
+                            $self->lmLog(
 "Unable to delete notification $refs->{$ref} for $uid",
-                            'error'
-                        );
+                                'error'
+                            );
+                        }
                     }
                 }
                 else {
@@ -272,6 +351,8 @@ sub newNotification {
       my $notif ( $xml->documentElement->getElementsByTagName('notification') )
     {
         my @datas = ();
+
+        # Mandatory information
         foreach (qw(date uid reference)) {
             my $tmp;
             unless ( $tmp = $notif->getAttribute($_) ) {
@@ -280,6 +361,16 @@ sub newNotification {
             }
             push @datas, $tmp;
         }
+
+        # Other information
+        foreach (qw(condition)) {
+            my $tmp;
+            if ( $tmp = $notif->getAttribute($_) ) {
+                push @datas, $tmp;
+            }
+            else { push @datas, ""; }
+        }
+
         my $result = XML::LibXML::Document->new( $version, $encoding );
         my $root = XML::LibXML::Element->new('root');
         $root->appendChild($notif);

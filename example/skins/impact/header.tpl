@@ -26,8 +26,10 @@
             var antiframe='<TMPL_VAR NAME="ANTIFRAME">';
         //]]></script>
         <script type="text/javascript" src="/skins/common/portal.js"></script>
+        <TMPL_INCLUDE NAME="customhead.tpl">
 </head>
 <body>
 
 <div id="layout">
 
+  <div id="layout-header"><TMPL_INCLUDE NAME="customheader.tpl"></div>

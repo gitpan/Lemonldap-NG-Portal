@@ -9,7 +9,7 @@ use strict;
 use Lemonldap::NG::Portal::_Choice;
 use Lemonldap::NG::Portal::Simple;
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.1.0';
 
 ## @apmethod int passwordDBInit()
 # Does nothing
@@ -25,14 +25,6 @@ sub passwordDBInit {
 sub modifyPassword {
     my $self = shift;
     return $self->_choice->try( 'modifyPassword', 2 );
-}
-
-## @apmethod int resetPassword()
-# Does nothing
-# @return Lemonldap::NG::Portal constant
-sub resetPassword {
-    my $self = shift;
-    return $self->_choice->try( 'resetPassword', 2 );
 }
 
 1;

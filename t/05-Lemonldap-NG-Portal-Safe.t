@@ -5,7 +5,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 8;
+use Test::More tests => 10;
 
 BEGIN { use_ok( 'Lemonldap::NG::Portal::Simple', ':all' ) }
 
@@ -26,7 +26,7 @@ ok(
             domain         => 'example.com',
         }
     ),
-    'Portal object'
+    'Portal object with Safe jail'
 );
 
 # Fake data
@@ -39,11 +39,15 @@ $ENV{REMOTE_ADDR} = $envData;
 ok( $p->{useSafeJail} == 1, 'Safe jail on' );
 ok( $p->safe->reval('$uid') eq $sessionData, 'Safe jail on - session data' );
 ok( $p->safe->reval('$ENV{REMOTE_ADDR}') eq $envData, 'Safe jail on - env data' );
+ok( defined $p->safe->reval('checkDate(0,1)'), 'Safe jail on - extended function' );
+
+# Reset safe object
+$Lemonldap::NG::Portal::Simple::safe = undef;
+$p->{useSafeJail} = 0;
 
 # Fake Safe jail
-$p->{useSafeJail} = 0;
 ok( $p->{useSafeJail} == 0, 'Safe jail off' );
 ok( $p->safe->reval('$uid') eq $sessionData, 'Safe jail off - session data' );
 ok( $p->safe->reval('$ENV{REMOTE_ADDR}') eq $envData, 'Safe jail off - env data' );
-
+ok( defined $p->safe->reval('checkDate(0,1)'), 'Safe jail off - extended function' );
 

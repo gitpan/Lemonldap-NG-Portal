@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::_i18n;
 # Developpers warning : this file must stay UTF-8 encoded
 
 use AutoLoader qw(AUTOLOAD);
-our $VERSION = '1.0.0';
+our $VERSION = '1.1.0';
 
 ## @fn string error(int error,string lang)
 # @param $error Number of error to resolve
@@ -125,6 +125,8 @@ __END__
 # * PE_OPENID_BADID                      63
 # * PE_MISSINGREQATTR                    64
 # * PE_BADPARTNER                        65
+# * PE_MAILCONFIRMATION_ALREADY_SENT     66
+# * PE_PASSWORDFORMEMPTY                 67
 
 # Not used in errors:
 # * PE_DONE                -1
@@ -145,7 +147,7 @@ sub error_fr {
         'Connexion impossible au serveur LDAP',
         'Erreur anormale du serveur LDAP',
         'Erreur du module Apache::Session choisi',
-        'Veuillez-vous authentifier',
+        'Veuillez vous authentifier',
         'Certificat invalide',
         'Échec de l\'initialisation de Lasso:Login ou Lasso:Logout',
         'Échec de la résolution de l\'artefact Liberty Alliance',
@@ -202,6 +204,8 @@ sub error_fr {
 'Vous tentez d\'utiliser une identité OpenID qui ne vous appartient pas',
         'Un attribut exigé n\'est pas disponible',
         'Fédération interdite par la politique de sécurité',
+        'Le mail de confirmation a déjà été envoyé',
+        'Mot de passe non renseigné',
     ];
 }
 
@@ -276,6 +280,8 @@ sub error_en {
         'You try to use an OpenID identity which is not yours',
         'A required attribute is not available',
         'Federation forbidden by security policy',
+        'The confirmation mail was already sent',
+        'Password field must be filled',
     ];
 }
 
@@ -351,6 +357,8 @@ sub error_ro {
 'Când încercaţi să utilizaţi o identitate OpenID care nu vă aparţine',
         'Un atribut solicitate nu sunt disponibile',
         'Federation forbidden by security policy',
+        'The confirmation mail was already sent',
+        'Password field must be filled',
     ];
 }
 

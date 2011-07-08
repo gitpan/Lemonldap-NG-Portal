@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_SAML;
 our @ISA = qw(Lemonldap::NG::Portal::_SAML);
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.1.0';
 
 ## @method void issuerDBInit()
 # Load and check SAML configuration
@@ -1511,6 +1511,19 @@ sub issuerForAuthUser {
             # Set subject NameID
             $response_assertions[0]
               ->set_subject_name_id( $login->nameIdentifier );
+
+            # Set basic conditions
+            my $oneTimeUse =
+              $self->{samlSPMetaDataOptions}->{$spConfKey}
+              ->{samlSPMetaDataOptionsOneTimeUse};
+
+            eval {
+                $response_assertions[0]
+                  ->set_basic_conditions( 60, 86400, $oneTimeUse );
+            };
+            if ($@) {
+                $self->lmLog( "Basic conditions not set: $@", 'debug' );
+            }
 
             # Create attribute statement
             if ( scalar @attributes ) {

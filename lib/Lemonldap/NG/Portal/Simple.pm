@@ -63,7 +63,7 @@ use Digest::MD5;
 #inherits Apache::Session
 #link Lemonldap::NG::Common::Apache::Session::SOAP protected globalStorage
 
-our $VERSION = '1.0.4';
+our $VERSION = '1.1.0';
 
 use base qw(Lemonldap::NG::Common::CGI Exporter);
 our @ISA;
@@ -135,6 +135,8 @@ use constant {
     PE_OPENID_BADID                     => 63,
     PE_MISSINGREQATTR                   => 64,
     PE_BADPARTNER                       => 65,
+    PE_MAILCONFIRMATION_ALREADY_SENT    => 66,
+    PE_PASSWORDFORMEMPTY                => 67,
 
     # Portal messages
     PM_USER                  => 0,
@@ -177,7 +179,8 @@ our @EXPORT = qw( PE_IMG_NOK PE_IMG_OK PE_INFO PE_REDIRECT PE_DONE PE_OK
   PE_SAML_CONDITIONS_ERROR PE_SAML_IDPSSOINITIATED_NOTALLOWED PE_SAML_SLO_ERROR
   PE_SAML_SIGNATURE_ERROR PE_SAML_ART_ERROR PE_SAML_SESSION_ERROR
   PE_SAML_LOAD_SP_ERROR PE_SAML_ATTR_ERROR PE_OPENID_EMPTY PE_OPENID_BADID
-  PE_MISSINGREQATTR PE_BADPARTNER
+  PE_MISSINGREQATTR PE_BADPARTNER PE_MAILCONFIRMATION_ALREADY_SENT
+  PE_PASSWORDFORMEMPTY
   PM_USER PM_DATE PM_IP PM_SESSIONS_DELETED PM_OTHER_SESSIONS
   PM_REMOVE_OTHER_SESSIONS PM_PP_GRACE PM_PP_EXP_WARNING
   PM_SAML_IDPSELECT PM_SAML_IDPCHOOSEN PM_REMEMBERCHOICE PM_SAML_SPLOGOUT
@@ -234,6 +237,17 @@ sub new {
     # Use LemonLDAP::NG custom Apache::Session
     $self->{globalStorageOptions}->{backend} = $self->{globalStorage};
     $self->{globalStorage} = 'Lemonldap::NG::Common::Apache::Session';
+
+    # Check specific persistent session configuration
+    if ( $self->{persistentStorage} ) {
+        $self->{persistentStorageOptions}->{backend} =
+          $self->{persistentStorage};
+        $self->{persistentStorage} = 'Lemonldap::NG::Common::Apache::Session';
+    }
+    else {
+        $self->{persistentStorage}        = $self->{globalStorage};
+        $self->{persistentStorageOptions} = $self->{globalStorageOptions};
+    }
 
     # Default values
     $self->setDefaultValues();
@@ -376,17 +390,34 @@ sub new {
     if ( $self->{notification} ) {
         require Lemonldap::NG::Portal::Notification;
         my $tmp;
+
+        # Use configuration options
         if ( $self->{notificationStorage} ) {
-            $tmp = $self->{notificationStorage};
+            $tmp->{type} = $self->{notificationStorage};
+            foreach ( keys %{ $self->{notificationStorageOptions} } ) {
+                $tmp->{$_} = $self->{notificationStorageOptions}->{$_};
+            }
         }
+
+        # Else use the configuration backend
         else {
             (%$tmp) = ( %{ $self->{lmConf} } );
             $self->abort( "notificationStorage not defined",
                 "This parameter is required to use notification system" )
               unless ( ref($tmp) );
+
+            # Get the type
             $tmp->{type} =~ s/.*:://;
+            $tmp->{type} =~ s/(CBDI|RDBI)/DBI/;    # CDBI/RDBI are DBI
+
+            # If type not File or DBI, abort
+            $self->abort("Only File or DBI supported for Notifications")
+              unless $tmp->{type} =~ /^(File|DBI)$/;
+
+            # Force table name
             $tmp->{table} = 'notifications';
         }
+
         $tmp->{p}            = $self;
         $self->{notifObject} = Lemonldap::NG::Portal::Notification->new($tmp);
         $self->abort($Lemonldap::NG::Portal::Notification::msg)
@@ -397,8 +428,10 @@ sub new {
     if ( $self->{Soap} or $self->{soap} ) {
         require Lemonldap::NG::Portal::_SOAP;
         push @ISA, 'Lemonldap::NG::Portal::_SOAP';
-        if ( $self->{notification} ) {
-            $self->{CustomSOAPServices}->{'/notification'} = 'newNotification';
+        if ( $self->{notification} and $ENV{PATH_INFO} ) {
+            $self->soapTest(
+                { '/notification' => 'newNotification' }->{ $ENV{PATH_INFO} },
+                $self->{notifObject} );
         }
         $self->startSoapServices();
     }
@@ -581,7 +614,13 @@ sub setDefaultValues {
     # Other
     $self->{logoutServices} ||= {};
     $self->{useSafeJail} = 1 unless defined $self->{useSafeJail};
+    $self->{ldapUsePasswordResetAttribute} = 1
+      unless ( defined( $self->{ldapUsePasswordResetAttribute} ) );
+    $self->{ldapPasswordResetAttribute}      ||= "pwdReset";
+    $self->{ldapPasswordResetAttributeValue} ||= "TRUE";
 
+    # Notification
+    $self->{notificationWildcard} ||= "allusers";
 }
 
 ## @method protected void setHiddenFormValue(string fieldname, string value, string prefix, boolean base64)
@@ -685,6 +724,10 @@ sub buildHiddenForm {
 sub checkXSSAttack {
     my ( $self, $name, $value ) = splice @_;
 
+    # Empty values are not bad
+    return 0 unless $value;
+
+    # Test value
     if ( $value =~ m/(?:\0|<|'|"|`|\%(?:00|25|3C|22|27|2C))/ ) {
         $self->lmLog( "XSS attack detected (param: $name | value: $value)",
             "warn" );
@@ -713,11 +756,26 @@ sub error {
     my $self = shift;
     my $lang = shift || $ENV{HTTP_ACCEPT_LANGUAGE};
     my $code = shift || $self->{error};
-    my $tmp  = &Lemonldap::NG::Portal::_i18n::error( $code, $lang );
+    my $msg;
+
+    # Check for customized message
+    $msg = $self->{ "error_" . $lang . "_" . $code }
+      || $self->{ "error_" . $code };
+
+    # Use customized message or built-in message
+    if ($msg) {
+        $self->lmLog( "Use customized message for error $code", 'debug' );
+    }
+    else {
+        $msg = &Lemonldap::NG::Portal::_i18n::error( $code, $lang );
+    }
+
+    # Return message
+    # Manage SOAP
     return (
         $ENV{HTTP_SOAPACTION}
-        ? SOAP::Data->name( result => $tmp )->type('string')
-        : $tmp
+        ? SOAP::Data->name( result => $msg )->type('string')
+        : $msg
     );
 }
 
@@ -745,11 +803,12 @@ sub error_type {
       if (
         scalar(
             grep { /^$code$/ } (
-                PE_INFO,         PE_SESSIONEXPIRED,
-                PE_FORMEMPTY,    PE_FIRSTACCESS,
-                PE_PP_GRACE,     PE_PP_EXP_WARNING,
-                PE_NOTIFICATION, PE_BADURL,
-                PE_CONFIRM,      PE_MAILFORMEMPTY,
+                PE_INFO,                          PE_SESSIONEXPIRED,
+                PE_FORMEMPTY,                     PE_FIRSTACCESS,
+                PE_PP_GRACE,                      PE_PP_EXP_WARNING,
+                PE_NOTIFICATION,                  PE_BADURL,
+                PE_CONFIRM,                       PE_MAILFORMEMPTY,
+                PE_MAILCONFIRMATION_ALREADY_SENT, PE_PASSWORDFORMEMPTY,
             )
         )
       );
@@ -800,7 +859,8 @@ sub getApacheSession {
         # Session not available (expired ?)
         if ($id) {
             $self->lmLog( "Session $id isn't yet available ($ENV{REMOTE_ADDR})",
-                'info' );
+                'info' )
+              unless $noInfo;
         }
         else {
             $self->lmLog( "Unable to create new session: $@", 'error' );
@@ -810,6 +870,35 @@ sub getApacheSession {
     unless ($noInfo) {
         $self->setApacheUser( $h{ $self->{whatToTrace} } ) if ($id);
         $self->{id} = $h{_session_id};
+    }
+    return \%h;
+}
+
+## @method protected hashref getPersistentSession(string id)
+# Try to recover the persitent session corresponding to id and return session datas.
+# If $id is set to undef, return a new session.
+# @param id session reference
+# return session hashref
+sub getPersistentSession {
+    my ( $self, $id ) = splice @_;
+    my %h;
+
+    # Trying to recover session from persistent session storage
+    eval {
+        tie %h, $self->{persistentStorage}, $id,
+          $self->{persistentStorageOptions};
+    };
+    if ( $@ or not tied(%h) ) {
+
+        # Session not available
+        if ($id) {
+            $self->lmLog( "Persistent session $id not available", 'debug' );
+        }
+        else {
+            $self->lmLog( "Unable to create new persitent session: $@",
+                'error' );
+        }
+        return 0;
     }
     return \%h;
 }
@@ -847,19 +936,26 @@ sub updatePersistentSession {
     return () unless ( ref $infos eq 'HASH' and %$infos );
 
     # Update current session
-    $self->updateSession( $self, $infos, $id );
+    $self->updateSession( $infos, $id );
 
     $uid ||= $self->{sessionInfo}->{ $self->{whatToTrace} };
     return () unless ($uid);
 
-    my $h = $self->getApacheSession( $self->_md5hash($uid), 1 );
+    my $h = $self->getPersistentSession( $self->_md5hash($uid) );
     unless ($h) {
-        my %opts = %{ $self->{globalStorageOptions} };
-        $opts{setId} = $uid;
-        eval { tie %$h, $self->{globalStorage}, undef, \%opts; };
+        $h = {};    # reset $h
+        my %opts = %{ $self->{persistentStorageOptions} };
+        $opts{setId} = $self->_md5hash($uid);
+        eval { tie %$h, $self->{persistentStorage}, undef, \%opts; };
         if ($@) {
             $self->lmLog( "Unable to create persistent session: $@", 'warn' );
             return ();
+        }
+        else {
+            $self->lmLog(
+                "Persistent session " . $h->{_session_id} . " created for $uid",
+                'debug'
+            );
         }
     }
     foreach ( keys %$infos ) {
@@ -892,15 +988,6 @@ sub updateSession {
     # Return if no infos to update
     return () unless ( ref $infos eq 'HASH' and %$infos );
 
-    # Update sessionInfo datas
-    if ($id) {
-        foreach ( keys %$infos ) {
-            $self->lmLog( "Update sessionInfo $_ with " . $infos->{$_},
-                'debug' );
-            $self->{sessionInfo}->{$_} = $infos->{$_};
-        }
-    }
-
     # Recover session ID unless given
     $id ||= $self->{id};
     unless ($id) {
@@ -909,6 +996,16 @@ sub updateSession {
           if ( defined $cookies{ $self->{cookieName} } );
     }
 
+    # Update sessionInfo data
+    if ($id) {
+        foreach ( keys %$infos ) {
+            $self->lmLog( "Update sessionInfo $_ with " . $infos->{$_},
+                'debug' );
+            $self->{sessionInfo}->{$_} = $infos->{$_};
+        }
+    }
+
+    # Update session in the backend
     if ($id) {
         my $h = $self->getApacheSession( $id, 1 ) or return ();
 
@@ -1459,6 +1556,32 @@ sub controlExistingSession {
                     $self->lmLog( "Unable to delete session $id", 'error' );
                     return PE_ERROR;
                 }
+                else {
+                    $self->lmLog( "Session $id deleted from global storage",
+                        'debug' );
+                }
+
+                # Delete session in local storage
+                if ( defined $self->{localStorage} ) {
+                    $self->loadModule( $self->{localStorage} );
+                    my $cache;
+                    eval '$cache = new '
+                      . $self->{localStorage}
+                      . '($self->{localStorageOptions})';
+                    if ( defined $cache ) {
+                        if ( $cache->remove($id) ) {
+                            $self->lmLog(
+"Unable to remove session $id from local storage",
+                                'warn'
+                            );
+                        }
+                        else {
+                            $self->lmLog(
+                                "Session $id removed from local storage",
+                                'debug' );
+                        }
+                    }
+                }
 
                 # Call issuerDB logout on each used issuerDBmodule
                 my $issuerDBList = $self->{sessionInfo}->{_issuerDB};
@@ -1706,7 +1829,26 @@ sub passwordDBInit {
     return $self->SUPER::passwordDBInit();
 }
 
-# modifyPassword(): must be implemented in PasswordDB* module
+## @apmethod int modifyPassword()
+# Call modifyPassword from PasswordDB* module
+# Continue auth process if password change is ok
+# @return Lemonldap::NG::Portal constant
+sub modifyPassword {
+    my $self = shift;
+
+    my $res = $self->SUPER::modifyPassword();
+
+    #  Continue process if password change is ok
+    if ( $res == PE_PASSWORD_OK ) {
+
+        # Set a flag to ignore password change in Menu
+        $self->{ignorePasswordChange} = 1;
+
+        return PE_OK;
+    }
+
+    return $res;
+}
 
 ##@apmethod int setSessionInfo()
 # Set ipAddr, xForwardedForAddr, startTime, updateTime, _utime and _userDB
@@ -1746,6 +1888,9 @@ sub setSessionInfo {
             delete $self->{exportedVars}->{$_};
         }
     }
+
+    # Store URL origin in session
+    $self->{sessionInfo}->{_url} = $self->{urldc};
 
     # Call UserDB setSessionInfo
     if ( my $res = $self->SUPER::setSessionInfo() ) {
@@ -1793,13 +1938,17 @@ sub setPersistentSessionInfo {
     # Do not restore infos if session already opened
     unless ( $self->{id} ) {
         my $key = $self->{sessionInfo}->{ $self->{whatToTrace} };
+
         return PE_OK unless ( $key and length($key) );
-        my $h =
-          $self->getApacheSession(
-            $self->_md5hash( $self->{sessionInfo}->{ $self->{whatToTrace} } ),
-            1 );
+
+        my $h = $self->getPersistentSession( $self->_md5hash($key) );
         if ($h) {
+            $self->lmLog( "Persistent session found for $key", 'debug' );
             foreach my $k ( keys %$h ) {
+
+                # Do not restore _session_id
+                next if $k =~ /^_session_id$/;
+                $self->lmLog( "Restore persistent parameter $k", 'debug' );
                 $self->{sessionInfo}->{$k} = $h->{$k};
             }
             untie %$h;

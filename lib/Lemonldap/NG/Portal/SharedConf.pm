@@ -14,7 +14,7 @@ use Lemonldap::NG::Common::Conf::Constants; #inherits
 *EXPORT_TAGS = *Lemonldap::NG::Portal::Simple::EXPORT_TAGS;
 *EXPORT      = *Lemonldap::NG::Portal::Simple::EXPORT;
 
-our $VERSION = '1.0.2';
+our $VERSION = '1.1.0';
 use base qw(Lemonldap::NG::Portal::Simple);
 our $confCached;
 
@@ -46,13 +46,22 @@ sub getConf {
     my $num = $self->__lmConf->lastCfg;
 
     unless ( $confCached and $confCached->{cfgNum} == $num ) {
-        %$confCached = (
-            %{ $self->__lmConf->getConf( { cfgNum => $num } ) },
-            %{ $self->__lmConf->getLocalConf(PORTALSECTION) },
-        );
+        my $gConf = $self->__lmConf->getConf( { cfgNum => $num } );
+        my $lConf = $self->__lmConf->getLocalConf(PORTALSECTION);
+        unless ( ref($gConf) and ref($lConf) ) {
+            $self->abort( "Cannot get configuration",
+                $Lemonldap::NG::Common::Conf::msg );
+        }
+        %$confCached = ( %$gConf, %$lConf );
     }
 
     %$self = ( %$self, %$confCached, %args, );
+
+    # localStorage should be declared in configuration object
+    # See Handler::SharedConf
+    foreach (qw(localStorage localStorageOptions)) {
+        $self->{$_} ||= $self->__lmConf->{$_};
+    }
 
     $self->lmLog( "Now using configuration: " . $confCached->{cfgNum},
         'debug' );

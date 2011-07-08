@@ -8,8 +8,9 @@ package Lemonldap::NG::Portal::Notification::DBI;
 use strict;
 use Time::Local;
 use DBI;
+use utf8;
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.1.0';
 
 ## @method boolean prereq()
 # Check if DBI parameters are set.
@@ -45,7 +46,16 @@ sub get {
       or return ();
     my $result;
     while ( my $h = $self->{sth}->fetchrow_hashref() ) {
-        $result->{"$h->{date}#$h->{uid}#$h->{ref}"} = $h->{xml};
+
+        # Get XML message
+        my $xml = $h->{xml};
+
+        # Decode it twice to get the correct uncoded string
+        utf8::decode($xml);
+        utf8::decode($xml);
+
+        # Store message in result
+        $result->{"$h->{date}#$h->{uid}#$h->{ref}"} = $xml;
     }
     $self->lmLog( $self->{sth}->err(), 'warn' ) if ( $self->{sth}->err() );
     return $result;
@@ -61,8 +71,12 @@ sub getAll {
         "SELECT * FROM $self->{dbiTable} WHERE done IS NULL ORDER BY date" );
     my $result;
     while ( my $h = $self->{sth}->fetchrow_hashref() ) {
-        $result->{"$h->{date}#$h->{uid}#$h->{ref}"} =
-          { date => $h->{date}, uid => $h->{uid}, ref => $h->{ref}, };
+        $result->{"$h->{date}#$h->{uid}#$h->{ref}"} = {
+            date      => $h->{date},
+            uid       => $h->{uid},
+            ref       => $h->{ref},
+            condition => $h->{condition}
+        };
     }
     $self->lmLog( $self->{sth}->err(), 'warn' ) if ( $self->{sth}->err() );
     return $result;
@@ -109,23 +123,34 @@ sub purge {
           . "WHERE done IS NOT NULL AND date='$d' AND uid='$u' AND ref='$r'" );
 }
 
-## @method boolean newNotif(string date, string uid, string ref, string xml)
+## @method boolean newNotif(string date, string uid, string ref, string condition, string xml)
 # Insert a new notification
 # @param date Date
 # @param uid UID
 # @param ref Reference of the notification
+# @param condition Condition for the notification
 # @param xml XML notification
 # @return true if succeed
 sub newNotif {
-    my ( $self, $date, $uid, $ref, $xml ) = @_;
-    $uid  =~ s/'/''/g;
-    $ref  =~ s/'/''/g;
-    $date =~ s/'/''/g;
+    my ( $self, $date, $uid, $ref, $condition, $xml ) = @_;
+    $uid       =~ s/'/''/g;
+    $ref       =~ s/'/''/g;
+    $date      =~ s/'/''/g;
+    $condition =~ s/'/''/g;
     $xml = $xml->serialize();
     $xml =~ s/'/''/g;
-    return _execute( $self,
-            "INSERT INTO $self->{dbiTable} (date,uid,ref,xml) "
-          . "VALUES('$date','$uid','$ref','$xml')" );
+
+    my $res =
+      $condition =~ /.+/
+      ? _execute( $self,
+            "INSERT INTO $self->{dbiTable} (date,uid,ref,cond,xml) "
+          . "VALUES('$date','$uid','$ref','$condition','$xml')" )
+      : _execute(
+        $self,
+        "INSERT INTO $self->{dbiTable} (date,uid,ref,xml) "
+          . "VALUES('$date','$uid','$ref','$xml')"
+      );
+    return $res;
 }
 
 ## @method hashref getDone()
@@ -140,7 +165,7 @@ sub getDone {
     my $result;
     while ( my $h = $self->{sth}->fetchrow_hashref() ) {
         my @t = split( /\D+/, $h->{date} );
-        my $done = timelocal( $t[6], $t[5], $t[4], $t[3], $t[2], $t[1], $t[0] );
+        my $done = timelocal( $t[5], $t[4], $t[3], $t[2], $t[1], $t[0] );
         $result->{"$h->{date}#$h->{uid}#$h->{ref}"} =
           { notified => $done, uid => $h->{uid}, ref => $h->{ref}, };
     }

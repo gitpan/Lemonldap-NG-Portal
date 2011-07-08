@@ -9,7 +9,7 @@ use strict;
 use Lemonldap::NG::Portal::Simple;
 use utf8;
 
-our $VERSION = '1.0.2';
+our $VERSION = '1.1.0';
 
 ## @method array display()
 # Call portal process and set template parameters
@@ -97,7 +97,9 @@ sub display {
                 DISPLAY_TAB     => $self->{menuDisplayTab},
                 LOGOUT_URL      => "$ENV{SCRIPT_NAME}?logout=1",
                 REQUIRE_OLDPASSWORD => $self->{portalRequireOldPassword},
-                DISPLAY_MODULES     => $self->{menuDisplayModules},
+                HIDE_OLDPASSWORD =>
+                  0,    # Do not hide old password if it is required
+                DISPLAY_MODULES => $self->{menuDisplayModules},
                 APPSLIST_MENU => $self->{menuAppslistMenu},  # For old templates
                 APPSLIST_DESC => $self->{menuAppslistDesc},  # For old templates
                 SCRIPT_NAME   => $ENV{SCRIPT_NAME},
@@ -119,6 +121,8 @@ sub display {
             SKIN            => $skin,
             HIDDEN_INPUTS   => $self->buildHiddenForm(),
             AUTH_URL        => $self->get_url,
+            CHOICE_PARAM    => $self->{authChoiceParam},
+            CHOICE_VALUE    => $self->{_authChoice},
         );
     }
 
@@ -203,36 +207,43 @@ sub display {
         if ( $self->{authLoop} ) {
             %templateParams = (
                 %templateParams,
-                AUTH_LOOP           => $self->{authLoop},
-                CHOICE_PARAM        => $self->{authChoiceParam},
-                CHOICE_VALUE        => $self->{_authChoice},
-                DISPLAY_FORM        => 0,
-                DISPLAY_OPENID_FORM => 0,
+                AUTH_LOOP            => $self->{authLoop},
+                CHOICE_PARAM         => $self->{authChoiceParam},
+                CHOICE_VALUE         => $self->{_authChoice},
+                DISPLAY_FORM         => 0,
+                DISPLAY_OPENID_FORM  => 0,
+                DISPLAY_YUBIKEY_FORM => 0,
             );
         }
 
         # Adapt template if password policy error
         if (
-            $self->{portalDisplayChangePassword}
-            and (  $self->{error} == PE_PP_CHANGE_AFTER_RESET
-                or $self->{error} == PE_PP_MUST_SUPPLY_OLD_PASSWORD
-                or $self->{error} == PE_PP_INSUFFICIENT_PASSWORD_QUALITY
-                or $self->{error} == PE_PP_PASSWORD_TOO_SHORT
-                or $self->{error} == PE_PP_PASSWORD_TOO_YOUNG
-                or $self->{error} == PE_PP_PASSWORD_IN_HISTORY
-                or $self->{error} == PE_PASSWORD_MISMATCH
-                or $self->{error} == PE_BADOLDPASSWORD )
+
+               $self->{error} == PE_PP_CHANGE_AFTER_RESET
+            or $self->{error} == PE_PP_MUST_SUPPLY_OLD_PASSWORD
+            or $self->{error} == PE_PP_INSUFFICIENT_PASSWORD_QUALITY
+            or $self->{error} == PE_PP_PASSWORD_TOO_SHORT
+            or $self->{error} == PE_PP_PASSWORD_TOO_YOUNG
+            or $self->{error} == PE_PP_PASSWORD_IN_HISTORY
+            or $self->{error} == PE_PASSWORD_MISMATCH
+            or $self->{error} == PE_BADOLDPASSWORD
           )
         {
             %templateParams = (
                 %templateParams,
-                REQUIRE_OLDPASSWORD   => 1,
+                REQUIRE_OLDPASSWORD =>
+                  1,    # Old password is required to check user credentials
                 DISPLAY_PASSWORD      => 1,
                 DISPLAY_RESETPASSWORD => 0,
                 DISPLAY_FORM          => 0,
                 AUTH_LOOP             => [],
                 CHOICE_PARAM          => $self->{authChoiceParam},
                 CHOICE_VALUE          => $self->{_authChoice},
+                OLDPASSWORD =>
+                  $self->checkXSSAttack( 'oldpassword', $self->{oldpassword} )
+                ? ""
+                : $self->{oldpassword},
+                HIDE_OLDPASSWORD => $self->{hideOldPassword},
             );
         }
 
@@ -243,6 +254,19 @@ sub display {
                 DISPLAY_RESETPASSWORD => 0,
                 DISPLAY_FORM          => 0,
                 DISPLAY_OPENID_FORM   => 1,
+                DISPLAY_YUBIKEY_FORM  => 0,
+                AUTH_LOOP             => [],
+            );
+        }
+
+        # Adapt template for Yubikey
+        if ( $self->get_module("auth") =~ /yubikey/i and !$self->{authLoop} ) {
+            %templateParams = (
+                %templateParams,
+                DISPLAY_RESETPASSWORD => 0,
+                DISPLAY_FORM          => 0,
+                DISPLAY_OPENID_FORM   => 0,
+                DISPLAY_YUBIKEY_FORM  => 1,
                 AUTH_LOOP             => [],
             );
         }
@@ -277,6 +301,7 @@ sub display {
                 DISPLAY_RESETPASSWORD => 0,
                 DISPLAY_FORM          => 0,
                 DISPLAY_OPENID_FORM   => 0,
+                DISPLAY_YUBIKEY_FORM  => 0,
                 AUTH_LOOP             => [],
                 PORTAL_URL            => $self->{portal},
                 MSG                   => $self->info(),

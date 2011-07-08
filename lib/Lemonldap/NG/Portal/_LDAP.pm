@@ -13,7 +13,7 @@ use Encode;
 use strict;
 
 our @EXPORT   = qw(ldap);
-our $VERSION  = '1.0.0';
+our $VERSION  = '1.1.0';
 our $ppLoaded = 0;
 
 BEGIN {
@@ -154,8 +154,16 @@ sub userBind {
 
         # Get server control response
         my ($resp) = $mesg->control("1.3.6.1.4.1.42.2.27.8.5.1");
-        return ( $mesg->code == 0 ? PE_OK : PE_LDAPERROR )
-          unless ( defined $resp );
+
+        # Return direct unless control resonse
+        unless ( defined $resp ) {
+            if ( $mesg->code == 49 ) {
+                $self->{portal}->_sub( 'userError',
+                    "Bad password for $self->{portal}->{user}" );
+                return PE_BADCREDENTIALS;
+            }
+            return ( $mesg->code == 0 ? PE_OK : PE_LDAPERROR );
+        }
 
         # Get expiration warning and graces
         if ( $resp->grace_authentications_remaining ) {
