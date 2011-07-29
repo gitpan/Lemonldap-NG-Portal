@@ -6,6 +6,7 @@
 package Lemonldap::NG::Portal::_LDAP;
 
 use Net::LDAP;    #inherits
+use Net::LDAP::Util qw(escape_filter_value);
 use Exporter;
 use base qw(Exporter Net::LDAP);
 use Lemonldap::NG::Portal::Simple;
@@ -13,7 +14,7 @@ use Encode;
 use strict;
 
 our @EXPORT   = qw(ldap);
-our $VERSION  = '1.1.0';
+our $VERSION  = '1.1.1';
 our $ppLoaded = 0;
 
 BEGIN {
@@ -421,7 +422,7 @@ sub searchGroups {
     my $searchFilter =
       "(&(objectClass=" . $portal->{ldapGroupObjectClass} . ")(|";
     foreach ( split( $portal->{multiValuesSeparator}, $value ) ) {
-        $searchFilter .= "(" . $key . "=" . $_ . ")";
+        $searchFilter .= "(" . $key . "=" .  escape_filter_value($_) . ")";
     }
     $searchFilter .= "))";
 

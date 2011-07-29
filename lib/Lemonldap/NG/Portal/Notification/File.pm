@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::Notification::File;
 use strict;
 use MIME::Base64;
 
-our $VERSION = '1.1.0';
+our $VERSION = '1.1.1';
 
 ## @method boolean prereq()
 # Check if parameters are set and if storage directory exists.
@@ -29,6 +29,10 @@ sub prereq {
           "Directory \"$self->{dirName}\" does not exist !";
         return 0;
     }
+
+    # Configure file name separator (_ by default)
+    $self->{fileNameSeparator} ||= "_";
+
     1;
 }
 
@@ -43,18 +47,20 @@ sub get {
     return () unless ($uid);
     opendir D, $self->{dirName};
     my @notif;
+    my $fns = $self->{fileNameSeparator};
     unless ($ref) {
-        @notif = grep /^\d{8}_${uid}_\S*\.xml$/, readdir(D);
+        @notif = grep /^\d{8}${fns}${uid}${fns}\S*\.xml$/, readdir(D);
     }
     else {
         my $tmp = encode_base64( $ref, '' );
-        @notif = grep /^\d{8}_${uid}_${tmp}_?\S*\.xml$/, readdir(D);
+        @notif = grep /^\d{8}${fns}${uid}${fns}${tmp}${fns}?\S*\.xml$/,
+          readdir(D);
     }
     close D;
     my $files;
     foreach my $file (@notif) {
         unless ( open F, $self->{dirName} . "/$file" ) {
-            $self->lmLog( "Unable to read notification $self->{dirName}/$_",
+            $self->lmLog( "Unable to read notification $self->{dirName}/$file",
                 'error' );
             next;
         }
@@ -71,9 +77,10 @@ sub getAll {
     my $self = shift;
     opendir D, $self->{dirName};
     my @notif;
+    my $fns = $self->{fileNameSeparator};
     @notif = grep /^\S*\.xml$/, readdir(D);
     my %h = map {
-        /^(\d{8})_([^\s_]+)_([^\s_]+)(?:_([^\s_]+))?\.xml$/
+/^(\d{8})${fns}([^\s${fns}]+)${fns}([^\s${fns}]+)(?:${fns}([^\s${fns}]+))?\.xml$/
           ? (
             $_ => {
                 date      => $1,
@@ -114,11 +121,14 @@ sub purge {
 # @return true if succeed
 sub newNotif {
     my ( $self, $date, $uid, $ref, $condition, $xml ) = @_;
+    my $fns = $self->{fileNameSeparator};
     $date =~ s/-//g;
     return ( 0, "Bad date" ) unless ( $date =~ /^\d{8}/ );
     my $filename =
-      $self->{dirName} . "/${date}_${uid}_" . encode_base64( $ref, '' );
-    $filename .= "_" . encode_base64( $condition, '' ) if $condition;
+        $self->{dirName}
+      . "/${date}${fns}${uid}${fns}"
+      . encode_base64( $ref, '' );
+    $filename .= "${fns}" . encode_base64( $condition, '' ) if $condition;
     $filename .= ".xml";
 
     return ( 0, 'This notification still exists' ) if ( -e $filename );
@@ -139,10 +149,14 @@ sub getDone {
     my ($self) = @_;
     opendir D, $self->{dirName};
     my @notif;
-    @notif = grep /^\d{8}_\S*\.done$/, readdir(D);
+    my $fns = $self->{fileNameSeparator};
+    @notif = grep /^\d{8}${fns}\S*\.done$/, readdir(D);
     my $res;
     foreach my $file (@notif) {
-        my ( $u, $r ) = ( $file =~ /^\d+_([^_]+)_([^_]+)_?([^_]+)\.done$/ );
+        my ( $u, $r ) =
+          ( $file =~
+/^\d+${fns}([^${fns}]+)${fns}([^${fns}]+)${fns}?([^${fns}]+)\.done$/
+          );
         die unless ( -f "$self->{dirName}/$file" );
         my $time = ( stat("$self->{dirName}/$file") )[10];
         $res->{$file} = {

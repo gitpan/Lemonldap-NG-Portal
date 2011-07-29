@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::_LibAccess;
 require SOAP::Lite;
 use base qw(Lemonldap::NG::Portal::_LibAccess);
 
-our $VERSION = '1.0.2';
+our $VERSION = '1.1.1';
 
 ## @method void startSoapServices()
 # Check the URI requested (PATH_INFO environment variable) and launch the
@@ -34,7 +34,16 @@ sub startSoapServices {
         }->{ $ENV{PATH_INFO} }
       )
     {
-        $self->soapTest($tmp);
+
+        # If $tmp is a HASHREF, extract SOAP functions and Object
+        # tmp->f: functions list
+        # tmp->o: object
+        if ( ref($tmp) =~ /HASH/ ) {
+            $self->soapTest( $tmp->{f}, $tmp->{o} );
+        }
+        else {
+            $self->soapTest($tmp);
+        }
         $self->{soapOnly} = 1;
     }
     else {
