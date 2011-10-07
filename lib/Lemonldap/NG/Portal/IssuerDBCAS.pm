@@ -8,9 +8,9 @@ package Lemonldap::NG::Portal::IssuerDBCAS;
 use strict;
 use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_CAS;
-use base qw(Lemonldap::NG::Portal::_CAS);
+use base qw(Lemonldap::NG::Portal::_CAS Lemonldap::NG::Portal::_LibAccess);
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.1.2';
 
 ## @method void issuerDBInit()
 # Nothing to do
@@ -520,6 +520,7 @@ sub issuerForAuthUser {
         my $renew = $self->getHiddenFormValue('renew') || $self->param('renew');
         my $gateway = $self->getHiddenFormValue('gateway')
           || $self->param('gateway');
+        my $casServiceTicket;
 
         # Renew
         if ( $renew eq 'true' ) {
@@ -548,41 +549,79 @@ sub issuerForAuthUser {
             return PE_OK;
         }
 
-        # Check last authentication time to decide if
-        # the authentication is recent or not
-        my $casRenewFlag = 0;
-        my $last_authn_utime = $self->{sessionInfo}->{_lastAuthnUTime} || 0;
-        if ( time() - $last_authn_utime < $self->{portalForceAuthnInterval} ) {
-            $self->lmLog(
-                "Authentication is recent, will set CAS renew flag to true",
+        # Check access on the service
+        my $casAccessControlPolicy = $self->{casAccessControlPolicy};
+
+        if ( $casAccessControlPolicy =~ /^(error|faketicket)$/i ) {
+            $self->lmLog( "CAS access control requested on service $service",
                 'debug' );
-            $casRenewFlag = 1;
+
+            if ( $self->_grant($service) ) {
+                $self->lmLog( "CAS service $service access allowed", 'debug' );
+            }
+
+            else {
+                $self->lmLog( "CAS service $service access not allowed",
+                    'error' );
+
+                if ( $casAccessControlPolicy =~ /^(error)$/i ) {
+                    $self->lmLog(
+"Return error instead of redirecting user on CAS service",
+                        'debug'
+                    );
+                    return PE_CAS_SERVICE_NOT_ALLOWED;
+                }
+
+                else {
+                    $self->lmLog(
+                        "Redirect user on CAS service with a fake ticket",
+                        'debug' );
+                    $casServiceTicket = "ST-F4K3T1CK3T";
+                }
+            }
         }
 
-        # Create a service ticket
-        $self->lmLog( "Create a CAS service ticket for service $service",
-            'debug' );
+        unless ($casServiceTicket) {
 
-        my $casServiceSession = $self->getCasSession();
+            # Check last authentication time to decide if
+            # the authentication is recent or not
+            my $casRenewFlag = 0;
+            my $last_authn_utime = $self->{sessionInfo}->{_lastAuthnUTime} || 0;
+            if (
+                time() - $last_authn_utime < $self->{portalForceAuthnInterval} )
+            {
+                $self->lmLog(
+                    "Authentication is recent, will set CAS renew flag to true",
+                    'debug'
+                );
+                $casRenewFlag = 1;
+            }
 
-        unless ($casServiceSession) {
-            $self->lmLog( "Unable to create CAS session", 'error' );
-            return PE_ERROR;
+            # Create a service ticket
+            $self->lmLog( "Create a CAS service ticket for service $service",
+                'debug' );
+
+            my $casServiceSession = $self->getCasSession();
+
+            unless ($casServiceSession) {
+                $self->lmLog( "Unable to create CAS session", 'error' );
+                return PE_ERROR;
+            }
+
+            $casServiceSession->{type}    = 'casService';
+            $casServiceSession->{service} = $service;
+            $casServiceSession->{renew}   = $casRenewFlag;
+            $casServiceSession->{_cas_id} = $session_id;
+            $casServiceSession->{_utime}  = $time;
+
+            my $casServiceSessionID = $casServiceSession->{_session_id};
+            $casServiceTicket = "ST-" . $casServiceSessionID;
+
+            untie %$casServiceSession;
+
+            $self->lmLog( "CAS service session $casServiceSessionID created",
+                'debug' );
         }
-
-        $casServiceSession->{type}    = 'casService';
-        $casServiceSession->{service} = $service;
-        $casServiceSession->{renew}   = $casRenewFlag;
-        $casServiceSession->{_cas_id} = $session_id;
-        $casServiceSession->{_utime}  = $time;
-
-        my $casServiceSessionID = $casServiceSession->{_session_id};
-        my $casServiceTicket    = "ST-" . $casServiceSessionID;
-
-        untie %$casServiceSession;
-
-        $self->lmLog( "CAS service session $casServiceSessionID created",
-            'debug' );
 
         # Redirect to service
         my $service_url = $service;

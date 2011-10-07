@@ -7,7 +7,7 @@ package Lemonldap::NG::Portal::_LibAccess;
 
 use strict;
 
-our $VERSION = '1.0.2';
+our $VERSION = '1.1.2';
 
 # Global variables
 our ( $defaultCondition, $locationCondition, $locationRegexp, $cfgNum ) =
@@ -29,20 +29,31 @@ BEGIN {
 # @return True if granted
 sub _grant {
     my ( $self, $uri ) = splice @_;
+    $self->lmLog( "Evaluate access right on $uri", 'debug' );
     $uri =~ m{(\w+)://([^/:]+)(:\d+)?(/.*)?$} or return 0;
     my ( $protocol, $vhost, $port, $path );
     ( $protocol, $vhost, $port, $path ) = ( $1, $2, $3, $4 );
     $path ||= '/';
+    $self->lmLog( "Evaluation for vhost $vhost and path $path", 'debug' );
     $self->_compileRules()
       if ( $cfgNum != $self->{cfgNum} );
-    return -1 unless ( defined( $defaultCondition->{$vhost} ) );
 
     if ( defined $locationRegexp->{$vhost} ) {    # Not just a default rule
+        $self->lmLog( "Applying access rule from $vhost", 'debug' );
         for ( my $i = 0 ; $i < @{ $locationRegexp->{$vhost} } ; $i++ ) {
             if ( $path =~ $locationRegexp->{$vhost}->[$i] ) {
+                $self->lmLog(
+                    "Applying access rule "
+                      . $locationCondition->{$vhost}->[$i]
+                      . " for path $path",
+                    'debug'
+                );
                 return &{ $locationCondition->{$vhost}->[$i] }($self);
             }
         }
+    }
+    else {
+        $self->lmLog( "Applying default access rule from $vhost", 'debug' );
     }
     unless ( $defaultCondition->{$vhost} ) {
         $self->lmLog(
@@ -61,6 +72,7 @@ sub _compileRules {
     my $self = shift;
     foreach my $vhost ( keys %{ $self->{locationRules} } ) {
         my $i = 0;
+        $self->lmLog( "Compiling rules for $vhost", 'debug' );
         foreach ( keys %{ $self->{locationRules}->{$vhost} } ) {
             if ( $_ eq 'default' ) {
                 $defaultCondition->{$vhost} =

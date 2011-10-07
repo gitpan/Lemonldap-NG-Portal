@@ -63,7 +63,7 @@ use Digest::MD5;
 #inherits Apache::Session
 #link Lemonldap::NG::Common::Apache::Session::SOAP protected globalStorage
 
-our $VERSION = '1.1.1';
+our $VERSION = '1.1.2';
 
 use base qw(Lemonldap::NG::Common::CGI Exporter);
 our @ISA;
@@ -137,6 +137,7 @@ use constant {
     PE_BADPARTNER                       => 65,
     PE_MAILCONFIRMATION_ALREADY_SENT    => 66,
     PE_PASSWORDFORMEMPTY                => 67,
+    PE_CAS_SERVICE_NOT_ALLOWED          => 68,
 
     # Portal messages
     PM_USER                  => 0,
@@ -180,7 +181,7 @@ our @EXPORT = qw( PE_IMG_NOK PE_IMG_OK PE_INFO PE_REDIRECT PE_DONE PE_OK
   PE_SAML_SIGNATURE_ERROR PE_SAML_ART_ERROR PE_SAML_SESSION_ERROR
   PE_SAML_LOAD_SP_ERROR PE_SAML_ATTR_ERROR PE_OPENID_EMPTY PE_OPENID_BADID
   PE_MISSINGREQATTR PE_BADPARTNER PE_MAILCONFIRMATION_ALREADY_SENT
-  PE_PASSWORDFORMEMPTY
+  PE_PASSWORDFORMEMPTY PE_CAS_SERVICE_NOT_ALLOWED
   PM_USER PM_DATE PM_IP PM_SESSIONS_DELETED PM_OTHER_SESSIONS
   PM_REMOVE_OTHER_SESSIONS PM_PP_GRACE PM_PP_EXP_WARNING
   PM_SAML_IDPSELECT PM_SAML_IDPCHOOSEN PM_REMEMBERCHOICE PM_SAML_SPLOGOUT
@@ -598,6 +599,7 @@ sub setDefaultValues {
     if ( !$self->{casStorageOptions} or !%{ $self->{casStorageOptions} } ) {
         $self->{casStorageOptions} = $self->{globalStorageOptions};
     }
+    $self->{casAccessControlPolicy} ||= "none";
 
     # Authentication levels
     $self->{ldapAuthnLevel}   = 2 unless defined $self->{ldapAuthnLevel};
@@ -1522,7 +1524,7 @@ sub checkNotifBack {
                 'debug'
             );
             $self->{error} = $self->_subProcess(
-                qw(issuerDBInit authInit issuerForAuthUser autoRedirect) );
+                qw(issuerDBInit authInit issuerForAuthUser autoRedirect));
             return $self->{error} || PE_DONE;
         }
     }

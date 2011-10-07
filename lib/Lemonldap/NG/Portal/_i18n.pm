@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::_i18n;
 # Developpers warning : this file must stay UTF-8 encoded
 
 use AutoLoader qw(AUTOLOAD);
-our $VERSION = '1.1.0';
+our $VERSION = '1.1.2';
 
 ## @fn string error(int error,string lang)
 # @param $error Number of error to resolve
@@ -127,6 +127,7 @@ __END__
 # * PE_BADPARTNER                        65
 # * PE_MAILCONFIRMATION_ALREADY_SENT     66
 # * PE_PASSWORDFORMEMPTY                 67
+# * PE_CAS_SERVICE_NOT_ALLOWED           68
 
 # Not used in errors:
 # * PE_DONE                -1
@@ -206,6 +207,7 @@ sub error_fr {
         'Fédération interdite par la politique de sécurité',
         'Le mail de confirmation a déjà été envoyé',
         'Mot de passe non renseigné',
+        'Accès non autorisé au service CAS',
     ];
 }
 
@@ -282,6 +284,7 @@ sub error_en {
         'Federation forbidden by security policy',
         'The confirmation mail was already sent',
         'Password field must be filled',
+        'Access non granted on CAS service',
     ];
 }
 
@@ -359,6 +362,7 @@ sub error_ro {
         'Federation forbidden by security policy',
         'The confirmation mail was already sent',
         'Password field must be filled',
+        'Access non granted on CAS service',
     ];
 }
 

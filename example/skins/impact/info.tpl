@@ -19,7 +19,7 @@
             <lang en="Wait" fr="Attendre" />
           </button>
           <button type="submit" class="positive" tabindex="3">
-            <lang en="Continuer" fr="Continuer" />
+            <lang en="Continue" fr="Continuer" />
           </button>
         </div>
       </form>
