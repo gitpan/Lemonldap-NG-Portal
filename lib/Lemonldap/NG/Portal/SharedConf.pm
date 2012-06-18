@@ -14,7 +14,7 @@ use Lemonldap::NG::Common::Conf::Constants; #inherits
 *EXPORT_TAGS = *Lemonldap::NG::Portal::Simple::EXPORT_TAGS;
 *EXPORT      = *Lemonldap::NG::Portal::Simple::EXPORT;
 
-our $VERSION = '1.1.0';
+our $VERSION = '1.2.0';
 use base qw(Lemonldap::NG::Portal::Simple);
 our $confCached;
 
@@ -45,7 +45,10 @@ sub getConf {
 
     my $num = $self->__lmConf->lastCfg;
 
+    # Reload configuration
     unless ( $confCached and $confCached->{cfgNum} == $num ) {
+        $self->lmLog( "Cached configuration too old, get configuration $num",
+            'debug' );
         my $gConf = $self->__lmConf->getConf( { cfgNum => $num } );
         my $lConf = $self->__lmConf->getLocalConf(PORTALSECTION);
         unless ( ref($gConf) and ref($lConf) ) {
@@ -163,7 +166,7 @@ SOAP mode authentication (client) :
   
       # If authentication failed, display error
       if ( $res->{error} ) {
-          print STDERR "Error: " . $soap->error( 'fr', $res->{error} )->result();
+          print STDERR "Error: " . $soap->error( $res->{error} )->result();
       }
   
       # print session-ID

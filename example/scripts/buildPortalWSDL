@@ -1,8 +1,29 @@
 #!/usr/bin/perl
 
-use Lemonldap::NG::Common::BuildWSDL;
+use Lemonldap::NG::Portal::SharedConf;
 
-print Lemonldap::NG::Common::BuildWSDL->new->buildWSDL(<<EOT);
+my $self = Lemonldap::NG::Portal::SharedConf->new( {} );
+
+unless ( $self->{Soap} ) {
+    print STDERR "Lemonldap::NG Portal SOAP capability is disabled.\n"
+      . "Set 'Soap' option to 1 in manager or lemonldap-ng.ini to enable it.\n";
+    exit;
+}
+
+my $portal = $self->{portal};
+$portal .= "index.pl" if ( $portal =~ /\/$/ );
+
+my @cookies = ( $self->{cookieName} );
+push @cookies, "$self->{cookieName}.http"
+  if ( $self->{securedCookie} >= 2 );
+my $cookieList = join "\n",
+  map { "<element name='$_' type='xsd:string'></element>" } @cookies;
+
+my $attrList = join "\n",
+  map { "<element name='$_' type='xsd:string' nillable='true'></element>" }
+  $self->exportedAttr;
+
+print <<EOT;
 <?xml version="1.0" encoding="UTF-8"?>
 
 <wsdl:definitions
@@ -22,19 +43,18 @@ print Lemonldap::NG::Common::BuildWSDL->new->buildWSDL(<<EOT);
 
       <complexType name="CookiesSequence">
         <sequence>
-          __XMLCOOKIELIST__
-          <element name="lemonldapupdate" type="xsd:string"></element>
+$cookieList
         </sequence>
       </complexType>
       <complexType name="AttributesSequence">
         <sequence>
-          __ATTRLIST__
+$attrList
         </sequence>
       </complexType>
       <complexType name="GetCookieResponse">
         <sequence>
           <element name="errorCode" type="xsd:int"></element>
-          <element name="cookies" type="tns1:CookiesSequence"></element>
+          <element name="cookies" minOccurs="0" type="tns1:CookiesSequence"></element>
         </sequence>
       </complexType>
       <complexType name="GetAttributesResponse">
@@ -50,8 +70,8 @@ print Lemonldap::NG::Common::BuildWSDL->new->buildWSDL(<<EOT);
   <!-- authentication service -->
 
   <wsdl:message name="errorRequest">
-    <wsdl:part name="lang" type="xsd:string" />
     <wsdl:part name="code" type="xsd:int" />
+    <wsdl:part name="lang" type="xsd:string" />
   </wsdl:message>
   <wsdl:message name="errorResponse">
     <wsdl:part name="result" type="xsd:string" />
@@ -100,7 +120,7 @@ print Lemonldap::NG::Common::BuildWSDL->new->buildWSDL(<<EOT);
 
   <wsdl:service name="authenticationService">
     <wsdl:port binding="impl:authenticationBinding" name="authenticationPort">
-      <wsdlsoap:address location="__PORTAL__" />
+      <wsdlsoap:address location="$portal" />
     </wsdl:port>
   </wsdl:service>
 
@@ -135,7 +155,7 @@ print Lemonldap::NG::Common::BuildWSDL->new->buildWSDL(<<EOT);
 
   <wsdl:service name="notificationService">
     <wsdl:port binding="impl:notificationBinding" name="notificationPort">
-      <wsdlsoap:address location="__PORTAL__/notification" />
+      <wsdlsoap:address location="$portal/notification" />
     </wsdl:port>
   </wsdl:service>
 
@@ -153,7 +173,7 @@ print Lemonldap::NG::Common::BuildWSDL->new->buildWSDL(<<EOT);
     <wsdl:part name="uri" type="xsd:string" />
   </wsdl:message>
   <wsdl:message name="isAuthorizedURIResponse">
-    <wsdl:part name="result" type="xsd:boolean" />
+    <wsdl:part name="result" type="xsd:int" />
   </wsdl:message>
 
   <wsdl:message name="getMenuApplicationsRequest">
@@ -189,7 +209,7 @@ print Lemonldap::NG::Common::BuildWSDL->new->buildWSDL(<<EOT);
         <wsdlsoap:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:Lemonldap/NG/Common/CGI/SOAPService" use="encoded" />
       </wsdl:output>
     </wsdl:operation>
-    <wdsl:operation name="isAuthorizedURI">
+    <wsdl:operation name="isAuthorizedURI">
       <wsdlsoap:operation soapAction="" />
       <wsdl:input name="isAuthorizedURIRequest">
         <wsdlsoap:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:Lemonldap/NG/Common/CGI/SOAPService" use="encoded" />
@@ -197,8 +217,8 @@ print Lemonldap::NG::Common::BuildWSDL->new->buildWSDL(<<EOT);
       <wsdl:output name="isAuthorizedURIResponse">
         <wsdlsoap:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:Lemonldap/NG/Common/CGI/SOAPService" use="encoded" />
       </wsdl:output>
-    </wdsl:operation>
-    <wdsl:operation name="getMenuApplications">
+    </wsdl:operation>
+    <wsdl:operation name="getMenuApplications">
       <wsdlsoap:operation soapAction="" />
       <wsdl:input name="getMenuApplicationsRequest">
         <wsdlsoap:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:Lemonldap/NG/Common/CGI/SOAPService" use="encoded" />
@@ -206,13 +226,13 @@ print Lemonldap::NG::Common::BuildWSDL->new->buildWSDL(<<EOT);
       <wsdl:output name="getMenuApplicationsResponse">
         <wsdlsoap:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:Lemonldap/NG/Common/CGI/SOAPService" use="encoded" />
       </wsdl:output>
-    </wdsl:operation>
+    </wsdl:operation>
 
   </wsdl:binding>
 
   <wsdl:service name="sessionsService">
     <wsdl:port binding="impl:sessionsBinding" name="sessionsPort">
-      <wsdlsoap:address location="__PORTAL__/sessions" />
+      <wsdlsoap:address location="$portal/sessions" />
     </wsdl:port>
   </wsdl:service>
 

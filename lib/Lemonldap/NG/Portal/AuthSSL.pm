@@ -7,49 +7,35 @@ package Lemonldap::NG::Portal::AuthSSL;
 
 use strict;
 use Lemonldap::NG::Portal::Simple;
-use Lemonldap::NG::Portal::AuthLDAP;
+use Lemonldap::NG::Portal::AuthNull;
 
-use base qw(Lemonldap::NG::Portal::AuthLDAP);
-
-our $VERSION = '1.0.0';
+our $VERSION = '1.2.0';
+our @ISA     = qw(Lemonldap::NG::Portal::AuthNull);
 
 ## @apmethod int authInit()
 # Check if SSL environment variables are set.
 # @return Lemonldap::NG::Portal constant
 sub authInit {
     my $self = shift;
-    $self->{SSLRequire} = 1 unless ( defined $self->{SSLRequire} );
-    $self->{SSLVar}       ||= 'SSL_CLIENT_S_DN_Email';
-    $self->{SSLLDAPField} ||= 'mail';
+    $self->{SSLVar} ||= 'SSL_CLIENT_S_DN_Email';
     PE_OK;
 }
 
-# Authentication is made by Apache with SSL and here before searching the LDAP
-# Directory.
-# So authenticate is overloaded to return only PE_OK.
-
 ## @apmethod int extractFormInfo()
-# Read username in SSL environment variables.
-# If $ENV{$self->{SSLVar}} is not set and SSLRequire is not set to 1, call
-# Lemonldap::NG::Portal::AuthLDAP::extractFormInfo()
-# else return an error
+# Read username in SSL environment variables, or return an error
 # @return Lemonldap::NG::Portal constant
 sub extractFormInfo {
     my $self = shift;
     my $user = $self->https ? $ENV{ $self->{SSLVar} } : 0;
     if ($user) {
         $self->{user} = $user;
-        $self->{AuthLDAPFilter} ||=
-          '(&(' . $self->{SSLLDAPField} . "=$user)(objectClass=inetOrgPerson))";
         return PE_OK;
     }
-    elsif ( $self->{SSLRequire} ) {
+    else {
         $self->_sub( 'userError',
             "No certificate found for $ENV{REMOTE_ADDR}" );
         return PE_CERTIFICATEREQUIRED;
     }
-    $self->{AuthLDAPFilter} = '';
-    return $self->SUPER::extractFormInfo(@_);
 }
 
 ## @apmethod int setAuthSessionInfo()
@@ -65,40 +51,10 @@ sub setAuthSessionInfo {
     PE_OK;
 }
 
-## @apmethod int authenticate()
-# Call Lemonldap::NG::Portal::AuthLDAP::authenticate() if user was not
-# authenticated by SSL.
-# @return Lemonldap::NG::Portal constant
-sub authenticate {
-    my $self = shift;
-    if (    $self->{sessionInfo}->{authenticationLevel}
-        and $self->{sessionInfo}->{authenticationLevel} >=
-        $self->{SSLAuthnLevel} )
-    {
-        return PE_OK;
-    }
-    return $self->SUPER::authenticate(@_);
-}
-
-## @apmethod int authFinish()
-# Does nothing.
-# @return Lemonldap::NG::Portal constant
-sub authFinish {
-    PE_OK;
-}
-
-## @apmethod int authLogout()
-# Does nothing
-# @return Lemonldap::NG::Portal constant
-sub authLogout {
-    PE_OK;
-}
-
-## @apmethod boolean authForce()
-# Does nothing
-# @return result
-sub authForce {
-    return 0;
+## @method string getDisplayType
+# @return display type
+sub getDisplayType {
+    return "logo";
 }
 
 1;
@@ -136,14 +92,6 @@ With Lemonldap::NG::Portal::Simple:
          # SSLVar: field to search in client certificate
          #         default: SSL_CLIENT_S_DN_Email the mail address
          SSLVar         => 'SSL_CLIENT_S_DN_CN',
-         
-         # SSLLDAPField: field to use in ldap filter to search SSLVar
-         #               default: mail
-         SSLLDAPField   => 'cn',
-         
-         # SSLRequire: if set to 1, login/password are disabled
-         #             default: 1
-         SSLRequire     => 1,
     );
 
   if($portal->process()) {
@@ -177,7 +125,6 @@ Apache SSLv3 mechanism: we've just to verify that
 C<$ENV{SSL_CLIENT_S_DN_Email}> exists. So remenber to export SSL variables
 to CGI.
 
-The parameter SSLRequire can be used to authenticate users by SSL or ldap bind.
 If SSL is used, authenticationLevel is set to 5. You can use this parameter in
 L<Lemonldap::NG::Handler> rules to force users to use certificates in some
 applications:

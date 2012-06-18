@@ -4,7 +4,7 @@ use Test::More tests => 14;
 use strict;
 
 our @ISA = qw(Lemonldap::NG::Portal::IssuerDBOpenID
-  Lemonldap::NG::Portal::OpenID::SREG);
+  Lemonldap::NG::Portal::OpenID::SREG Lemonldap::NG::Portal::Simple);
 
 sub lmLog {
     my ( $self, $msg, $level ) = splice @_;

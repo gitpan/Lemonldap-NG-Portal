@@ -6,10 +6,11 @@
 package Lemonldap::NG::Portal::UserDBSlave;
 
 use strict;
+use Lemonldap::NG::Portal::_Slave;
 use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::UserDBNull;
 
-our $VERSION = '1.1.0';
+our $VERSION = '1.2.0';
 our @ISA     = qw(Lemonldap::NG::Portal::UserDBNull);
 
 ## @apmethod int setSessionInfo()
@@ -17,6 +18,9 @@ our @ISA     = qw(Lemonldap::NG::Portal::UserDBNull);
 # @return Lemonldap::NG::Portal constant
 sub setSessionInfo {
     my $self = shift;
+
+    return PE_FORBIDDENIP
+      unless ( $self->checkIP );
 
     while ( my ( $k, $v ) = each %{ $self->{exportedVars} } ) {
         $v = 'HTTP_' . uc($v);

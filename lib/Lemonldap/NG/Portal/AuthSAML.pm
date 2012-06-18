@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_SAML;    #inherits
 use Lemonldap::NG::Common::Conf::SAML::Metadata;
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.2.0';
 our @ISA     = qw(Lemonldap::NG::Portal::_SAML);
 
 ## @apmethod int authInit()
@@ -38,7 +38,7 @@ sub extractFormInfo {
 
     # 1. Get HTTP request informations to know
     # if we are receving SAML request or response
-    my $url            = $self->url();
+    my $url            = $self->url( -absolute => 1 );
     my $request_method = $self->request_method();
     my $content_type   = $self->content_type();
 
@@ -162,8 +162,7 @@ sub extractFormInfo {
                     );
                     delete $self->{urldc};
                     $self->{mustRedirect} = 1;
-                    $self->{error} = $self->_subProcess(qw(autoRedirect));
-                    return $self->{error};
+                    return $self->_subProcess(qw(autoRedirect));
                 }
             }
             else {
@@ -190,7 +189,7 @@ sub extractFormInfo {
             if (
                 $checkConditions
                 and !$self->validateConditions(
-                    $assertion, $self->getMetaDataURL( "samlEntityID", 0 )
+                    $assertion, $self->getMetaDataURL( "samlEntityID", 0, 1 )
                 )
               )
             {
@@ -344,8 +343,7 @@ sub extractFormInfo {
 
             # Redirect user
             $self->{mustRedirect} = 1;
-            $self->{error}        = $self->_subProcess(qw(autoRedirect));
-            return $self->{error};
+            return $self->_subProcess(qw(autoRedirect));
         }
 
     }
@@ -437,7 +435,7 @@ sub extractFormInfo {
                     'debug' );
             }
 
-            $self->_subProcess(qw(autoRedirect))
+            return $self->_subProcess(qw(autoRedirect))
               if (  $self->{urldc}
                 and $self->{portal} !~ /\Q$self->{urldc}\E\/?/ );
 
@@ -661,12 +659,7 @@ sub extractFormInfo {
 
                 $self->{urldc} = $slo_url;
 
-                $self->_subProcess(qw(autoRedirect));
-
-                # If we are here, there was a problem with GET request
-                $self->lmLog( "Logout response was not sent trough GET",
-                    'error' );
-                return PE_SAML_SLO_ERROR;
+                return $self->_subProcess(qw(autoRedirect));
             }
 
             # HTTP-POST
@@ -683,12 +676,7 @@ sub extractFormInfo {
                 $self->{postFields}->{'RelayState'} = $relaystate
                   if ($relaystate);
 
-                $self->_subProcess(qw(autoPost));
-
-                # If we are here, there was a problem with POST response
-                $self->lmLog( "Logout response was not sent trough POST",
-                    'error' );
-                return PE_SAML_SLO_ERROR;
+                return $self->_subProcess(qw(autoPost));
             }
 
             # HTTP-SOAP
@@ -716,8 +704,7 @@ sub extractFormInfo {
 
             # Redirect user
             $self->{mustRedirect} = 1;
-            $self->{error}        = $self->_subProcess(qw(autoRedirect));
-            return $self->{error};
+            return $self->_subProcess(qw(autoRedirect));
         }
     }
 
@@ -773,14 +760,6 @@ sub extractFormInfo {
     # Get confirmation flag
     my $confirm_flag = $self->param("confirm");
 
-    # If confirmation is -1 from IDP list,
-    # return error to get next authentication method
-    # with AuthMulti
-    if ( $confirm_flag == -1 and $self->param("idplist") ) {
-        $self->lmLog( "SAML authentication refused by user", 'error' );
-        return PE_ERROR;
-    }
-
     # If confirmation is -1 from resolved IDP screen,
     # or IDP was not resolve, let the user choose its IDP
     if ( $confirm_flag == -1 or !$idp ) {
@@ -791,40 +770,15 @@ sub extractFormInfo {
         return $urlcheck unless ( $urlcheck == PE_OK );
 
         # IDP list
-        my $html = "<h3>"
-          . &Lemonldap::NG::Portal::_i18n::msg( PM_SAML_IDPSELECT,
-            $ENV{HTTP_ACCEPT_LANGUAGE} )
-          . "</h3>\n<table>\n";
-
+        my @list = ();
         foreach ( keys %{ $self->{_idpList} } ) {
-            $html .=
-                '<tr><td><input type="radio" name="idp" value="' 
-              . $_
-              . '" /></td><td>'
-              . $self->{_idpList}->{$_}->{name}
-              . '</td></tr>';
+            push @list,
+              {
+                val  => $_,
+                name => $self->{_idpList}->{$_}->{name}
+              };
         }
-
-        $html .=
-'<tr><td><input type="checkbox" name="cookie_type" value="1"></td><td>'
-          . &Lemonldap::NG::Portal::_i18n::msg( PM_REMEMBERCHOICE,
-            $ENV{HTTP_ACCEPT_LANGUAGE} )
-          . "</td></tr></table>\n"
-
-          # URL
-          . '<input type="hidden" name="url" value="'
-          . $self->param("url") . '" />'
-
-          # IDP list flag
-          . '<input type="hidden" name="idplist" value="1" />'
-
-          # Script to autoselect first choice
-          . '<script>$("[type=radio]:first").attr("checked","checked");</script>';
-
-        $self->info($html);
-
-        # Timer not active on IDP list
-        $self->{activeTimer} = 0;
+        $self->{list} = \@list;
 
         # Delete existing IDP resolution cookie
         push @{ $self->{cookie} },
@@ -837,6 +791,7 @@ sub extractFormInfo {
             -expires => '-1d',
           );
 
+        $self->{login} = 1;
         return PE_CONFIRM;
     }
 
@@ -850,8 +805,7 @@ sub extractFormInfo {
 
         # Choosen IDP
         my $html = '<h3>'
-          . &Lemonldap::NG::Portal::_i18n::msg( PM_SAML_IDPCHOOSEN,
-            $ENV{HTTP_ACCEPT_LANGUAGE} )
+          . $self->msg(PM_SAML_IDPCHOOSEN)
           . "</h3>\n" . "<h4>"
           . $self->{_idpList}->{$idp}->{name}
           . "</h4>\n"
@@ -864,6 +818,7 @@ sub extractFormInfo {
 
         $self->info($html);
 
+        $self->{login} = 1;
         return PE_CONFIRM;
     }
 
@@ -1016,11 +971,7 @@ sub extractFormInfo {
 
         $self->{urldc} = $sso_url;
 
-        $self->_subProcess(qw(autoRedirect));
-
-        # If we are here, there was a problem with GET request
-        $self->lmLog( "SSO request was not sent trough GET", 'error' );
-        return PE_SAML_SSO_ERROR;
+        return $self->_subProcess(qw(autoRedirect));
     }
 
     # HTTP-POST
@@ -1045,11 +996,7 @@ sub extractFormInfo {
         $self->{postFields}->{'RelayState'} = $login->msg_relayState
           if ( $login->msg_relayState );
 
-        $self->_subProcess(qw(autoPost));
-
-        # If we are here, there was a problem with POST request
-        $self->lmLog( "SSO request was not sent trough POST", 'error' );
-        return PE_SAML_SSO_ERROR;
+        return $self->_subProcess(qw(autoPost));
     }
 
     # No SOAP transport for SSO request
@@ -1221,7 +1168,6 @@ sub getIDP {
             and $self->{samlCommonDomainCookieActivation}
             and $self->{samlCommonDomainCookieReader} )
         {
-
             $self->lmLog(
                 "Will try to use Common Domain Cookie for IDP resolution",
                 'debug' );
@@ -1241,8 +1187,7 @@ sub getIDP {
 
             $self->{urldc} = $cdc_reader_url;
 
-            return $self->_sub('autoRedirect');
-
+            return $self->_subProcess('autoRedirect');
         }
 
         $self->lmLog( 'No IDP found', 'debug' ) unless ($idp);
@@ -1410,7 +1355,7 @@ sub authLogout {
 sub authForce {
     my $self = shift;
 
-    my $url = $self->url();
+    my $url = $self->url( -absolute => 1 );
 
     my $saml_acs_art_url = $self->getMetaDataURL(
         "samlSPSSODescriptorAssertionConsumerServiceHTTPArtifact");
@@ -1483,6 +1428,12 @@ sub authFinish {
     $self->lmLog( "Link session $id to SAML session $session_id", 'debug' );
 
     return PE_OK;
+}
+
+## @method string getDisplayType
+# @return display type
+sub getDisplayType {
+    return "logo";
 }
 
 1;

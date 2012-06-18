@@ -43,7 +43,7 @@ sub sregHook {
             if ( $v =~ Lemonldap::NG::Common::Regexp::HTTP_URI ) {
                 $self->{_openIdTrustExtMsg} .=
                     '<dl><dt>'
-                  . &Lemonldap::NG::Portal::_i18n::msg(PM_OPENID_PA)
+                  . $self->msg(PM_OPENID_PA)
                   . "&nbsp;:</dt><dd><a href=\"$v\">$v</a></dd></dl>";
 
                 # Question: is it important to notify policy changes ?
@@ -91,13 +91,7 @@ sub sregHook {
             );
 
             $self->info(
-                '<h3>'
-                  . sprintf(
-                    &Lemonldap::NG::Portal::_i18n::msg(PM_OPENID_RPNS),
-                    $k
-                  )
-                  . '</h3>'
-            );
+                '<h3>' . sprintf( $self->msg(PM_OPENID_RPNS), $k ) . '</h3>' );
             return ( 0, {} );
         }
     }
@@ -178,7 +172,7 @@ sub sregHook {
     else {
 
         $self->{_openIdTrustExtMsg} .=
-          "<h3>" . &Lemonldap::NG::Portal::_i18n::msg(PM_OPENID_AP) . "</h3>\n";
+          "<h3>" . $self->msg(PM_OPENID_AP) . "</h3>\n";
 
         $self->{_openIdTrustExtMsg} .= "<table class=\"openidsreg\">\n";
 

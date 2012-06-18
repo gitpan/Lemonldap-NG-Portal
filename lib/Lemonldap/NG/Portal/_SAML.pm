@@ -15,11 +15,12 @@ use HTTP::Request;     # SOAP call
 use POSIX;             # Convert SAML2 date into timestamp
 use Time::Local;       # Convert SAML2 date into timestamp
 use Encode;            # Encode attribute values
+use URI;               # Get metadata URL path
 
 # Special comments for doxygen
 #inherits Lemonldap::NG::Common::Conf::SAML::Metadata protected service_metadata
 
-our $VERSION = '1.0.2';
+our $VERSION = '1.2.0';
 our $samlCache;
 our $initGlibDone;
 
@@ -71,6 +72,20 @@ BEGIN {
 # @return boolean result
 sub loadLasso {
     my $self = shift;
+
+    # Reload SAML cache if configuration number has changed
+    unless ( $samlCache->{cfgNum} == $self->{cfgNum} ) {
+        $self->lmLog( "Reset SAML configuration cache", 'debug' );
+        delete $samlCache->{_lassoServerDump};
+        delete $samlCache->{_spList};
+        delete $samlCache->{_idpList};
+
+        $samlCache->{cfgNum} = $self->{cfgNum};
+    }
+
+    $self->lmLog( "SAML cache configuration: " . $samlCache->{cfgNum},
+        'debug' );
+
     return 1 if ($initGlibDone);
 
     # Catch GLib Lasso messages (require Glib)
@@ -86,7 +101,7 @@ sub loadLasso {
     }
 
     unless (LASSO) {
-        $self->lmLog( "Module Lasso not loaded (see bellow)", 'error' );
+        $self->lmLog( "Module Lasso not loaded (see below)", 'error' );
         return 0;
     }
 
@@ -96,6 +111,7 @@ sub loadLasso {
     }
 
     $initGlibDone = 1;
+
     return 1;
 }
 
@@ -154,7 +170,8 @@ sub loadService {
     # Create Lasso server with service metadata
     my $server = $self->createServer(
         $service_metadata->serviceToXML(
-            $self->getApacheHtdocsPath() . "/skins/common/saml2-metadata.tpl", $self
+            $self->getApacheHtdocsPath() . "/skins/common/saml2-metadata.tpl",
+            $self
         ),
         $privateKeySig,
         $privateKeySigPwd,
@@ -776,7 +793,7 @@ sub createAuthnRequest {
 
     # Set RelayState
     my $infos;
-    foreach (qw /urldc/) {
+    foreach (qw /urldc checkLogins/) {
         $infos->{$_} = $self->{$_} if $self->{$_};
     }
     my $relaystate = $self->storeRelayState($infos);
@@ -1343,7 +1360,7 @@ sub createLogoutRequest {
 
     # Set RelayState
     my $infos;
-    foreach (qw /urldc/) {
+    foreach (qw /urldc checkLogins/) {
         $infos->{$_} = $self->{$_} if $self->{$_};
     }
     my $relaystate = $self->storeRelayState($infos);
@@ -1456,10 +1473,12 @@ sub setIdentityFromDump {
 # Replace #PORTAL# macro
 # @param key Metadata configuration key
 # @param index field index containing URL
+# @param full Return full URL instead of path
 # @return url
 sub getMetaDataURL {
-    my ( $self, $key, $index ) = splice @_;
+    my ( $self, $key, $index, $full ) = splice @_;
     $index = 3 unless defined $index;
+    $full  = 0 unless defined $full;
 
     return unless defined $self->{$key};
 
@@ -1472,8 +1491,12 @@ sub getMetaDataURL {
     # Replace #PORTAL# macro
     $url =~ s/#PORTAL#/$portal/g;
 
-    # Return URL
-    return $url;
+    # Return Full URL
+    return $url if $full;
+
+    # Return only path
+    my $uri = URI->new($url);
+    return $uri->path();
 }
 
 ## @method boolean processLogoutResponseMsg(Lasso::Logout logout, string response)
@@ -2300,13 +2323,7 @@ sub sendLogoutResponseToServiceProvider {
 
         $self->lmLog( "Redirect user to $slo_url", 'debug' );
 
-        $self->_subProcess(qw(autoRedirect));
-
-        # If we are here, there was a problem with HTTP-REDIRECT response
-        $self->lmLog( "Logout response was not sent trough GET", 'error' );
-
-        return 0;
-
+        return $self->_subProcess(qw(autoRedirect));
     }
 
     # HTTP-POST
@@ -2324,13 +2341,7 @@ sub sendLogoutResponseToServiceProvider {
         $self->{postFields}->{'RelayState'} = $relaystate
           if ($relaystate);
 
-        $self->_subProcess(qw(autoPost));
-
-        # If we are here, there was a problem with POST response
-        $self->lmLog( "Logout response was not sent trough POST", 'error' );
-
-        return 0;
-
+        return $self->_subProcess(qw(autoPost));
     }
 
     # HTTP-SOAP
@@ -2447,6 +2458,11 @@ sub sendLogoutRequestToProvider {
             return ( 0, $method, undef );
         }
 
+    }
+
+    unless ( $logout->request() ) {
+        $self->lmLog( "Unable to create SAML request", 'error' );
+        return ( 0, $method, undef );
     }
 
     # Keep message ID in memory to prevent replay
@@ -2626,10 +2642,7 @@ sub sendLogoutRequestToProviders {
 
     # Header of the block which will be displayed to the user, if needed.
     $info .= '<h3>'
-      . &Lemonldap::NG::Portal::_i18n::msg
-      ( Lemonldap::NG::Portal::Simple::PM_SAML_SPLOGOUT,
-        $ENV{HTTP_ACCEPT_LANGUAGE} )
-      . '</h3>'
+      . $self->msg(Lemonldap::NG::Portal::Simple::PM_SAML_SPLOGOUT) . '</h3>'
       . '<table class="sloState">';
 
     # Foreach SP found in session, get it from configuration, and send the
@@ -2660,7 +2673,6 @@ sub sendLogoutRequestToProviders {
     $self->info($info) if $providersCount;
 
     return $providersCount;
-
 }
 
 ## @method boolean checkSignatureStatus(Lasso::Profile profile)
@@ -2736,15 +2748,19 @@ sub checkDestination {
 
     $self->lmLog( "Destination $destination found in SAML message", 'debug' );
 
+    # Retrieve full URL
+    my $portal = $self->{portal};
+    $portal =~ s#^(https?://[^/]+)/.*#$1#;    # remove path of portal URL
+    $url = $portal . $url;
+
     # Compare Destination and URL
-    if ( $destination =~ /^$url$/ ) {
+    if ( $destination eq $url ) {
         $self->lmLog( "Destination match URL $url", 'debug' );
         return 1;
     }
-    else {
-        $self->lmLog( "Destination does not match URL $url", 'error' );
-        return 0;
-    }
+
+    $self->lmLog( "Destination does not match URL $url", 'error' );
+    return 0;
 }
 
 ## @method hashref getSamlSession(string id)
@@ -2935,14 +2951,7 @@ sub sendSLOErrorResponse {
     }
 
     # Send unvalidated SLO response
-    unless ( $self->sendLogoutResponseToServiceProvider( $logout, $method ) ) {
-        $self->lmLog( "Could not send SLO error response", 'error' );
-        $self->quit();
-    }
-
-    $self->lmLog( "SLO response error sent", 'debug' );
-
-    $self->quit();
+    return $self->sendLogoutResponseToServiceProvider( $logout, $method );
 }
 
 1;

@@ -8,51 +8,35 @@ package Lemonldap::NG::Portal::_i18n;
 # Developpers warning : this file must stay UTF-8 encoded
 
 use AutoLoader qw(AUTOLOAD);
-our $VERSION = '1.1.2';
+our $VERSION = '1.2.0';
 
-## @fn string error(int error,string lang)
-# @param $error Number of error to resolve
-# @param $lang Language or Accepted-Language HTTP header string
-# @return Error string for the $code in the $lang language
-sub error {
-    my ( $error, $lang ) = splice @_;
-    $lang = lc($lang);
-    $lang =~ s/-/_/g;
-    $error = 0 if ( $error < 0 );
-    foreach ( split( /[,;]/, $lang ) ) {
-        next if /=/;
-        if ( __PACKAGE__->can("error_$_") ) {
-            return &{"error_$_"}->[$error];
-        }
-        s/^(..).*$/$1/;
-        if ( __PACKAGE__->can("error_$_") ) {
-            return &{"error_$_"}->[$error];
-        }
-    }
-    return &error_en->[$error];
-}
-
-## @fn string msg(int msg,string lang)
+## @fn string msg(int msg, array ref lang)
 # @param $msg Number of msg to resolve
-# @param $lang Language or Accepted-Language HTTP header string
-# @return Error string for the $code in the $lang language
+# @param $lang Array ref for 2-letters languages (e.g. ['es', 'fr'])
+# @return Message string in the first matching language
 sub msg {
     my ( $msg, $lang ) = splice @_;
-    $lang ||= $ENV{HTTP_ACCEPT_LANGUAGE};
-    $lang = lc($lang);
-    $lang =~ s/-/_/g;
-    $msg = 0 if ( $msg < 0 );
-    foreach ( split( /[,;]/, $lang ) ) {
-        next if /=/;
-        if ( __PACKAGE__->can("msg_$_") ) {
-            return &{"msg_$_"}->[$msg];
-        }
-        s/^(..).*$/$1/;
+    foreach ( @{$lang} ) {
         if ( __PACKAGE__->can("msg_$_") ) {
             return &{"msg_$_"}->[$msg];
         }
     }
     return &msg_en->[$msg];
+}
+
+## @fn string error(int error, array ref lang)
+# @param $error Number of error to resolve
+# @param $lang Array ref for 2-letters languages (e.g. ['es', 'fr'])
+# @return Error string in the first matching language
+sub error {
+    my ( $error, $lang ) = splice @_;
+    $error = 0 if ( $error < 0 );
+    foreach ( @{$lang} ) {
+        if ( __PACKAGE__->can("error_$_") ) {
+            return &{"error_$_"}->[$error];
+        }
+    }
+    return &error_en->[$error];
 }
 
 1;
@@ -128,6 +112,13 @@ __END__
 # * PE_MAILCONFIRMATION_ALREADY_SENT     66
 # * PE_PASSWORDFORMEMPTY                 67
 # * PE_CAS_SERVICE_NOT_ALLOWED           68
+# * PE_MAILFIRSTACCESS                   69
+# * PE_MAILNOTFOUND                      70
+# * PE_PASSWORDFIRSTACCESS               71
+# * PE_MAILCONFIRMOK                     72
+# * PE_RADIUSCONNECTFAILED		 73
+# * PE_MUST_SUPPLY_OLD_PASSWORD          74
+# * PE_FORBIDDENIP                       75
 
 # Not used in errors:
 # * PE_DONE                -1
@@ -180,9 +171,9 @@ sub error_fr {
         'Aucun schéma disponible',
         'Ancien mot de passe invalide',
         'Nom d\'utilisateur incorrect',
-        'Ouverture de session non autorisée',
+        'Ouverture de session interdite',
         'Confirmation demandée',
-        'Veuillez saisir votre adresse mail',
+        'L\'adresse mail est obligatoire ',
         'La clé de confirmation est invalide ou trop ancienne',
         'L\'envoi du mail a échoué',
         'Un mail vous a été envoyé',
@@ -208,6 +199,13 @@ sub error_fr {
         'Le mail de confirmation a déjà été envoyé',
         'Mot de passe non renseigné',
         'Accès non autorisé au service CAS',
+        'Merci de saisir votre adresse mail',
+        'Pas d\'utilisateur correspondant',
+        'Merci de saisir votre nouveau mot de passe',
+        'Un mail de confirmation vous a été envoyé',
+        'La connexion au serveur Radius a échoué',
+        "L'ancien mot de passe est obligatoire",
+        'Vous venez d\'une adresse IP qui n\'est pas accréditée',
     ];
 }
 
@@ -259,7 +257,7 @@ sub error_en {
         'Bad username',
         'Session opening not allowed',
         'Confirmation required',
-        'Please provide your mail address',
+        'Your mail address is mandatory',
         'Confirmation key is invalid or too old',
         'An error occurs when sending mail',
         'A mail has been sent',
@@ -285,6 +283,13 @@ sub error_en {
         'The confirmation mail was already sent',
         'Password field must be filled',
         'Access non granted on CAS service',
+        'Please provide your mail address',
+        'No matching user',
+        'Please provide your new password',
+        'A confirmation mail has been sent',
+        'Radius connection has failed',
+        'Old password is required',
+        'You came from an unaccredited IP address',
     ];
 }
 
@@ -363,6 +368,13 @@ sub error_ro {
         'The confirmation mail was already sent',
         'Password field must be filled',
         'Access non granted on CAS service',
+        'Vă rugăm să introduceţi adresa dvs. de e-mail',
+        'No matching user',
+        'Please provide your new password',
+        'Un e-mail a fost trimis',
+        'Radius connection has failed',
+        'Old password is required',
+        'You came from an unaccredited IP address',
     ];
 }
 
@@ -388,6 +400,9 @@ sub error_ro {
 # * PM_OPENID_RPNS             18
 # * PM_OPENID_PA               19
 # * PM_OPENID_AP               20
+# * PM_ERROR_MSG               21
+# * PM_LAST_LOGINS             22
+# * PM_LAST_FAILED_LOGINS      23
 
 sub msg_en {
     use utf8;
@@ -395,8 +410,8 @@ sub msg_en {
         'User',
         'Date',
         'IP address',
-        'The following sessions have been deleted',
-        'Other sessions',
+        'The following sessions have been closed',
+        'Other active sessions',
         'Remove other sessions',
         'authentications remaining, change your password!',
         'seconds before password expiration, change it!',
@@ -413,6 +428,9 @@ sub msg_en {
         'Parameter %s requested for federation isn\'t available',
         'Data usage policy is available at',
         'Do you agree to provide the following parameters?',
+        'Error Message',
+        'Your last logins',
+        'Your last failed logins',
     ];
 }
 
@@ -422,9 +440,9 @@ sub msg_fr {
         'Utilisateur',
         'Date',
         'Adresse IP',
-        'Les sessions suivantes ont été effacées',
-        'Autres sessions',
-        'Supprimer les autres sessions',
+        'Les sessions suivantes ont été fermées',
+        'Autres sessions ouvertes',
+        'Fermer les autres sessions',
         'authentifications restantes, changez votre mot de passe !',
 'secondes avant expiration de votre mot de passe, pensez à le changer !',
         'Choisissez votre fournisseur d\'identité',
@@ -440,6 +458,9 @@ sub msg_fr {
         'Le paramètre %s exigé pour la fédération n\'est pas disponible',
         'La politique d\'utilisation des données est disponible ici',
         'Consentez-vous à communiquer les paramètres suivants&nbsp;?',
+        'Message d\'erreur',
+        'Vos dernières connexions',
+        'Vos dernières connexions refusées',
     ];
 }
 

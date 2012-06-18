@@ -10,6 +10,9 @@ my $portal = Lemonldap::NG::Portal::MailReset->new();
 my $skin       = $portal->{portalSkin};
 my $skin_dir   = $portal->getApacheHtdocsPath() . "/skins";
 my $portal_url = $portal->{portal};
+my $portalPath = $portal->{portal};
+$portalPath =~ s#^https?://[^/]+/?#/#;
+$portalPath =~ s#[^/]+\.pl$##;
 
 # Process
 $portal->process();
@@ -19,54 +22,104 @@ my $template = HTML::Template->new(
     filename          => "$skin_dir/$skin/mail.tpl",
     die_on_bad_params => 0,
     cache             => 0,
-    filter            => sub { $portal->translate_template(@_) }
+    filter            => [
+        sub { $portal->translate_template(@_) },
+        sub { $portal->session_template(@_) }
+    ],
 );
 
-$template->param( PORTAL_URL      => "$portal_url" );
-$template->param( SKIN            => "$skin" );
-$template->param( AUTH_ERROR      => $portal->error );
-$template->param( AUTH_ERROR_TYPE => $portal->error_type );
-$template->param( CHOICE_PARAM    => $portal->{authChoiceParam} );
-$template->param( CHOICE_VALUE    => $portal->{_authChoice} );
 $template->param(
-    MAIL => $portal->checkXSSAttack( 'mail', $portal->{mail} )
-    ? ""
-    : $portal->{mail}
-);
-$template->param(
+    PORTAL_URL      => $portal_url,
+    SKIN_PATH       => $portalPath . "skins",
+    SKIN            => $skin,
+    AUTH_ERROR      => $portal->error,
+    AUTH_ERROR_TYPE => $portal->error_type,
+    CHOICE_PARAM    => $portal->{authChoiceParam},
+    CHOICE_VALUE    => $portal->{_authChoice},
+    EXPMAILDATE     => $portal->{expMailDate},
+    EXPMAILTIME     => $portal->{expMailTime},
+    STARTMAILDATE   => $portal->{startMailDate},
+    STARTMAILTIME   => $portal->{startMailTime},
+    MAILALREADYSENT => $portal->{mail_already_sent},
+    MAIL            => $portal->checkXSSAttack( 'mail', $portal->{mail} ) ? ""
+    : $portal->{mail},
     MAIL_TOKEN => $portal->checkXSSAttack( 'mail_token', $portal->{mail_token} )
     ? ""
-    : $portal->{mail_token}
+    : $portal->{mail_token},
 );
 
 # Display form the first time
 if (
     (
            $portal->{error} == PE_MAILFORMEMPTY
-        or $portal->{error} == PE_BADCREDENTIALS
+        or $portal->{error} == PE_MAILFIRSTACCESS
+        or $portal->{error} == PE_MAILNOTFOUND
     )
     and !$portal->{mail_token}
   )
 {
-
-    $template->param( DISPLAY_FORM          => 1 );
-    $template->param( DISPLAY_RESEND_FORM   => 0 );
-    $template->param( DISPLAY_PASSWORD_FORM => 0 );
+    $template->param(
+        DISPLAY_FORM            => 1,
+        DISPLAY_RESEND_FORM     => 0,
+        DISPLAY_CONFIRMMAILSENT => 0,
+        DISPLAY_MAILSENT        => 0,
+        DISPLAY_PASSWORD_FORM   => 0,
+    );
 }
 
 # Display mail confirmation resent form
 if ( $portal->{error} == PE_MAILCONFIRMATION_ALREADY_SENT ) {
-    $template->param( DISPLAY_FORM          => 0 );
-    $template->param( DISPLAY_RESEND_FORM   => 1 );
-    $template->param( DISPLAY_PASSWORD_FORM => 0 );
+    $template->param(
+        DISPLAY_FORM            => 0,
+        DISPLAY_RESEND_FORM     => 1,
+        DISPLAY_CONFIRMMAILSENT => 0,
+        DISPLAY_MAILSENT        => 0,
+        DISPLAY_PASSWORD_FORM   => 0,
+    );
 }
 
-if ( $portal->{mail_token}
-    and ( $portal->{error} != PE_MAILERROR and $portal->{error} != PE_MAILOK ) )
+# Display confirmation mail sent
+if ( $portal->{error} == PE_MAILCONFIRMOK ) {
+    $template->param(
+        DISPLAY_FORM            => 0,
+        DISPLAY_RESEND_FORM     => 0,
+        DISPLAY_CONFIRMMAILSENT => 1,
+        DISPLAY_MAILSENT        => 0,
+        DISPLAY_PASSWORD_FORM   => 0,
+    );
+}
+
+# Display mail sent
+if ( $portal->{error} == PE_MAILOK ) {
+    $template->param(
+        DISPLAY_FORM            => 0,
+        DISPLAY_RESEND_FORM     => 0,
+        DISPLAY_CONFIRMMAILSENT => 0,
+        DISPLAY_MAILSENT        => 1,
+        DISPLAY_PASSWORD_FORM   => 0,
+    );
+}
+
+# Display password change form
+if (    $portal->{mail_token}
+    and $portal->{error} != PE_MAILERROR
+    and $portal->{error} != PE_BADMAILTOKEN
+    and $portal->{error} != PE_MAILOK )
 {
-    $template->param( DISPLAY_FORM          => 0 );
-    $template->param( DISPLAY_RESEND_FORM   => 0 );
-    $template->param( DISPLAY_PASSWORD_FORM => 1 );
+    $template->param(
+        DISPLAY_FORM            => 0,
+        DISPLAY_RESEND_FORM     => 0,
+        DISPLAY_CONFIRMMAILSENT => 0,
+        DISPLAY_MAILSENT        => 0,
+        DISPLAY_PASSWORD_FORM   => 1,
+    );
+}
+
+# Custom template parameters
+if ( my $customParams = $portal->getCustomTemplateParameters() ) {
+    foreach ( keys %$customParams ) {
+        $template->param( $_, $customParams->{$_} );
+    }
 }
 
 print $portal->header('text/html; charset=utf8');

@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::_Remote;
 use Lemonldap::NG::Portal::Simple;
 use base qw(Lemonldap::NG::Portal::_Remote);
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.2.0';
 
 *authInit = *Lemonldap::NG::Portal::_Remote::init;
 
@@ -70,6 +70,12 @@ sub authLogout {
 # @return result
 sub authForce {
     return 0;
+}
+
+## @method string getDisplayType
+# @return display type
+sub getDisplayType {
+    return "logo";
 }
 
 1;

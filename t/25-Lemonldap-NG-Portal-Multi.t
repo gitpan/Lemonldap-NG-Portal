@@ -56,12 +56,13 @@ sub goToPortal {
 my $p;
 
 # CGI Environment
-$ENV{SCRIPT_NAME}     = '/test.pl';
-$ENV{SCRIPT_FILENAME} = '/tmp/test.pl';
-$ENV{REQUEST_METHOD}  = 'GET';
-$ENV{REQUEST_URI}     = '/';
-$ENV{QUERY_STRING}    = '';
-$ENV{REMOTE_ADDR}     = '127.0.0.1';
+$ENV{SCRIPT_NAME}          = '/test.pl';
+$ENV{SCRIPT_FILENAME}      = '/tmp/test.pl';
+$ENV{REQUEST_METHOD}       = 'GET';
+$ENV{REQUEST_URI}          = '/';
+$ENV{QUERY_STRING}         = '';
+$ENV{REMOTE_ADDR}          = '127.0.0.1';
+$ENV{HTTP_ACCEPT_LANGUAGE} = 'en';
 
 my ( $test, $testU );
 {
@@ -90,6 +91,7 @@ my ( $test, $testU );
                 portal         => 'http://abc',
                 sessionInfo    => { uid => 't', },
                 userNotice     => sub { },
+                user           => 'jdoe',
             }
         ),
         'Portal object'
@@ -110,6 +112,7 @@ my ( $test, $testU );
                 portal         => 'http://abc',
                 sessionInfo    => { uid => 't', },
                 userNotice     => sub { },
+                user           => 'jdoe',
             }
         ),
         'Portal object'
@@ -131,6 +134,7 @@ my ( $test, $testU );
                 portal         => 'http://abc',
                 sessionInfo    => { uid => 't', },
                 userNotice     => sub { },
+                user           => 'jdoe',
             }
         ),
         'Portal object'
@@ -152,6 +156,7 @@ my ( $test, $testU );
                 portal         => 'http://abc',
                 sessionInfo    => { uid => 't', },
                 userNotice     => sub { },
+                user           => 'jdoe',
             }
         ),
         'Portal object'
@@ -170,6 +175,7 @@ my ( $test, $testU );
                 portal         => 'http://abc',
                 sessionInfo    => { uid => 't', },
                 userNotice     => sub { },
+                user           => 'jdoe',
             }
         ),
         'Portal object'
@@ -188,6 +194,7 @@ my ( $test, $testU );
                 portal         => 'http://abc',
                 sessionInfo    => { uid => 't', },
                 userNotice     => sub { },
+                user           => 'jdoe',
             }
         ),
         'Portal object'

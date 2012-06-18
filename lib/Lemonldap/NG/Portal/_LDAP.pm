@@ -14,7 +14,7 @@ use Encode;
 use strict;
 
 our @EXPORT   = qw(ldap);
-our $VERSION  = '1.1.1';
+our $VERSION  = '1.2.0';
 our $ppLoaded = 0;
 
 BEGIN {
@@ -168,22 +168,16 @@ sub userBind {
 
         # Get expiration warning and graces
         if ( $resp->grace_authentications_remaining ) {
-            $self->{portal}->info(
-                    "<h3>" 
+            $self->{portal}->info( "<h3>"
                   . $resp->grace_authentications_remaining . " "
-                  . &Lemonldap::NG::Portal::_i18n::msg( PM_PP_GRACE,
-                    $ENV{HTTP_ACCEPT_LANGUAGE} )
-                  . "</h3>"
-            );
+                  . $self->msg(PM_PP_GRACE)
+                  . "</h3>" );
         }
         if ( $resp->time_before_expiration ) {
-            $self->{portal}->info(
-                    "<h3>" 
+            $self->{portal}->info( "<h3>"
                   . $resp->time_before_expiration . " "
-                  . &Lemonldap::NG::Portal::_i18n::msg( PM_PP_EXP_WARNING,
-                    $ENV{HTTP_ACCEPT_LANGUAGE} )
-                  . "</h3>"
-            );
+                  . $self->msg(PM_PP_EXP_WARNING)
+                  . "</h3>" );
         }
 
         my $pp_error = $resp->pp_error;
@@ -237,31 +231,34 @@ sub userModifyPassword {
         if ( $self->{portal}->{ldapSetPassword} ) {
 
             # Bind as user if oldpassword and ldapChangePasswordAsUser
-            if ( $oldpassword and $self->{ldapChangePasswordAsUser} ) {
+            if ( $oldpassword and $self->{portal}->{ldapChangePasswordAsUser} )
+            {
 
                 $mesg = $self->bind( $dn, password => $oldpassword );
                 return PE_BADOLDPASSWORD if ( $mesg->code != 0 );
             }
 
             # Use SetPassword extended operation
-            use Net::LDAP::Extension::SetPassword;
+            require Net::LDAP::Extension::SetPassword;
             $mesg =
               ($oldpassword)
               ? $self->set_password(
-                user        => $dn,
-                oldpasswd   => $oldpassword,
-                newpassword => $newpassword
+                user      => $dn,
+                oldpasswd => $oldpassword,
+                newpasswd => $newpassword
               )
               : $self->set_password(
-                user        => $dn,
-                newpassword => $newpassword
+                user      => $dn,
+                newpasswd => $newpassword
               );
 
             # Catch the "Unwilling to perform" error
             return PE_BADOLDPASSWORD if ( $mesg->code == 53 );
         }
         else {
-            if ($oldpassword) {
+            if ( $self->{portal}->{portalRequireOldPassword} ) {
+
+                return PE_MUST_SUPPLY_OLD_PASSWORD if ( !$oldpassword );
 
                 # Check old password with a bind
                 $mesg = $self->bind( $dn, password => $oldpassword );
@@ -292,7 +289,8 @@ sub userModifyPassword {
         if ( $self->{portal}->{ldapSetPassword} ) {
 
             # Bind as user if oldpassword and ldapChangePasswordAsUser
-            if ( $oldpassword and $self->{ldapChangePasswordAsUser} ) {
+            if ( $oldpassword and $self->{portal}->{ldapChangePasswordAsUser} )
+            {
 
                 $mesg = $self->bind( $dn, password => $oldpassword );
                 return PE_BADOLDPASSWORD if ( $mesg->code != 0 );
@@ -305,15 +303,15 @@ sub userModifyPassword {
             $mesg =
               ($oldpassword)
               ? $self->set_password(
-                user        => $dn,
-                oldpasswd   => $oldpassword,
-                newpassword => $newpassword,
-                control     => [$pp]
+                user      => $dn,
+                oldpasswd => $oldpassword,
+                newpasswd => $newpassword,
+                control   => [$pp]
               )
               : $self->set_password(
-                user        => $dn,
-                newpassword => $newpassword,
-                control     => [$pp]
+                user      => $dn,
+                newpasswd => $newpassword,
+                control   => [$pp]
               );
 
             # Catch the "Unwilling to perform" error
@@ -422,7 +420,7 @@ sub searchGroups {
     my $searchFilter =
       "(&(objectClass=" . $portal->{ldapGroupObjectClass} . ")(|";
     foreach ( split( $portal->{multiValuesSeparator}, $value ) ) {
-        $searchFilter .= "(" . $key . "=" .  escape_filter_value($_) . ")";
+        $searchFilter .= "(" . $key . "=" . escape_filter_value($_) . ")";
     }
     $searchFilter .= "))";
 

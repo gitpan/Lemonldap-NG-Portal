@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::_WebForm;
 use Lemonldap::NG::Portal::Simple qw(:all);
 use strict;
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.2.0';
 
 ## @apmethod int authInit()
 # Does nothing.
@@ -22,19 +22,38 @@ sub authInit {
 # @return Lemonldap::NG::Portal constant
 sub extractFormInfo {
     my $self = shift;
-    return PE_FIRSTACCESS
-      unless ( $self->param('user') );
-    return PE_FORMEMPTY
-      unless (
-        ( $self->{user} = $self->param('user') )
-        && (   ( $self->{password} = $self->param('password') )
-            || ( $self->{newpassword} = $self->param('newpassword') ) )
-      );
-    $self->{oldpassword}     = $self->param('oldpassword');
-    $self->{confirmpassword} = $self->param('confirmpassword');
-    $self->{timezone}        = $self->param('timezone');
+
+    # Detect first access and empty forms
+    my $defUser        = defined $self->param('user');
+    my $defPassword    = defined $self->param('password');
+    my $defOldPassword = defined $self->param('oldpassword');
+
+    # 1. No user defined at all -> first access
+    return PE_FIRSTACCESS unless $defUser;
+
+    # 2. If user and password defined -> login form
+    if ( $defUser && $defPassword ) {
+        return PE_FORMEMPTY
+          unless ( ( $self->{user} = $self->param('user') )
+            && ( $self->{password} = $self->param('password') ) );
+    }
+
+    # 3. If user and oldpassword defined -> password form
+    if ( $defUser && $defOldPassword ) {
+        return PE_PASSWORDFORMEMPTY
+          unless ( ( $self->{user} = $self->param('user') )
+            && ( $self->{oldpassword}     = $self->param('oldpassword') )
+            && ( $self->{newpassword}     = $self->param('newpassword') )
+            && ( $self->{confirmpassword} = $self->param('confirmpassword') ) );
+    }
+
+    # Other parameters
+    $self->{timezone} = $self->param('timezone');
     $self->{userControl} ||= '^[\w\.\-@]+$';
+
+    # Check user
     return PE_MALFORMEDUSER unless ( $self->{user} =~ /$self->{userControl}/o );
+
     PE_OK;
 }
 

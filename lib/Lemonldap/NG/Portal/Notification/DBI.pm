@@ -10,7 +10,7 @@ use Time::Local;
 use DBI;
 use utf8;
 
-our $VERSION = '1.1.0';
+our $VERSION = '1.2.0';
 
 ## @method boolean prereq()
 # Check if DBI parameters are set.
@@ -50,9 +50,12 @@ sub get {
         # Get XML message
         my $xml = $h->{xml};
 
-        # Decode it twice to get the correct uncoded string
+        # Decode it to get the correct uncoded string
         utf8::decode($xml);
-        utf8::decode($xml);
+
+        # TODO on some systems, a second decoding is mandatory
+        # need to find out why
+        #utf8::decode($xml);
 
         # Store message in result
         $result->{"$h->{date}#$h->{uid}#$h->{ref}"} = $xml;
@@ -101,7 +104,7 @@ sub delete {
     return _execute( $self,
             "UPDATE $self->{dbiTable} "
           . "SET done='$ts[5]-$ts[4]-$ts[3] $ts[2]:$ts[1]' "
-          . "WHERE done IS NULL AND date='$d' AND uid='$u' AND ref='$r'" );
+          . "WHERE done IS NULL AND uid='$u' AND ref='$r' AND date='$d'" );
 }
 
 ## @method boolean purge(string myref)
@@ -120,7 +123,7 @@ sub purge {
     $d =~ s/'/''/g;
     return _execute( $self,
             "DELETE FROM $self->{dbiTable} "
-          . "WHERE done IS NOT NULL AND date='$d' AND uid='$u' AND ref='$r'" );
+          . "WHERE done IS NOT NULL AND uid='$u' AND ref='$r' AND date='$d'" );
 }
 
 ## @method boolean newNotif(string date, string uid, string ref, string condition, string xml)

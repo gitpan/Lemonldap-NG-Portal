@@ -9,7 +9,7 @@ use strict;
 use Lemonldap::NG::Portal::Simple;
 use utf8;
 
-our $VERSION = '1.1.2';
+our $VERSION = '1.2.0';
 
 ## @method array display()
 # Call portal process and set template parameters
@@ -30,6 +30,7 @@ sub display {
         # Error code
         my $error500 = 1 if ( $http_error eq "500" );
         my $error403 = 1 if ( $http_error eq "403" );
+        my $error503 = 1 if ( $http_error eq "503" );
 
         # Check URL
         $self->_sub('controlUrlOrigin');
@@ -37,11 +38,10 @@ sub display {
         %templateParams = (
             PORTAL_URL => $self->{portal},
             LOGOUT_URL => $self->{portal} . "?logout=1",
-            ANTIFRAME  => $self->{portalAntiFrame},
             URL        => $self->{urldc},
-            SKIN       => $self->{portalSkin},
             ERROR403   => $error403,
             ERROR500   => $error500,
+            ERROR503   => $error503,
         );
 
     }
@@ -66,9 +66,7 @@ sub display {
             $skinfile       = 'info.tpl';
             %templateParams = (
                 AUTH_ERROR_TYPE => $self->error_type,
-                ANTIFRAME       => $self->{portalAntiFrame},
                 MSG             => $info,
-                SKIN            => $skin,
                 URL             => $self->{urldc},
                 HIDDEN_INPUTS   => $self->buildHiddenForm(),
                 ACTIVE_TIMER    => $self->{activeTimer},
@@ -76,7 +74,17 @@ sub display {
             );
         }
 
-        # 1.3 Case : display menu
+        # 1.3 Redirection
+        elsif ( $self->{error} == PE_REDIRECT ) {
+            $skinfile       = "redirect.tpl";
+            %templateParams = (
+                URL           => $self->{urldc},
+                HIDDEN_INPUTS => $self->buildHiddenForm(),
+                FORM_METHOD   => $self->{redirectFormMethod},
+            );
+        }
+
+        # 1.4 Case : display menu
         else {
 
             # Initialize menu elements
@@ -87,15 +95,13 @@ sub display {
             utf8::decode($auth_user);
 
             %templateParams = (
-                AUTH_USER       => $auth_user,
-                AUTOCOMPLETE    => $self->{portalAutocomplete},
-                NEWWINDOW       => $self->{portalOpenLinkInNewWindow},
-                ANTIFRAME       => $self->{portalAntiFrame},
-                SKIN            => $skin,
-                AUTH_ERROR      => $self->error( undef, $self->{menuError} ),
-                AUTH_ERROR_TYPE => $self->error_type( $self->{menuError} ),
-                DISPLAY_TAB     => $self->{menuDisplayTab},
-                LOGOUT_URL      => "$ENV{SCRIPT_NAME}?logout=1",
+                AUTH_USER           => $auth_user,
+                AUTOCOMPLETE        => $self->{portalAutocomplete},
+                NEWWINDOW           => $self->{portalOpenLinkInNewWindow},
+                AUTH_ERROR          => $self->error( $self->{menuError} ),
+                AUTH_ERROR_TYPE     => $self->error_type( $self->{menuError} ),
+                DISPLAY_TAB         => $self->{menuDisplayTab},
+                LOGOUT_URL          => "$ENV{SCRIPT_NAME}?logout=1",
                 REQUIRE_OLDPASSWORD => $self->{portalRequireOldPassword},
                 HIDE_OLDPASSWORD =>
                   0,    # Do not hide old password if it is required
@@ -116,9 +122,7 @@ sub display {
         $skinfile       = 'notification.tpl';
         %templateParams = (
             AUTH_ERROR_TYPE => $self->error_type,
-            ANTIFRAME       => $self->{portalAntiFrame},
             NOTIFICATION    => $notif,
-            SKIN            => $skin,
             HIDDEN_INPUTS   => $self->buildHiddenForm(),
             AUTH_URL        => $self->get_url,
             CHOICE_PARAM    => $self->{authChoiceParam},
@@ -134,15 +138,16 @@ sub display {
             AUTH_ERROR      => $self->error,
             AUTH_ERROR_TYPE => $self->error_type,
             AUTH_URL        => $self->get_url,
-            ANTIFRAME       => $self->{portalAntiFrame},
             MSG             => $self->info(),
-            SKIN            => $skin,
             HIDDEN_INPUTS   => $self->buildHiddenForm(),
             ACTIVE_TIMER    => $self->{activeTimer},
             FORM_METHOD     => $self->{confirmFormMethod},
             CHOICE_PARAM    => $self->{authChoiceParam},
             CHOICE_VALUE    => $self->{_authChoice},
+            CHECK_LOGINS    => $self->{portalCheckLogins} && $self->{login},
+            ASK_LOGINS      => $self->{checkLogins},
             CONFIRMKEY      => $self->stamp(),
+            LIST            => $self->{list} || [],
         );
     }
 
@@ -152,9 +157,7 @@ sub display {
         %templateParams = (
             AUTH_ERROR      => $self->error,
             AUTH_ERROR_TYPE => $self->error_type,
-            ANTIFRAME       => $self->{portalAntiFrame},
             MSG             => $info,
-            SKIN            => $skin,
             URL             => $self->{urldc},
             HIDDEN_INPUTS   => $self->buildHiddenForm(),
             ACTIVE_TIMER    => $self->{activeTimer},
@@ -174,8 +177,6 @@ sub display {
         %templateParams = (
             AUTH_ERROR      => $self->error,
             AUTH_ERROR_TYPE => $self->error_type,
-            ANTIFRAME       => $self->{portalAntiFrame},
-            SKIN            => $skin,
             PROVIDERURI     => $p,
             ID              => $self->{_openidPortal}
               . $self->{sessionInfo}
@@ -192,31 +193,17 @@ sub display {
             AUTH_ERROR            => $self->error,
             AUTH_ERROR_TYPE       => $self->error_type,
             AUTH_URL              => $self->get_url,
-            ANTIFRAME             => $self->{portalAntiFrame},
             LOGIN                 => $self->get_user,
             AUTOCOMPLETE          => $self->{portalAutocomplete},
-            SKIN                  => $skin,
+            CHECK_LOGINS          => $self->{portalCheckLogins},
+            ASK_LOGINS            => $self->{checkLogins},
             DISPLAY_RESETPASSWORD => $self->{portalDisplayResetPassword},
-            DISPLAY_FORM          => 1,
             MAIL_URL              => $self->{mailUrl},
             HIDDEN_INPUTS         => $self->buildHiddenForm(),
             LOGIN_INFO            => $self->loginInfo(),
         );
 
-        # Authentication loop
-        if ( $self->{authLoop} ) {
-            %templateParams = (
-                %templateParams,
-                AUTH_LOOP            => $self->{authLoop},
-                CHOICE_PARAM         => $self->{authChoiceParam},
-                CHOICE_VALUE         => $self->{_authChoice},
-                DISPLAY_FORM         => 0,
-                DISPLAY_OPENID_FORM  => 0,
-                DISPLAY_YUBIKEY_FORM => 0,
-            );
-        }
-
-        # Adapt template if password policy error
+        # Show password form if password policy error
         if (
 
                $self->{error} == PE_PP_CHANGE_AFTER_RESET
@@ -227,15 +214,18 @@ sub display {
             or $self->{error} == PE_PP_PASSWORD_IN_HISTORY
             or $self->{error} == PE_PASSWORD_MISMATCH
             or $self->{error} == PE_BADOLDPASSWORD
+            or $self->{error} == PE_PASSWORDFORMEMPTY
           )
         {
             %templateParams = (
                 %templateParams,
                 REQUIRE_OLDPASSWORD =>
                   1,    # Old password is required to check user credentials
+                DISPLAY_FORM          => 0,
+                DISPLAY_OPENID_FORM   => 0,
+                DISPLAY_YUBIKEY_FORM  => 0,
                 DISPLAY_PASSWORD      => 1,
                 DISPLAY_RESETPASSWORD => 0,
-                DISPLAY_FORM          => 0,
                 AUTH_LOOP             => [],
                 CHOICE_PARAM          => $self->{authChoiceParam},
                 CHOICE_VALUE          => $self->{_authChoice},
@@ -247,55 +237,11 @@ sub display {
             );
         }
 
-        # Adapt template for OpenID
-        if ( $self->get_module("auth") =~ /openid/i and !$self->{authLoop} ) {
-            %templateParams = (
-                %templateParams,
-                DISPLAY_RESETPASSWORD => 0,
-                DISPLAY_FORM          => 0,
-                DISPLAY_OPENID_FORM   => 1,
-                DISPLAY_YUBIKEY_FORM  => 0,
-                AUTH_LOOP             => [],
-            );
-        }
-
-        # Adapt template for Yubikey
-        if ( $self->get_module("auth") =~ /yubikey/i and !$self->{authLoop} ) {
-            %templateParams = (
-                %templateParams,
-                DISPLAY_RESETPASSWORD => 0,
-                DISPLAY_FORM          => 0,
-                DISPLAY_OPENID_FORM   => 0,
-                DISPLAY_YUBIKEY_FORM  => 1,
-                AUTH_LOOP             => [],
-            );
-        }
-
-        # Adapt template if external authentication error
-        # or logout is OK
-        if (   $self->{error} == PE_BADCERTIFICATE
-            or $self->{error} == PE_CERTIFICATEREQUIRED
-            or $self->{error} == PE_ERROR
-            or $self->{error} == PE_SAML_ERROR
-            or $self->{error} == PE_SAML_LOAD_SERVICE_ERROR
-            or $self->{error} == PE_SAML_LOAD_IDP_ERROR
-            or $self->{error} == PE_SAML_SSO_ERROR
-            or $self->{error} == PE_SAML_UNKNOWN_ENTITY
-            or $self->{error} == PE_SAML_DESTINATION_ERROR
-            or $self->{error} == PE_SAML_CONDITIONS_ERROR
-            or $self->{error} == PE_SAML_IDPSSOINITIATED_NOTALLOWED
-            or $self->{error} == PE_SAML_SLO_ERROR
-            or $self->{error} == PE_SAML_SIGNATURE_ERROR
-            or $self->{error} == PE_SAML_ART_ERROR
-            or $self->{error} == PE_SAML_SESSION_ERROR
-            or $self->{error} == PE_SAML_LOAD_SP_ERROR
-            or $self->{error} == PE_SAML_ATTR_ERROR
-            or $self->{error} == PE_OPENID_EMPTY
-            or $self->{error} == PE_OPENID_BADID
-            or $self->{error} == PE_MISSINGREQATTR
-            or $self->{error} == PE_BADPARTNER
-            or $self->{error} == PE_CAS_SERVICE_NOT_ALLOWED
-            or $self->{error} == PE_LOGOUT_OK )
+        # Disable all forms on:
+        # * Logout message
+        # * Bad URL error
+        elsif ($self->{error} == PE_LOGOUT_OK
+            or $self->{error} == PE_BADURL )
         {
             %templateParams = (
                 %templateParams,
@@ -307,7 +253,64 @@ sub display {
                 PORTAL_URL            => $self->{portal},
                 MSG                   => $self->info(),
             );
+
         }
+
+        # Display authentifcation form
+        else {
+
+            # Authentication loop
+            if ( $self->{authLoop} ) {
+                %templateParams = (
+                    %templateParams,
+                    AUTH_LOOP            => $self->{authLoop},
+                    CHOICE_PARAM         => $self->{authChoiceParam},
+                    CHOICE_VALUE         => $self->{_authChoice},
+                    DISPLAY_FORM         => 0,
+                    DISPLAY_OPENID_FORM  => 0,
+                    DISPLAY_YUBIKEY_FORM => 0,
+                );
+            }
+
+            # Choose what form to display if not in a loop
+            else {
+
+                my $displayType = $self->getDisplayType();
+
+                $self->lmLog( "Display type $displayType ", 'debug' );
+
+                %templateParams = (
+                    %templateParams,
+                    DISPLAY_FORM => $displayType eq "standardform" ? 1 : 0,
+                    DISPLAY_OPENID_FORM => $displayType eq "openidform" ? 1 : 0,
+                    DISPLAY_YUBIKEY_FORM => $displayType eq "yubikeyform"
+                    ? 1
+                    : 0,
+                    AUTH_LOOP  => [],
+                    PORTAL_URL => $displayType eq "logo" ? $self->{portal} : 0,
+                    MSG        => $self->info(),
+                );
+
+            }
+
+        }
+
+    }
+
+    ## Common template params
+    my $portalPath = $self->{portal};
+    $portalPath =~ s#^https?://[^/]+/?#/#;
+    $portalPath =~ s#[^/]+\.pl$##;
+    %templateParams = (
+        %templateParams,
+        SKIN_PATH => $portalPath . "skins",
+        SKIN      => $skin,
+        ANTIFRAME => $self->{portalAntiFrame},
+    );
+
+    ## Custom template params
+    if ( my $customParams = $self->getCustomTemplateParameters() ) {
+        %templateParams = ( %templateParams, %$customParams );
     }
 
     return ( "$skin_dir/$skin/$skinfile", %templateParams );

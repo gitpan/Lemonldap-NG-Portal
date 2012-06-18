@@ -10,7 +10,7 @@ use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_CAS;
 use base qw(Lemonldap::NG::Portal::_CAS Lemonldap::NG::Portal::_LibAccess);
 
-our $VERSION = '1.1.2';
+our $VERSION = '1.2.0';
 
 ## @method void issuerDBInit()
 # Nothing to do
@@ -27,22 +27,22 @@ sub issuerDBInit {
 sub issuerForUnAuthUser {
     my $self = shift;
 
-    my $portal = $self->{portal};
-    $portal =~ s/\/$//;
-
     # CAS URLs
-    my $cas_login_url           = $portal . '/cas/login';
-    my $cas_logout_url          = $portal . '/cas/logout';
-    my $cas_validate_url        = $portal . '/cas/validate';
-    my $cas_serviceValidate_url = $portal . '/cas/serviceValidate';
-    my $cas_proxyValidate_url   = $portal . '/cas/proxyValidate';
-    my $cas_proxy_url           = $portal . '/cas/proxy';
+    my $issuerDBCASPath     = $self->{issuerDBCASPath};
+    my $cas_login           = 'login';
+    my $cas_logout          = 'logout';
+    my $cas_validate        = 'validate';
+    my $cas_serviceValidate = 'serviceValidate';
+    my $cas_proxyValidate   = 'proxyValidate';
+    my $cas_proxy           = 'proxy';
 
     # Called URL
     my $url = $self->url();
+    my $url_path = $self->url( -absolute => 1 );
+    $url_path =~ s#^//#/#;
 
     # 1. LOGIN
-    if ( $url =~ /\Q$cas_login_url\E/io ) {
+    if ( $url_path =~ m#${issuerDBCASPath}${cas_login}# ) {
 
         $self->lmLog( "URL $url detected as an CAS LOGIN URL", 'debug' );
 
@@ -78,7 +78,7 @@ sub issuerForUnAuthUser {
     }
 
     # 2. LOGOUT
-    if ( $url =~ /\Q$cas_logout_url\E/io ) {
+    if ( $url_path =~ m#${issuerDBCASPath}${cas_logout}# ) {
 
         $self->lmLog( "URL $url detected as an CAS LOGOUT URL", 'debug' );
 
@@ -90,12 +90,7 @@ sub issuerForUnAuthUser {
             # Display a link to the provided URL
             $self->lmLog( "Logout URL $logout_url will be displayed", 'debug' );
 
-            $self->info(
-                "<h3>"
-                  . &Lemonldap::NG::Portal::_i18n::msg( PM_BACKTOCASURL,
-                    $ENV{HTTP_ACCEPT_LANGUAGE} )
-                  . "</h3>"
-            );
+            $self->info( "<h3>" . $self->msg(PM_BACKTOCASURL) . "</h3>" );
             $self->info("<p><a href=\"$logout_url\">$logout_url</a></p>");
             $self->{activeTimer} = 0;
 
@@ -107,7 +102,7 @@ sub issuerForUnAuthUser {
     }
 
     # 3. VALIDATE [CAS 1.0]
-    if ( $url =~ /\Q$cas_validate_url\E/io ) {
+    if ( $url_path =~ m#${issuerDBCASPath}${cas_validate}# ) {
 
         $self->lmLog( "URL $url detected as an CAS VALIDATE URL", 'debug' );
 
@@ -125,6 +120,12 @@ sub issuerForUnAuthUser {
         $self->lmLog(
             "Get validate request with ticket $ticket for service $service",
             'debug' );
+
+        unless ( $ticket =~ s/^ST-// ) {
+            $self->lmLog( "Provided ticket is not a service ticket (ST)",
+                'error' );
+            $self->returnCasValidateError();
+        }
 
         my $casServiceSession = $self->getCasSession($ticket);
 
@@ -197,11 +198,15 @@ sub issuerForUnAuthUser {
 
     # 4. SERVICE VALIDATE [CAS 2.0]
     # 5. PROXY VALIDATE [CAS 2.0]
-    if ( $url =~ /(\Q$cas_serviceValidate_url\E|\Q$cas_proxyValidate_url\E)/io )
+    if (   ( $url_path =~ m#${issuerDBCASPath}${cas_serviceValidate}# )
+        || ( $url_path =~ m#${issuerDBCASPath}${cas_proxyValidate}# ) )
     {
 
-        my $urlType =
-          ( $url =~ /\Q$cas_serviceValidate_url\E/ ? 'SERVICE' : 'PROXY' );
+        my $urlType = (
+            $url_path =~ m#${issuerDBCASPath}${cas_serviceValidate}#
+            ? 'SERVICE'
+            : 'PROXY'
+        );
 
         $self->lmLog( "URL $url detected as an CAS $urlType VALIDATE URL",
             'debug' );
@@ -407,7 +412,7 @@ sub issuerForUnAuthUser {
     }
 
     # 6. PROXY [CAS 2.0]
-    if ( $url =~ /\Q$cas_proxy_url\E/io ) {
+    if ( $url_path =~ m#${issuerDBCASPath}${cas_proxy}# ) {
 
         $self->lmLog( "URL $url detected as an CAS PROXY URL", 'debug' );
 
@@ -489,19 +494,19 @@ sub issuerForUnAuthUser {
 sub issuerForAuthUser {
     my $self = shift;
 
-    my $portal = $self->{portal};
-    $portal =~ s/\/$//;
-
     # CAS URLs
-    my $cas_login_url           = $portal . '/cas/login';
-    my $cas_logout_url          = $portal . '/cas/logout';
-    my $cas_validate_url        = $portal . '/cas/validate';
-    my $cas_serviceValidate_url = $portal . '/cas/serviceValidate';
-    my $cas_proxyValidate_url   = $portal . '/cas/proxyValidate';
-    my $cas_proxy_url           = $portal . '/cas/proxy';
+    my $issuerDBCASPath     = $self->{issuerDBCASPath};
+    my $cas_login           = 'login';
+    my $cas_logout          = 'logout';
+    my $cas_validate        = 'validate';
+    my $cas_serviceValidate = 'serviceValidate';
+    my $cas_proxyValidate   = 'proxyValidate';
+    my $cas_proxy           = 'proxy';
 
     # Called URL
     my $url = $self->url();
+    my $url_path = $self->url( -absolute => 1 );
+    $url_path =~ s#^//#/#;
 
     # Session ID
     my $session_id = $self->{sessionInfo}->{_session_id} || $self->{id};
@@ -510,7 +515,7 @@ sub issuerForAuthUser {
     my $time = $self->{sessionInfo}->{_utime} || time();
 
     # 1. LOGIN
-    if ( $url =~ /\Q$cas_login_url\E/io ) {
+    if ( $url_path =~ m#${issuerDBCASPath}${cas_login}# ) {
 
         $self->lmLog( "URL $url detected as an CAS LOGIN URL", 'debug' );
 
@@ -531,8 +536,8 @@ sub issuerForAuthUser {
             $self->{error}         = $self->_subProcess(
                 qw(issuerDBInit authInit issuerForUnAuthUser extractFormInfo
                   userDBInit getUser setAuthSessionInfo setSessionInfo
-                  setMacros setLocalGroups setGroups setPersistentSessionInfo
-                  authenticate store authFinish)
+                  setMacros setGroups setPersistentSessionInfo
+                  setLocalGroups authenticate store authFinish)
             );
 
             # Return error if any
@@ -639,7 +644,7 @@ sub issuerForAuthUser {
     }
 
     # 2. LOGOUT
-    if ( $url =~ /\Q$cas_logout_url\E/io ) {
+    if ( $url_path =~ m#${issuerDBCASPath}${cas_logout}# ) {
 
         $self->lmLog( "URL $url detected as an CAS LOGOUT URL", 'debug' );
 
@@ -661,12 +666,7 @@ sub issuerForAuthUser {
             # Display a link to the provided URL
             $self->lmLog( "Logout URL $logout_url will be displayed", 'debug' );
 
-            $self->info(
-                "<h3>"
-                  . &Lemonldap::NG::Portal::_i18n::msg( PM_BACKTOCASURL,
-                    $ENV{HTTP_ACCEPT_LANGUAGE} )
-                  . "</h3>"
-            );
+            $self->info( "<h3>" . $self->msg(PM_BACKTOCASURL) . "</h3>" );
             $self->info("<p><a href=\"$logout_url\">$logout_url</a></p>");
             $self->{activeTimer} = 0;
 
@@ -678,7 +678,7 @@ sub issuerForAuthUser {
     }
 
     # 3. VALIDATE [CAS 1.0]
-    if ( $url =~ /\Q$cas_validate_url\E/io ) {
+    if ( $url_path =~ m#${issuerDBCASPath}${cas_validate}# ) {
 
         $self->lmLog( "URL $url detected as an CAS VALIDATE URL", 'debug' );
 
@@ -691,7 +691,7 @@ sub issuerForAuthUser {
     }
 
     # 4. SERVICE VALIDATE [CAS 2.0]
-    if ( $url =~ /\Q$cas_serviceValidate_url\E/io ) {
+    if ( $url_path =~ m#${issuerDBCASPath}${cas_serviceValidate}# ) {
 
         $self->lmLog( "URL $url detected as an CAS SERVICE VALIDATE URL",
             'debug' );
@@ -706,7 +706,7 @@ sub issuerForAuthUser {
     }
 
     # 5. PROXY VALIDATE [CAS 2.0]
-    if ( $url =~ /\Q$cas_proxyValidate_url\E/io ) {
+    if ( $url_path =~ m#${issuerDBCASPath}${cas_proxyValidate}# ) {
 
         $self->lmLog( "URL $url detected as an CAS PROXY VALIDATE URL",
             'debug' );
@@ -720,7 +720,7 @@ sub issuerForAuthUser {
     }
 
     # 6. PROXY [CAS 2.0]
-    if ( $url =~ /\Q$cas_proxy_url\E/io ) {
+    if ( $url_path =~ m#${issuerDBCASPath}${cas_proxy}# ) {
 
         $self->lmLog( "URL $url detected as an CAS PROXY URL", 'debug' );
 

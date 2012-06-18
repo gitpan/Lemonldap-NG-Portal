@@ -57,21 +57,31 @@
 		<table>
 	        <TMPL_IF NAME="module">
 		<tr class="authLogo"><td>
-		<img src="/skins/common/<TMPL_VAR NAME="module">.png" />
+		<img src="<TMPL_VAR NAME="SKIN_PATH">/common/<TMPL_VAR NAME="module">.png" />
 		</td></tr>
 		</TMPL_IF>
+
+                <TMPL_IF NAME="CHECK_LOGINS">
+                <tr><td colspan="2"><div class="buttons">
+                <label for="checkLogins">
+                    <input type="checkbox" id="checkLogins" name="checkLogins" <TMPL_IF NAME="ASK_LOGINS">checked</TMPL_IF>/>
+                    <lang en="Check my last logins" fr="Voir mes dernières connexions"/>
+                </label>
+                </div></td></tr>
+                </TMPL_IF>
 
 		<tr><td>
 		<div class="buttons">
 		<button type="reset" class="negative" tabindex="4">
-			<img src="/skins/common/cancel.png" alt="" />
+			<img src="<TMPL_VAR NAME="SKIN_PATH">/common/cancel.png" alt="" />
 			<lang en="Cancel" fr="Annuler" />
 		</button>
 		<button type="submit" class="positive" tabindex="3">
-			<img src="/skins/common/accept.png" alt="" />
+			<img src="<TMPL_VAR NAME="SKIN_PATH">/common/accept.png" alt="" />
 			<lang en="Connect" fr="Se connecter" />
 		</button>
 		</div></td></tr>
+
                 </table>
 
 	</TMPL_IF>
@@ -137,7 +147,7 @@
         <TMPL_IF NAME="MSG"><TMPL_VAR NAME="MSG"></TMPL_IF>
         <div class="buttons">
                 <a href="<TMPL_VAR NAME="PORTAL_URL">" class="positive">
-                        <img src="/skins/common/accept.png" alt="" />
+                        <img src="<TMPL_VAR NAME="SKIN_PATH">/common/accept.png" alt="" />
                         <lang en="Go to portal" fr="Aller au portail" />
                 </a>
 	</div>
@@ -148,7 +158,7 @@
 	<div id="logout">
 		<div class="buttons">
 		<a href="<TMPL_VAR NAME="LOGOUT_URL">" class="negative">
-			<img src="/skins/common/cancel.png" alt="" />
+			<img src="<TMPL_VAR NAME="SKIN_PATH">/common/cancel.png" alt="" />
 			<lang en="Logout" fr="Se d&eacute;connecter"/>
 		</a>
 		</div>

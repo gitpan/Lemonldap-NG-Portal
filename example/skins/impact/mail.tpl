@@ -3,7 +3,7 @@
   <div id="content">
     <div id="content-all">
       <div class="title">
-        <img src="/skins/<TMPL_VAR NAME="SKIN">/images/logo-ok.png" />
+        <img src="<TMPL_VAR NAME="SKIN_PATH">/<TMPL_VAR NAME="SKIN">/images/logo-ok.png" />
         <lang en="Forgot your password?" fr="Mot de passe oubli&eacute; ?"/>
       </div>
       <hr class="solid" />
@@ -11,7 +11,9 @@
 
       <TMPL_IF NAME="DISPLAY_FORM">
       <form action="#" method="post" class="login">
+      <TMPL_IF NAME="CHOICE_VALUE">
       <input type="hidden" id="authKey" name="<TMPL_VAR NAME="CHOICE_PARAM">" value="<TMPL_VAR NAME="CHOICE_VALUE">" />
+      </TMPL_IF>
       <div id="content-all-info">
         <table>
           <tr>
@@ -34,9 +36,18 @@
 
       <TMPL_IF NAME="DISPLAY_RESEND_FORM">
       <form action="#" method="post" class="login">
+      <TMPL_IF NAME="CHOICE_VALUE">
       <input type="hidden" id="authKey" name="<TMPL_VAR NAME="CHOICE_PARAM">" value="<TMPL_VAR NAME="CHOICE_VALUE">" />
+      </TMPL_IF>
+      <TMPL_IF NAME="MAIL">
       <input type="hidden" value="<TMPL_VAR NAME="MAIL">" name="mail">
+      </TMPL_IF>
       <div id="content-all-info">
+        <p>
+        <lang en="A password reset request was already issued on " fr="Une demande de réinitialisation de mot de passe a déjà été faite le " />
+        <TMPL_VAR NAME="STARTMAILDATE">.
+        <lang en="Do you want the confirmation mail to be resent?" fr="Voulez-vous que le message de confirmation soit renvoyé ?" />
+        </p>
         <table>
           <tr>
             <th><input id="resendconfirmation" type="checkbox" name="resendconfirmation"></th>
@@ -58,8 +69,12 @@
 
       <TMPL_IF NAME="DISPLAY_PASSWORD_FORM">
       <form action="#" method="post" class="password">
+      <TMPL_IF NAME="CHOICE_VALUE">
       <input type="hidden" id="authKey" name="<TMPL_VAR NAME="CHOICE_PARAM">" value="<TMPL_VAR NAME="CHOICE_VALUE">" />
+      </TMPL_IF>
+      <TMPL_IF NAME="MAIL_TOKEN">
       <input type="hidden" id="mail_token" name="mail_token" value="<TMPL_VAR NAME="MAIL_TOKEN">" />
+      </TMPL_IF>
       <div id="content-all-info">
         <table>
         <tr><th><lang en="New password" fr="Nouveau mot de passe" /></th>
@@ -82,6 +97,20 @@
         </td></tr></table>
       </div>
       </form>
+      </TMPL_IF>
+
+      <TMPL_IF NAME="DISPLAY_CONFIRMMAILSENT">
+      <div id="content-all-info">
+      <lang en="A message has been sent to your mail address." fr="Un message a été envoyé à votre adresse mail." />
+      <lang en="This message contains a link to reset your password, this link is valid until " fr="Ce message contient un lien pour réinitialiser votre mot de passe, ce lien est valide jusqu'au " />
+      <TMPL_VAR NAME="EXPMAILDATE">.
+      </div>
+      </TMPL_IF>
+
+      <TMPL_IF NAME="DISPLAY_MAILSENT">
+      <div id="content-all-info">
+      <lang en="Your new password has been sent to your mail address." fr="Votre nouveau mot de passe a été envoyé à votre adresse mail." />
+      </div>
       </TMPL_IF>
 
       <div class="panel-buttons">

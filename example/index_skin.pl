@@ -43,7 +43,10 @@ my $template = HTML::Template->new(
     die_on_bad_params => 0,
     cache             => 0,
     global_vars       => 1,
-    filter            => sub { $portal->translate_template(@_) }
+    filter            => [
+        sub { $portal->translate_template(@_) },
+        sub { $portal->session_template(@_) }
+    ],
 );
 
 # Give parameters to the template

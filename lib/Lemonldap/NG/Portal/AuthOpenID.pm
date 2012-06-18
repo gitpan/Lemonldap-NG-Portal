@@ -12,7 +12,7 @@ use Lemonldap::NG::Common::Regexp;
 use LWP::UserAgent;
 use Cache::FileCache;
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.2.0';
 our $initDone;
 
 BEGIN {
@@ -215,6 +215,12 @@ sub authLogout {
 # @return result
 sub authForce {
     return 0;
+}
+
+## @method string getDisplayType
+# @return display type
+sub getDisplayType {
+    return "openidform";
 }
 
 1;

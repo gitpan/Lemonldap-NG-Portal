@@ -3,7 +3,7 @@
     <div id="content">
 
     <div id="content-left">
-      <p><img src="/skins/<TMPL_VAR NAME="SKIN">/images/logo-lock.png" /></p>
+      <p><img src="<TMPL_VAR NAME="SKIN_PATH">/<TMPL_VAR NAME="SKIN">/images/logo-lock.png" /></p>
     </div>
 
     <div id="content-right">
@@ -19,7 +19,7 @@
 
       <TMPL_IF NAME="PORTAL_URL">
         <p>
-        <img src="/skins/<TMPL_VAR NAME="SKIN">/images/arrow.png" /><a href="<TMPL_VAR NAME="PORTAL_URL">" class="positive"><lang en="Go to portal" fr="Aller au portail" /></a>
+        <img src="<TMPL_VAR NAME="SKIN_PATH">/<TMPL_VAR NAME="SKIN">/images/arrow.png" /><a href="<TMPL_VAR NAME="PORTAL_URL">" class="positive"><lang en="Go to portal" fr="Aller au portail" /></a>
         </p>
 		</TMPL_IF>
 

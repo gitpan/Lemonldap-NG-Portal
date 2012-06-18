@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::AuthTwitter;
 use strict;
 use Lemonldap::NG::Portal::Simple;
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.2.0';
 our $initDone;
 
 BEGIN {
@@ -178,6 +178,12 @@ sub authLogout {
 # @return result
 sub authForce {
     return 0;
+}
+
+## @method string getDisplayType
+# @return display type
+sub getDisplayType {
+    return "logo";
 }
 
 1;

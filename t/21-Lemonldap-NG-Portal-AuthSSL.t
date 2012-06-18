@@ -21,7 +21,6 @@ ok(
             globalStorage  => 'Apache::Session::File',
             domain         => 'example.com',
             authentication => 'SSL',
-            SSLRequired    => 0,
         }
     )
 );

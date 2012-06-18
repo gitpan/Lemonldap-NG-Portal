@@ -11,7 +11,6 @@ use warnings;
 use Exporter 'import';
 
 use warnings;
-use File::Basename;
 use MIME::Base64;
 use Lemonldap::NG::Common::CGI;
 use CGI::Cookie;
@@ -34,6 +33,7 @@ use Digest::MD5;
 #inherits Lemonldap::NG::Portal::AuthNull;
 #inherits Lemonldap::NG::Portal::AuthOpenID;
 #inherits Lemonldap::NG::Portal::AuthProxy;
+#inherits Lemonldap::NG::Portal::AuthRadius;
 #inherits Lemonldap::NG::Portal::AuthRemote;
 #inherits Lemonldap::NG::Portal::AuthSAML;
 #inherits Lemonldap::NG::Portal::AuthSSL;
@@ -63,7 +63,7 @@ use Digest::MD5;
 #inherits Apache::Session
 #link Lemonldap::NG::Common::Apache::Session::SOAP protected globalStorage
 
-our $VERSION = '1.1.2';
+our $VERSION = '1.2.0';
 
 use base qw(Lemonldap::NG::Common::CGI Exporter);
 our @ISA;
@@ -138,6 +138,13 @@ use constant {
     PE_MAILCONFIRMATION_ALREADY_SENT    => 66,
     PE_PASSWORDFORMEMPTY                => 67,
     PE_CAS_SERVICE_NOT_ALLOWED          => 68,
+    PE_MAILFIRSTACCESS                  => 69,
+    PE_MAILNOTFOUND                     => 70,
+    PE_PASSWORDFIRSTACCESS              => 71,
+    PE_MAILCONFIRMOK                    => 72,
+    PE_RADIUSCONNECTFAILED              => 73,
+    PE_MUST_SUPPLY_OLD_PASSWORD         => 74,
+    PE_FORBIDDENIP                      => 75,
 
     # Portal messages
     PM_USER                  => 0,
@@ -161,6 +168,9 @@ use constant {
     PM_OPENID_RPNS           => 18,    # OpenID "requested parameter is not set"
     PM_OPENID_PA             => 19,    # "OpenID policy available at"
     PM_OPENID_AP             => 20,    # OpenID "Asked parameter"
+    PM_ERROR_MSG             => 21,
+    PM_LAST_LOGINS           => 22,
+    PM_LAST_FAILED_LOGINS    => 23,
 };
 
 # EXPORTER PARAMETERS
@@ -181,12 +191,14 @@ our @EXPORT = qw( PE_IMG_NOK PE_IMG_OK PE_INFO PE_REDIRECT PE_DONE PE_OK
   PE_SAML_SIGNATURE_ERROR PE_SAML_ART_ERROR PE_SAML_SESSION_ERROR
   PE_SAML_LOAD_SP_ERROR PE_SAML_ATTR_ERROR PE_OPENID_EMPTY PE_OPENID_BADID
   PE_MISSINGREQATTR PE_BADPARTNER PE_MAILCONFIRMATION_ALREADY_SENT
-  PE_PASSWORDFORMEMPTY PE_CAS_SERVICE_NOT_ALLOWED
+  PE_PASSWORDFORMEMPTY PE_CAS_SERVICE_NOT_ALLOWED PE_MAILFIRSTACCESS
+  PE_MAILNOTFOUND PE_PASSWORDFIRSTACCESS PE_MAILCONFIRMOK
+  PE_MUST_SUPPLY_OLD_PASSWORD PE_FORBIDDENIP
   PM_USER PM_DATE PM_IP PM_SESSIONS_DELETED PM_OTHER_SESSIONS
   PM_REMOVE_OTHER_SESSIONS PM_PP_GRACE PM_PP_EXP_WARNING
   PM_SAML_IDPSELECT PM_SAML_IDPCHOOSEN PM_REMEMBERCHOICE PM_SAML_SPLOGOUT
   PM_REDIRECTION PM_BACKTOSP PM_BACKTOCASURL PM_LOGOUT PM_OPENID_EXCHANGE
-  PM_CDC_WRITER PM_OPENID_RPNS PM_OPENID_PA PM_OPENID_AP
+  PM_CDC_WRITER PM_OPENID_RPNS PM_OPENID_PA PM_OPENID_AP PM_ERROR_MSG
 );
 our %EXPORT_TAGS = ( 'all' => [ @EXPORT, 'import' ], );
 
@@ -274,10 +286,11 @@ sub new {
     $self->loadModule('Lemonldap::NG::Portal::Display');
 
     # Rules to allow redirection
-    $self->{mustRedirect} = (
-        ( $ENV{REQUEST_METHOD} eq 'POST' and not $self->param('newpassword') )
-          or $self->param('logout')
-    ) ? 1 : 0;
+    $self->{mustRedirect} =
+      defined $ENV{REQUEST_METHOD}
+      ? ( $ENV{REQUEST_METHOD} eq "POST" and not $self->param('newpassword') )
+      : $self->param('logout') ? 1
+      :                          0;
 
     # Push authentication/userDB/passwordDB modules in @ISA
     foreach my $type (qw(authentication userDB passwordDB)) {
@@ -437,17 +450,14 @@ sub new {
     }
 
     # Trusted domains
-    unless ( defined( $self->{trustedDomains} ) ) {
-        $self->{trustedDomains} = $self->{domain};
-    }
-    if ( $self->{trustedDomains} eq '*' ) {
-        $self->{trustedDomains} = '|\w[\w\-\.]*\w';
-    }
-    elsif ( $self->{trustedDomains} ) {
-        $self->{trustedDomains} = '|(?:[^/]*)?(?:'
-          . join( '|',
-            ( map { s/\./\\\./g; $_ } split /\s+/, $self->{trustedDomains} ) )
-          . ')';
+    $self->{trustedDomains} ||= "";
+    $self->{trustedDomains} = "*"
+      if ( $self->{trustedDomains} =~ /(^|\s)\*(\s|$)/ );
+    if ( $self->{trustedDomains} and $self->{trustedDomains} ne "*" ) {
+        $self->{trustedDomains} =~ s#(^|\s+)\.#[^/]+.#g;
+        $self->{trustedDomains} =
+          '(' . join( '|', split( /\s+/, $self->{trustedDomains} ) ) . ')';
+        $self->{trustedDomains} =~ s/\./\\./g;
     }
 
     return $self;
@@ -513,6 +523,10 @@ sub setDefaultValues {
       unless ( defined( $self->{portalDisplayChangePassword} ) );
     $self->{portalDisplayAppslist} = 1
       unless ( defined( $self->{portalDisplayAppslist} ) );
+    $self->{portalDisplayLoginHistory} = 1
+      unless ( defined( $self->{portalDisplayLoginHistory} ) );
+    $self->{jsRedirect} = 0
+      unless ( defined( $self->{jsRedirect} ) );
     $self->{portalAutocomplete} ||= 0;
     $self->{portalRequireOldPassword} = 1
       unless ( defined( $self->{portalRequireOldPassword} ) );
@@ -539,9 +553,10 @@ sub setDefaultValues {
     $self->{mailUrl}              ||= $self->{portal} . "/mail.pl";
     $self->{multiValuesSeparator} ||= '; ';
     $self->{activeTimer} = 1 unless ( defined( $self->{activeTimer} ) );
-    $self->{infoFormMethod}    ||= "get";
-    $self->{confirmFormMethod} ||= "post";
-    $self->{authChoiceParam}   ||= "lmAuth";
+    $self->{infoFormMethod}     ||= "get";
+    $self->{confirmFormMethod}  ||= "post";
+    $self->{redirectFormMethod} ||= "get";
+    $self->{authChoiceParam}    ||= "lmAuth";
 
     # Set default userDB and passwordDB to DBI if authentication is DBI
     if ( $self->{authentication} =~ /DBI/i ) {
@@ -610,7 +625,8 @@ sub setDefaultValues {
     $self->{twitterAuthnLevel} = 1
       unless defined $self->{twitterAuthnLevel};
     $self->{apacheAuthnLevel} = 4 unless defined $self->{apacheAuthnLevel};
-    $self->{nullAuthnLevel}   = 2 unless defined $self->{nullAuthnLevel};
+    $self->{nullAuthnLevel}   = 0 unless defined $self->{nullAuthnLevel};
+    $self->{radiusAuthnLevel} = 3 unless defined $self->{radiusAuthnLevel};
 
     # Other
     $self->{logoutServices} ||= {};
@@ -619,9 +635,21 @@ sub setDefaultValues {
       unless ( defined( $self->{ldapUsePasswordResetAttribute} ) );
     $self->{ldapPasswordResetAttribute}      ||= "pwdReset";
     $self->{ldapPasswordResetAttributeValue} ||= "TRUE";
+    $self->{mailOnPasswordChange}            ||= 0;
 
     # Notification
     $self->{notificationWildcard} ||= "allusers";
+
+    # Login History
+    $self->{loginHistoryEnabled} = 1
+      unless defined $self->{loginHistoryEnabled};
+    $self->{successLoginNumber} = 5 unless defined $self->{successLoginNumber};
+    $self->{failedLoginNumber}  = 5 unless defined $self->{failedLoginNumber};
+    $self->{portalCheckLogins}  = 1
+      unless defined $self->{portalCheckLogins};
+
+    # XSS
+    $self->{checkXSS} = 1 unless defined $self->{checkXSS};
 }
 
 ## @method protected void setHiddenFormValue(string fieldname, string value, string prefix, boolean base64)
@@ -717,6 +745,20 @@ sub buildHiddenForm {
     return $val;
 }
 
+## @method boolean isTrustedUrl(string url)
+# Check if an URL's domain name is declared in LL::NG config or is declared as trusted domain
+# @param url Parameter url
+# @param value Parameter value
+# @return 1 if url can be trusted, 0 else
+sub isTrustedUrl {
+    my ( $self, $url ) = splice @_;
+    return
+         $url =~ m#^https?://$self->{reVHosts}(:\d+)?/#o
+      || $self->{trustedDomains} eq "*"
+      || $self->{trustedDomains}
+      && $url =~ m#^https?://$self->{trustedDomains}(:\d+)?/#o;
+}
+
 ## @method boolean checkXSSAttack(string name, string value)
 # Check value to detect XSS attack
 # @param name Parameter name
@@ -732,7 +774,7 @@ sub checkXSSAttack {
     if ( $value =~ m/(?:\0|<|'|"|`|\%(?:00|25|3C|22|27|2C))/ ) {
         $self->lmLog( "XSS attack detected (param: $name | value: $value)",
             "warn" );
-        return 1;
+        return $self->{checkXSS};
     }
 
     return 0;
@@ -748,36 +790,52 @@ _RETURN $string Error string
 
 =cut
 
-##@method string error(string lang, int code)
-# error calls Portal/_i18n.pm to display error in the wanted language.
-#@param $lang optional (browser language is used instead)
+##@method string msg(int code)
+# calls Portal/_i18n.pm to display message in the client's language.
+#@param $code message code
+#@return message
+sub msg {
+    my $self = shift;
+    my $code = shift;
+    return &Lemonldap::NG::Portal::_i18n::msg( $code, $self->{lang} );
+}
+
+##@method string error(int code)
+# calls Portal/_i18n.pm to display error in the client's language.
 #@param $code optional error code
 #@return error message
 sub error {
     my $self = shift;
-    my $lang = shift || $ENV{HTTP_ACCEPT_LANGUAGE};
     my $code = shift || $self->{error};
+    if ( my $lang = shift ) {    # only for SOAP error requests
+        $self->{lang} = $self->extract_lang($lang);
+    }
     my $msg;
 
     # Check for customized message
-    $msg = $self->{ "error_" . $lang . "_" . $code }
-      || $self->{ "error_" . $code };
+    foreach ( @{ $self->{lang} } ) {
+        if ( $self->{ "error_" . $_ . "_" . $code } ) {
+            $msg = $self->{ "error_" . $_ . "_" . $code };
+            last;
+        }
+    }
+    $msg ||= $self->{ "error_" . $code };
 
     # Use customized message or built-in message
-    if ($msg) {
-        $self->lmLog( "Use customized message for error $code", 'debug' );
+    if ( defined $msg ) {
+
+        # Manage UTF-8
+        utf8::decode($msg);
+
+        $self->lmLog( "Use customized message $msg for error $code", 'debug' );
     }
     else {
-        $msg = &Lemonldap::NG::Portal::_i18n::error( $code, $lang );
+        $msg = &Lemonldap::NG::Portal::_i18n::error( $code, $self->{lang} );
     }
 
     # Return message
     # Manage SOAP
-    return (
-        $ENV{HTTP_SOAPACTION}
-        ? SOAP::Data->name( result => $msg )->type('string')
-        : $msg
-    );
+    return $msg;
 }
 
 ##@method string error_type(int code)
@@ -793,8 +851,11 @@ sub error_type {
       if (
         scalar(
             grep { /^$code$/ } (
-                PE_REDIRECT, PE_DONE, PE_OK, PE_PASSWORD_OK,
-                PE_MAILOK,   PE_LOGOUT_OK,
+                PE_REDIRECT,        PE_DONE,
+                PE_OK,              PE_PASSWORD_OK,
+                PE_MAILOK,          PE_LOGOUT_OK,
+                PE_MAILFIRSTACCESS, PE_PASSWORDFIRSTACCESS,
+                PE_MAILCONFIRMOK,
             )
         )
       );
@@ -896,21 +957,12 @@ sub getPersistentSession {
             $self->lmLog( "Persistent session $id not available", 'debug' );
         }
         else {
-            $self->lmLog( "Unable to create new persitent session: $@",
+            $self->lmLog( "Unable to create new persistent session: $@",
                 'error' );
         }
         return 0;
     }
     return \%h;
-}
-
-##@method string getApacheHtdocsPath()
-# Return the absolute path to the htdocs directory where is portal script.
-# @return path string
-sub getApacheHtdocsPath {
-    my $self = shift;
-    my ( $name, $path, $suffix ) = fileparse( $ENV{SCRIPT_FILENAME} );
-    return $path;
 }
 
 ## @method protected string _md5hash(string s)
@@ -978,12 +1030,12 @@ sub updatePersistentSession {
 # Update session stored.
 # If no id is given, try to get it from cookie.
 # If the session is available, update datas with $info.
+# Note that outdated session data may remain some time on
+# server local cache, if there are several LL::NG servers.
 # @param infos hash reference of information to update
 # @param id Session ID
 # @return nothing
 sub updateSession {
-
-    # TODO: update all caches
     my ( $self, $infos, $id ) = splice @_;
 
     # Return if no infos to update
@@ -997,36 +1049,41 @@ sub updateSession {
           if ( defined $cookies{ $self->{cookieName} } );
     }
 
-    # Update sessionInfo data
     if ($id) {
+
+        # Update sessionInfo data
+        ## sessionInfo updated if $id defined : quite strange !!
+        ## See http://jira.ow2.org/browse/LEMONLDAP-430
         foreach ( keys %$infos ) {
             $self->lmLog( "Update sessionInfo $_ with " . $infos->{$_},
                 'debug' );
             $self->{sessionInfo}->{$_} = $infos->{$_};
         }
-    }
 
-    # Update session in the backend
-    if ($id) {
-        my $h = $self->getApacheSession( $id, 1 ) or return ();
+        # Delete session from local storage
+        eval { $self->{lmConf}->{refLocalStorage}->remove($id); };
 
-        # Store/update session values
-        foreach ( keys %$infos ) {
-            if ( defined( $infos->{$_} ) ) {
-                $self->lmLog( "Update session key $_ with " . $infos->{$_},
-                    'debug' );
-                $h->{$_} = $infos->{$_};
+        # Update session in global storage
+        if ( my $h = $self->getApacheSession( $id, 1 ) ) {
+
+            # Store/update session values
+            foreach ( keys %$infos ) {
+                if ( defined( $infos->{$_} ) ) {
+                    $self->lmLog( "Update session key $_ with " . $infos->{$_},
+                        'debug' );
+                    $h->{$_} = $infos->{$_};
+                }
+                else {
+                    $self->lmLog( "Delete session key $_", 'debug' );
+                    delete $h->{$_};
+                }
             }
-            else {
-                $self->lmLog( "Delete session key $_", 'debug' );
-                delete $h->{$_};
-            }
+
+            # Store updateTime
+            $h->{updateTime} = &POSIX::strftime( "%Y%m%d%H%M%S", localtime() );
+
+            untie %$h;
         }
-
-        # Store updateTime
-        $h->{updateTime} = &POSIX::strftime( "%Y%m%d%H%M%S", localtime() );
-
-        untie %$h;
     }
 }
 
@@ -1250,31 +1307,33 @@ sub _deleteSession {
         return 0;
     }
 
-    # Try to find a linked http session (securedCookie=>2)
-    if ( my $id2 = $h->{_httpSession} ) {
-        if ( my $h2 = $self->getApacheSession( $id2, 1 ) ) {
+    # Invalidate http cookie and session, if set
+    if ( $self->{securedCookie} >= 2 ) {
 
-            # Try to purge local cache
-            # (if an handler is running on the same server)
-            eval { $self->{lmConf}->{refLocalStorage}->remove($id2); };
-            eval { tied(%$h2)->delete() };
-            $self->lmLog( $@, 'error' ) if ($@);
+        # Try to find a linked http session (securedCookie == 2)
+        if ( my $id2 = $h->{_httpSession} ) {
+            if ( my $h2 = $self->getApacheSession( $id2, 1 ) ) {
 
-            # Create an obsolete cookie to remove it
-            push @{ $self->{cookie} },
-              $self->cookie(
-                -name    => $self->{cookieName} . 'http',
-                -value   => 0,
-                -domain  => $self->{domain},
-                -path    => "/",
-                -secure  => 0,
-                -expires => '-1d',
-                @_,
-              );
+                # Try to purge local cache
+                # (if an handler is running on the same server)
+                eval { $self->{lmConf}->{refLocalStorage}->remove($id2); };
+                eval { tied(%$h2)->delete() };
+                $self->lmLog( $@, 'error' ) if ($@);
+            }
         }
-    }
 
-    my $logged_user = $h->{ $self->{whatToTrace} } || 'unknown';
+        # Create an obsolete cookie to remove it
+        push @{ $self->{cookie} },
+          $self->cookie(
+            -name    => $self->{cookieName} . 'http',
+            -value   => 0,
+            -domain  => $self->{domain},
+            -path    => "/",
+            -secure  => 0,
+            -expires => '-1d',
+            @_,
+          );
+    }
 
     # Try to purge local cache
     # (if an handler is running on the same server)
@@ -1298,8 +1357,9 @@ sub _deleteSession {
       ) unless ($preserveCookie);
 
     # Log
-    $self->_sub( 'userNotice', "User $logged_user has been disconnected" )
-      if $logged_user;
+    my $user = $h->{ $self->{whatToTrace} };
+    $self->_sub( 'userNotice', "User $user has been disconnected" )
+      if $user;
 
     # Return the result of tied(%$h)->delete()
     return $result;
@@ -1404,18 +1464,21 @@ sub stamp {
 #    - issuerDBInit
 #    - issuerForUnAuthUser
 #    - issuerForAuthUser
+#  - MailReset:
+#    - sendPasswordMail
 #
 #@return 1 if all is OK, 0 if session isn't created or a notification has to be done
 sub process {
     my ($self) = @_;
     $self->{error} = PE_OK;
     $self->{error} = $self->_subProcess(
-        qw(controlUrlOrigin checkNotifBack controlExistingSession issuerDBInit
-          authInit issuerForUnAuthUser extractFormInfo userDBInit getUser
-          setAuthSessionInfo passwordDBInit modifyPassword setSessionInfo
-          setMacros setLocalGroups setGroups setPersistentSessionInfo authenticate
-          removeOther grantSession store authFinish buildCookie checkNotification
-          issuerForAuthUser autoRedirect)
+        qw(controlUrlOrigin checkNotifBack controlExistingSession
+          issuerDBInit authInit issuerForUnAuthUser extractFormInfo
+          userDBInit getUser setAuthSessionInfo passwordDBInit
+          modifyPassword setSessionInfo setMacros setGroups
+          setPersistentSessionInfo setLocalGroups sendPasswordMail
+          authenticate grantSession removeOther store authFinish
+          buildCookie checkNotification issuerForAuthUser autoRedirect)
     );
     $self->updateStatus;
     return ( ( $self->{error} > 0 ) ? 0 : 1 );
@@ -1480,11 +1543,7 @@ sub controlUrlOrigin {
         }
 
         # Non protected hosts
-        if (    $tmp
-            and $tmp !~
-/^https?:\/\/(?:$self->{reVHosts}$self->{trustedDomains})(?::\d+)?(?:\/.*)?$/o
-          )
-        {
+        if ( $tmp and !$self->isTrustedUrl($tmp) ) {
             $self->lmLog(
                 "URL contains a non protected host (param: "
                   . ( $self->param('logout') ? 'HTTP Referer' : 'urldc' )
@@ -1560,7 +1619,7 @@ sub controlExistingSession {
             # Logout if required
             if ( $self->param('logout') ) {
 
-                # Delete session in global storage
+                # Delete session
                 unless ( $self->_deleteSession($h) ) {
                     $self->lmLog( "Unable to delete session $id", 'error' );
                     return PE_ERROR;
@@ -1568,28 +1627,6 @@ sub controlExistingSession {
                 else {
                     $self->lmLog( "Session $id deleted from global storage",
                         'debug' );
-                }
-
-                # Delete session in local storage
-                if ( defined $self->{localStorage} ) {
-                    $self->loadModule( $self->{localStorage} );
-                    my $cache;
-                    eval '$cache = new '
-                      . $self->{localStorage}
-                      . '($self->{localStorageOptions})';
-                    if ( defined $cache ) {
-                        if ( $cache->remove($id) ) {
-                            $self->lmLog(
-"Unable to remove session $id from local storage",
-                                'warn'
-                            );
-                        }
-                        else {
-                            $self->lmLog(
-                                "Session $id removed from local storage",
-                                'debug' );
-                        }
-                    }
                 }
 
                 # Call issuerDB logout on each used issuerDBmodule
@@ -1652,11 +1689,7 @@ sub controlExistingSession {
                         "Create iFrames to forward logout to services",
                         'debug' );
 
-                    $self->info(
-                        "<h3>"
-                          . &Lemonldap::NG::Portal::_i18n::msg
-                          (Lemonldap::NG::Portal::Simple::PM_LOGOUT) . "</h3>"
-                    );
+                    $self->info( "<h3>" . $self->msg(PM_LOGOUT) . "</h3>" );
 
                     foreach ( keys %{ $self->{logoutServices} } ) {
                         my $logoutServiceName = $_;
@@ -1684,14 +1717,17 @@ sub controlExistingSession {
                     }
                 }
 
+                untie %$h;
+
                 # Redirect or Post if asked by authLogout
-                $self->_subProcess(qw(autoRedirect))
+                return $self->_subProcess(qw(autoRedirect))
                   if (  $self->{urldc}
                     and $self->{urldc} ne $self->{portal} );
-                $self->_subProcess(qw(autoPost)) if ( $self->{postUrl} );
+
+                return $self->_subProcess(qw(autoPost))
+                  if ( $self->{postUrl} );
 
                 # Display logout message
-                untie %$h;
                 return PE_LOGOUT_OK;
             }
 
@@ -1785,8 +1821,8 @@ sub existingSession {
             $self->{error} = $self->_subProcess(
                 qw(issuerDBInit authInit issuerForUnAuthUser extractFormInfo
                   userDBInit getUser setAuthSessionInfo setSessionInfo
-                  setMacros setLocalGroups setGroups setPersistentSessionInfo
-                  authenticate store authFinish)
+                  setMacros setGroups setPersistentSessionInfo
+                  setLocalGroups authenticate store authFinish)
             );
             return $self->{error} || PE_DONE;
         }
@@ -1806,9 +1842,17 @@ sub existingSession {
 
 # issuerForUnAuthUser(): must be implemented in IssuerDB* module
 
-# extractFormInfo(): must be implemented in Auth* module
-# * set $self->{user}
-# * authenticate user if possible (or do it in authenticate())
+##@apmethod int extractFormInfo()
+# Extract data common to all authentication modules,
+# and call extractFormInfo() in Auth* module
+# Auth*::extractFormInfo set $self->{user} and in some cases
+# authenticate user (done in authenticate() else)
+#@return Lemonldap::NG::Portal constant
+sub extractFormInfo {
+    my $self = shift;
+    $self->{checkLogins} = $self->param('checkLogins');
+    return $self->SUPER::extractFormInfo;
+}
 
 # getUser(): must be implemented in UserDB* module
 
@@ -1847,12 +1891,23 @@ sub modifyPassword {
 
     my $res = $self->SUPER::modifyPassword();
 
-    #  Continue process if password change is ok
     if ( $res == PE_PASSWORD_OK ) {
+
+        # Update password in session if needed
+        $self->lmLog( "Update password in session for " . $self->{user},
+            'debug' );
+
+        my $infos;
+        $infos->{_password} = $self->{newpassword};
+        $self->updateSession($infos) if ( $self->{storePassword} );
 
         # Set a flag to ignore password change in Menu
         $self->{ignorePasswordChange} = 1;
 
+        # Set a flag to allow sending a mail
+        $self->{passwordWasChanged} = 1;
+
+        #  Continue process if password change is ok
         return PE_OK;
     }
 
@@ -1967,22 +2022,76 @@ sub setPersistentSessionInfo {
     PE_OK;
 }
 
+## @apmethod sendPasswordMail
+# Call sendPasswordMail from MailReset if option is configured
+# @return Lemonldap::NG::Portal constant
+sub sendPasswordMail {
+    my $self = shift;
+
+    if ( $self->{mailOnPasswordChange} && $self->{passwordWasChanged} ) {
+
+        $self->lmLog( "Send password by mail requested", 'debug' );
+
+        eval "require Lemonldap::NG::Portal::MailReset";
+        &Lemonldap::NG::Portal::MailReset::smtpInit($self);
+        &Lemonldap::NG::Portal::MailReset::sendPasswordMail($self);
+    }
+
+    # Never stop the process here
+    return PE_OK;
+}
+
 ##@apmethod int authenticate()
-# Call authenticate() in Auth* module and call userNotice().
+# Call authenticate() in Auth* module, and registerLogin()
+# if authentication failed, userNotice() if it succeeded.
 #@return Lemonldap::NG::Portal constant
 sub authenticate {
     my $self = shift;
-    my $tmp;
-    return $tmp if ( $tmp = $self->SUPER::authenticate() );
+    if ( my $errorCode = $self->SUPER::authenticate() ) {
+        $self->registerLogin($errorCode);
+        return $errorCode;
+    }
 
     # Log good authentication
     my $user = $self->{sessionInfo}->{ $self->{whatToTrace} };
-    $self->_sub( 'userNotice', "Good authentication for $user" ) if $user;
+    $self->_sub( 'userNotice',
+        "Good authentication for $user by $self->{sessionInfo}->{_auth}" )
+      if $user;
 
     # Set _lastAuthnUTime
     $self->{sessionInfo}->{_lastAuthnUTime} = time();
 
     PE_OK;
+}
+
+##@method registerLogin
+# Store current login in login history
+# @param $errorCode Code returned by authenticate()
+sub registerLogin {
+    my ( $self, $errorCode ) = @_;
+
+    if ( $self->{loginHistoryEnabled} ) {
+        my $history = $self->{sessionInfo}->{loginHistory} ||= {};
+
+        my $type = ( $errorCode ? "failed" : "success" ) . "Login";
+        $history->{$type} ||= [];
+        $self->lmLog( "Current login saved into $type", "debug" );
+
+        # Gather current login's parameters
+        my $login = $self->_sumUpSession( $self->{sessionInfo}, 1 );
+        $login->{error} = $self->error($errorCode)
+          if ($errorCode);
+
+        # Add current login into history
+        unshift @{ $history->{$type} }, $login;
+
+        # Forget oldest logins
+        splice @{ $history->{$type} }, $self->{ $type . "Number" }
+          if ( scalar @{ $history->{$type} } > $self->{ $type . "Number" } );
+
+        # Save into persistent session
+        $self->updatePersistentSession( { loginHistory => $history, } );
+    }
 }
 
 ##@apmethod int removeOther()
@@ -2009,21 +2118,11 @@ sub removeOther {
                     and $self->{sessionInfo}->{ipAddr} ne $h->{ipAddr} )
               )
             {
-                push @{ $self->{deleted} },
-                  {
-                    time => $h->{_utime},
-                    ip   => $h->{ipAddr},
-                    user => $h->{ $self->{whatToTrace} },
-                  };
+                push @{ $self->{deleted} }, $self->_sumUpSession($h);
                 $self->_deleteSession( $h, 1 );
             }
             else {
-                push @{ $self->{otherSessions} },
-                  {
-                    time => $h->{_utime},
-                    ip   => $h->{ipAddr},
-                    user => $h->{ $self->{whatToTrace} },
-                  };
+                push @{ $self->{otherSessions} }, $self->_sumUpSession($h);
             }
         }
     }
@@ -2037,48 +2136,97 @@ sub removeOther {
             unless ( $self->{sessionInfo}->{ $self->{whatToTrace} } eq
                 $h->{ $self->{whatToTrace} } )
             {
-                push @{ $self->{deleted} },
-                  {
-                    time => $h->{_utime},
-                    ip   => $h->{ipAddr},
-                    user => $h->{ $self->{whatToTrace} },
-                  };
+                push @{ $self->{deleted} }, $self->_sumUpSession($h);
                 $self->_deleteSession( $h, 1 );
             }
         }
     }
     $self->info(
-        $self->_mkDateIpArray(
-            &Lemonldap::NG::Portal::_i18n::msg(PM_SESSIONS_DELETED),
-            @{ $self->{deleted} }
+        $self->mkSessionArray(
+            $self->{deleted}, $self->msg(PM_SESSIONS_DELETED), 1
         )
     ) if ( $self->{notifyDeleted} and @{ $self->{deleted} } );
     $self->info(
-        $self->_mkDateIpArray(
-            &Lemonldap::NG::Portal::_i18n::msg(PM_OTHER_SESSIONS),
-            @{ $self->{otherSessions} } )
+        $self->mkSessionArray( $self->{otherSessions},
+            $self->msg(PM_OTHER_SESSIONS), 1 )
           . $self->_mkRemoveOtherLink()
     ) if ( $self->{notifyOther} and @{ $self->{otherSessions} } );
+
+    $self->info(
+        (
+            $self->{sessionInfo}->{loginHistory}->{successLogin}
+            ? $self->mkSessionArray(
+                $self->{sessionInfo}->{loginHistory}->{successLogin},
+                $self->msg(PM_LAST_LOGINS),
+                0, 0
+              )
+            : ""
+        )
+        . (
+            $self->{sessionInfo}->{loginHistory}->{failedLogin}
+            ? $self->mkSessionArray(
+                $self->{sessionInfo}->{loginHistory}->{failedLogin},
+                $self->msg(PM_LAST_FAILED_LOGINS),
+                0, 1
+              )
+            : ""
+        )
+    ) if ( $self->{checkLogins} );
+
     PE_OK;
 }
 
-##@method private string _mkDateIpArray(string title,array datas)
-# Build the HTML array to display sessions deleted or found by removeOther()
+##@method private hashref _sumUpSession(hashref session)
+# put main session data into a hash ref
+# @param hashref $session The session to sum up
+# @return hashref
+sub _sumUpSession {
+    my ( $self, $session, $withoutUser ) = @_;
+    my $res =
+      $withoutUser
+      ? {}
+      : { user => $session->{ $self->{whatToTrace} } };
+    $res->{$_} = $session->{$_}
+      foreach ( "_utime", "ipAddr", keys %{ $self->{sessionDataToRemember} } );
+    return $res;
+}
+
+##@method private string mkSessionArray(string title,array datas)
+# Build an HTML array to display sessions
+# @param $sessions Array ref of hash ref containing sessions datas
 # @param $title Title of the array
-# @param @datas Array of hash ref containing sessions datas
+# @param $displayUser To display "User" column
+# @param $displaError To display "Error" column
 # @return HTML string
-sub _mkDateIpArray {
-    my ( $self, $title, @datas ) = @_;
-    my $tmp = "<h3>$title</h3>";
-    $tmp .= "<table class=\"info\"><tbody><tr>";
-    $tmp .= '<th>' . &Lemonldap::NG::Portal::_i18n::msg($_) . '</th>'
-      foreach ( PM_USER, PM_DATE, PM_IP );
+sub mkSessionArray {
+    my ( $self, $sessions, $title, $displayUser, $displayError ) = @_;
+
+    return "" unless ( ref $sessions eq "ARRAY" and @$sessions );
+
+    my $tmp = $title ? "<h3>$title</h3>" : "";
+    $tmp .= "<table class=\"info\"><tbody>";
+
+    $tmp .= "<tr>";
+    $tmp .= "<th>" . $self->msg(PM_USER) . "</th>"
+      if ($displayUser);
+    $tmp .= "<th>" . $self->msg(PM_DATE) . "</th>";
+    $tmp .= "<th>" . $self->msg(PM_IP) . "</th>";
+    $tmp .= "<th>" . $self->{sessionDataToRemember}->{$_} . "</th>"
+      foreach ( keys %{ $self->{sessionDataToRemember} } );
+    $tmp .= '<th>' . $self->msg(PM_ERROR_MSG) . '</th>'
+      if ($displayError);
     $tmp .= '</tr>';
-    foreach (@datas) {
+
+    foreach my $session (@$sessions) {
+        $tmp .= "<tr>";
+        $tmp .= "<td>$session->{user}</td>" if ($displayUser);
         $tmp .=
-            "<tr><td>$_->{user}</td><td>"
-          . "<script>var _date=new Date($_->{time}*1000);document.write(_date.toLocaleString());</script>"
-          . "</td><td>$_->{ip}</td></tr>";
+"<td><script>var _date=new Date($session->{_utime}*1000);document.write(_date.toLocaleString());</script></td>";
+        $tmp .= "<td>$session->{ipAddr}</td>";
+        $tmp .= "<td>" . ( $session->{$_} || "" ) . "</td>"
+          foreach ( keys %{ $self->{sessionDataToRemember} } );
+        $tmp .= "<td>$session->{error}</td>" if ($displayError);
+        $tmp .= "</tr>";
     }
     $tmp .= '</tbody></table>';
     return $tmp;
@@ -2095,7 +2243,7 @@ sub _mkRemoveOtherLink {
 
     return
         "<p class=\"removeOther\"><a href=\"$link\" onclick=\"_go=0\">"
-      . &Lemonldap::NG::Portal::_i18n::msg(PM_REMOVE_OTHER_SESSIONS)
+      . $self->msg(PM_REMOVE_OTHER_SESSIONS)
       . "</a></p>";
 }
 
@@ -2105,22 +2253,45 @@ sub _mkRemoveOtherLink {
 sub grantSession {
     my ($self) = @_;
 
-    # Return PE_OK if no grantSessionRule
-    return PE_OK unless defined $self->{grantSessionRule};
+    if ( defined $self->{grantSessionRule} ) {
 
-    # Eval grantSessionRule
-    my $grantSessionRule = $self->{grantSessionRule};
+        # Eval grantSessionRule
+        # Kept for backward compatibility with LL::NG 1.1.2 and previous
+        my $grantSessionRule = $self->{grantSessionRule};
 
-    unless ( $self->safe->reval($grantSessionRule) ) {
-        $self->lmLog(
-            "User " . $self->{user} . " was not granted to open session",
-            'error' );
-        return PE_SESSIONNOTGRANTED;
+        unless ( $self->safe->reval($grantSessionRule) ) {
+            $self->lmLog(
+                "User " . $self->{user} . " was not granted to open session",
+                'error' );
+            $self->registerLogin(PE_SESSIONNOTGRANTED);
+            return PE_SESSIONNOTGRANTED;
+        }
     }
 
-    $self->lmLog( "Session granted for " . $self->{user}, 'notice' );
+    # Eval grantSessionRules sorted by comments
+    sub sortByComment {
+        my $A = ( $a =~ /^.*?##(.*)$/ )[0];
+        my $B = ( $b =~ /^.*?##(.*)$/ )[0];
+        return !$A ? 1 : !$B ? -1 : $A cmp $B;
+    }
+    foreach ( sort sortByComment keys %{ $self->{grantSessionRules} } ) {
+        $self->lmLog( "Grant session condition \"$_\" checked", "debug" );
+        unless ( $self->safe->reval($_) ) {
+            $self->lmLog(
+                "User " . $self->{user} . " was not granted to open session",
+                'error' );
+            my $msg = $self->safe->reval( $self->{grantSessionRules}->{$_} );
+            $msg = $self->{grantSessionRules}->{$_} if ($@);
+            $self->{ "error_" . PE_SESSIONNOTGRANTED } = $msg if ($msg);
+            $self->registerLogin(PE_SESSIONNOTGRANTED);
+            return PE_SESSIONNOTGRANTED;
+        }
+    }
 
-    PE_OK;
+    my $user = $self->{sessionInfo}->{ $self->{whatToTrace} };
+    $self->_sub( 'userNotice', "Session granted for $user" ) if ($user);
+    $self->registerLogin(PE_OK);
+    return PE_OK;
 }
 
 ##@apmethod int store()
@@ -2193,11 +2364,15 @@ sub buildCookie {
         -expires  => $self->{cookieExpiration},
         @_,
       );
-    if ( $self->{securedCookie} == 2 ) {
+    if ( $self->{securedCookie} >= 2 ) {
         push @{ $self->{cookie} },
           $self->cookie(
-            -name     => $self->{cookieName} . "http",
-            -value    => $self->{sessionInfo}->{_httpSession},
+            -name  => $self->{cookieName} . "http",
+            -value => (
+                  $self->{securedCookie} == 2
+                ? $self->{sessionInfo}->{_httpSession}
+                : $self->{cipher}->encryptHex( $self->{id}, "http" )
+            ),
             -domain   => $self->{domain},
             -path     => "/",
             -secure   => 0,
@@ -2232,8 +2407,7 @@ sub issuerForAuthUser {
     my $self = shift;
 
     # User information
-    my $logged_user = $self->{sessionInfo}->{ $self->{whatToTrace} }
-      || 'unknown';
+    my $user = $self->{sessionInfo}->{ $self->{whatToTrace} } || 'unknown';
 
     # Get active module
     my $issuerDBtype = $self->get_module('issuer');
@@ -2247,10 +2421,8 @@ sub issuerForAuthUser {
 
         unless ( $self->safe->reval($rule) ) {
             $self->lmLog(
-                "User $logged_user"
-                  . " was not allowed to use IssuerDB $issuerDBtype",
-                'warn'
-            );
+                "User $user was not allowed to use IssuerDB $issuerDBtype",
+                'warn' );
 
             return PE_OK;
         }
@@ -2260,9 +2432,7 @@ sub issuerForAuthUser {
         $self->lmLog( "No rule found for IssuerDB $issuerDBtype", 'debug' );
     }
 
-    $self->lmLog(
-        "User $logged_user" . " allowed to use IssuerDB $issuerDBtype",
-        'debug' );
+    $self->lmLog( "User $user allowed to use IssuerDB $issuerDBtype", 'debug' );
 
     # Register IssuerDB module in session
     $self->addSessionValue( '_issuerDB', $issuerDBtype, $self->{id} );
@@ -2277,6 +2447,7 @@ sub issuerForAuthUser {
 #@return Lemonldap::NG::Portal constant
 sub autoRedirect {
     my $self = shift;
+    $self->clearHiddenFormValue();
 
     # Default redirection URL
     $self->{urldc} ||= $self->{portal}
@@ -2289,7 +2460,7 @@ sub autoRedirect {
         my ($query_string) = ( $self->{urldc} =~ /.+?\?(.+)/ );
         if ($query_string) {
             $self->lmLog(
-                "Transfrom query string $query_string into hidden form values",
+                "Transform query string $query_string into hidden form values",
                 'debug'
             );
             my $query      = CGI->new($query_string);
@@ -2308,42 +2479,34 @@ sub autoRedirect {
         # Cross-domain mechanism
         if (    $self->{cda}
             and $self->{id}
-            and $self->{urldc} !~ m#^http(s?)://[^/]*$self->{domain}/#oi )
+            and $self->{urldc} !~ m#^https?://[^/]*$self->{domain}(:\d+)?/#oi
+            and $self->isTrustedUrl( $self->{urldc} ) )
         {
-            my $ssl = $1;
+            my $ssl = $self->{urldc} =~ /^https/;
             $self->lmLog( 'CDA request', 'debug' );
-            $self->{urldc} .=
-                ( $self->{urldc} =~ /\?/ ? '&' : '?' ) 
-              . $self->{cookieName} . "="
+            $self->{urldc} .= ( $self->{urldc} =~ /\?/ ? '&' : '?' )
               . (
-                ( $self->{securedCookie} != 2 or $ssl )
-                ? $self->{id}
-                : $self->{sessionInfo}->{_httpSession}
+                $self->{securedCookie} < 2
+                  or $ssl
+                ? $self->{cookieName} . "=" . $self->{id}
+                : $self->{cookieName} . "http="
+                  . $self->{sessionInfo}->{_httpSession}
               );
         }
-        $self->updateStatus;
-        print $self->SUPER::redirect(
-            -uri    => $self->{urldc},
-            -cookie => $self->{cookie},
-            -status => '303 See Other'
-        );
 
-        # Remove this lines if your browsers does not support redirections
-        #        print << "EOF";
-        #<html>
-        #<head>
-        #<script language="Javascript">
-        #function redirect() {
-        #        document.location.href='$u';
-        #}
-        #</script>
-        #</head>
-        #<body onload="redirect();">
-        #        <h2>The document has moved <a href="$u">HERE</a></h2>
-        #</body>
-        #</html>
-        #EOF
-        $self->quit();
+        $self->updateStatus;
+
+        if ( $self->safe->reval( $self->{jsRedirect} ) ) {
+            $self->{redirectFormMethod} = "get";
+            return PE_REDIRECT;
+        }
+        else {
+            print $self->redirect(
+                -status   => '303 See Other',
+                -location => $self->{urldc},
+            );
+            $self->quit();
+        }
     }
     PE_OK;
 }
@@ -2373,75 +2536,43 @@ sub autoPost {
     my $self = shift;
 
     # Get URL and Form fields
-    my $url        = $self->{postUrl};
+    $self->{urldc} = $self->{postUrl};
     my $formFields = $self->{postFields};
+
+    $self->clearHiddenFormValue();
+    foreach ( keys %$formFields ) {
+        $self->setHiddenFormValue( $_, $formFields->{$_}, "", 0 );
+    }
 
     # Display info before redirecting
     if ( $self->info() ) {
         $self->{infoFormMethod} = $self->param('method') || "post";
-        $self->clearHiddenFormValue();
-        $self->{urldc} = $url;
-        foreach ( keys %$formFields ) {
-            $self->setHiddenFormValue( $_, $formFields->{$_}, "", 0 );
-        }
         return PE_INFO;
     }
 
-    # Quit if no URL
-    $self->quit() unless $self->{postUrl};
+    $self->{redirectFormMethod} = "post";
+    return PE_REDIRECT;
+}
 
-    # Simple CSS
-    my $css = "
-    body {
-    background: #ddd;
-    color: #fff;
-    }
-    h1 {
-    size: 10pt;
-    text-align: center;
-    letter-spacing: 5px;
-    margin-top: 100px;
-    }
-    form {
-    display: none;
-    }
-    ";
+## @method HASHREF getCustomTemplateParameters()
+# Find custom templates parameters
+# @return Custom parameters
+sub getCustomTemplateParameters {
 
-    my $message = &Lemonldap::NG::Portal::_i18n::msg(PM_REDIRECTION);
+    my $self            = shift;
+    my $customTplParams = {};
 
-    # Print page
-    print $self->header();
-    print $self->start_html(
-        -title => $message,
-        -style => { -code => $css }
-    );
+    foreach ( keys %$self ) {
+        next unless ( $_ =~ /^tpl_(.+)$/ );
+        my $tplParam = $1;
+        my $tplValue = $self->{ "tpl_" . $tplParam };
+        $self->lmLog( "Set custom template parameter $tplParam with $tplValue",
+            'debug' );
 
-    print $self->h1($message);
-
-    print $self->start_form( -action => $url );
-
-    $self->lmLog( "POST form action: $url", 'debug' );
-
-    # Create fields
-    foreach ( keys %$formFields ) {
-        print $self->textfield( -name => $_, -value => $formFields->{$_} );
-        $self->lmLog( "POST field $_: " . $formFields->{$_}, 'debug' );
+        $customTplParams->{$tplParam} = $tplValue;
     }
 
-    print $self->submit();
-    print $self->end_form();
-
-    # Auto submit javascript
-    print "<script language=\"JavaScript\" type=\"text/javascript\">\n";
-    print "document.forms[0].submit();\n";
-    print "</script>\n";
-
-    # End page
-    print $self->end_html();
-
-    # Exit
-    $self->quit();
-
+    return $customTplParams;
 }
 
 1;
@@ -2527,7 +2658,7 @@ SOAP mode authentication (client) :
   
       # If authentication failed, display error
       if ( $res->{error} ) {
-          print STDERR "Error: " . $soap->error( 'fr', $res->{error} )->result();
+          print STDERR "Error: " . $soap->error( $res->{error} )->result();
       }
   
       # print session-ID

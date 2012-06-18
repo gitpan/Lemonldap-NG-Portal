@@ -3,7 +3,7 @@
   <div id="content">
     <div id="content-all">
       <div class="title">
-        <img src="/skins/<TMPL_VAR NAME="SKIN">/images/logo-warn.png" />
+        <img src="<TMPL_VAR NAME="SKIN_PATH">/<TMPL_VAR NAME="SKIN">/images/logo-warn.png" />
         <lang en="Warning" fr="Attention" />
       </div>
       <p></p>
@@ -13,6 +13,9 @@
         </TMPL_IF>
         <TMPL_IF ERROR500>
           <h3><lang en="Error occurs on the server" fr="Une erreur est survenue sur le serveur" /></h3>
+        </TMPL_IF>
+        <TMPL_IF ERROR503>
+          <h3><lang en="This application is in maintenance, please try to connect later" fr="Cette application est en maintenance, merci de réessayer plus tard" /></h3>
         </TMPL_IF>
         <TMPL_IF URL>
           <h3>

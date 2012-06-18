@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Lemonldap-NG-Portal
-version:            1.1.2
+version:            1.2.0
 abstract:           The authentication portal part of Lemonldap::NG Web-SSO
 author:
     - Xavier Guimard <x.guimard@free.fr>, Clément Oudot <clement@oodo.net>, Thomas Chemineau <thomas.chemineau@gmail.com>, Mikael Ates <mikael.ates@univ-st-etienne.fr>
@@ -16,23 +16,21 @@ requires:
     Apache::Session:      0
     CGI:                  3.08
     Clone:                0
-    Crypt::OpenSSL::X509:  0
     File::Basename:       0
     HTML::Template:       0
-    IO::String:           0
-    Lemonldap::NG::Common:  1.1.2
-    Lemonldap::NG::Handler:  1.1.2
+    Lemonldap::NG::Common:  1.2.0
+    Lemonldap::NG::Handler:  1.2.0
     MIME::Lite:           0
     Net::LDAP:            0
-    SOAP::Lite:           0
     String::Random:       0
+    URI:                  0
     XML::LibXML:          0
     XML::LibXSLT:         0
 no_index:
     directory:
         - t
         - inc
-generated_by:       ExtUtils::MakeMaker version 6.55_02
+generated_by:       ExtUtils::MakeMaker version 6.57_05
 meta-spec:
     url:      http://module-build.sourceforge.net/META-spec-v1.4.html
     version:  1.4

@@ -425,6 +425,8 @@ sub purge {
 sub _get {
     no strict 'refs';
     my $self = $_[0];
+
+    # Debug lines. Must be removed ?
     die ref($self)
       unless ( ref($self) eq 'Lemonldap::NG::Portal::Notification' );
     return &{ $_[0]->{type} . '::get' }(@_);

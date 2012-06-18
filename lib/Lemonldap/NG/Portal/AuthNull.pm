@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::AuthNull;
 use strict;
 use Lemonldap::NG::Portal::Simple;
 
-our $VERSION = '1.0.1';
+our $VERSION = '1.2.0';
 
 ## @apmethod int authInit()
 # Does nothing
@@ -62,6 +62,12 @@ sub authLogout {
 # @return result
 sub authForce {
     return 0;
+}
+
+## @method string getDisplayType
+# @return display type
+sub getDisplayType {
+    return "";
 }
 
 1;

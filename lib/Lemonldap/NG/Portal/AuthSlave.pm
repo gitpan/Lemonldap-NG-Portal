@@ -6,10 +6,11 @@
 package Lemonldap::NG::Portal::AuthSlave;
 
 use strict;
+use Lemonldap::NG::Portal::_Slave;
 use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::AuthNull;
 
-our $VERSION = '1.1.0';
+our $VERSION = '1.2.0';
 our @ISA     = qw(Lemonldap::NG::Portal::AuthNull);
 
 ## @apmethod int extractFormInfo()
@@ -17,6 +18,9 @@ our @ISA     = qw(Lemonldap::NG::Portal::AuthNull);
 # @return Lemonldap::NG::Portal constant
 sub extractFormInfo {
     my $self = shift;
+
+    return PE_FORBIDDENIP
+      unless ( $self->checkIP );
 
     my $user_header = $self->{slaveUserHeader};
     $user_header = 'HTTP_' . uc($user_header);
@@ -43,6 +47,12 @@ sub setAuthSessionInfo {
     $self->{sessionInfo}->{authenticationLevel} = $self->{slaveAuthnLevel};
 
     PE_OK;
+}
+
+## @method string getDisplayType
+# @return display type
+sub getDisplayType {
+    return "logo";
 }
 
 1;

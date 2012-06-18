@@ -125,7 +125,7 @@ sub process {
         );
 
         # Redirect
-        $self->_sub('autoRedirect');
+        return $self->_subProcess('autoRedirect');
 
     }
 

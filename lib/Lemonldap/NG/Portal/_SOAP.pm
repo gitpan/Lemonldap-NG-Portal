@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::_LibAccess;
 require SOAP::Lite;
 use base qw(Lemonldap::NG::Portal::_LibAccess);
 
-our $VERSION = '1.1.1';
+our $VERSION = '1.2.0';
 
 ## @method void startSoapServices()
 # Check the URI requested (PATH_INFO environment variable) and launch the
@@ -86,26 +86,20 @@ sub getCookies {
     }
     else {
         $self->{error} = $self->_subProcess(
-            qw(authInit userDBInit getUser setAuthSessionInfo setSessionInfo
-              setMacros setLocalGroups setGroups setPersistentSessionInfo authenticate
-              removeOther grantSession store authFinish buildCookie)
+            qw(authInit userDBInit getUser setAuthSessionInfo
+              setSessionInfo setMacros setGroups setPersistentSessionInfo
+              setLocalGroups authenticate grantSession removeOther
+              store authFinish buildCookie)
         );
         $self->updateSession();
     }
     my @tmp = ();
-    push @tmp, SOAP::Data->name( error => $self->{error} );
+    push @tmp, SOAP::Data->name( errorCode => $self->{error} );
     my @cookies = ();
     unless ( $self->{error} ) {
         foreach ( @{ $self->{cookie} } ) {
-            push @cookies, SOAP::Data->name( $_->name, $_->value );
-        }
-        push @cookies,
-          SOAP::Data->name( $self->{cookieName} . 'update', time() );
-    }
-    else {
-        my @cookieNames = split /\s+/, $self->{cookieName};
-        foreach (@cookieNames) {
-            push @cookies, SOAP::Data->name( $_, 0 );
+            push @cookies,
+              SOAP::Data->name( $_->name, $_->value )->type("string");
         }
     }
     push @tmp, SOAP::Data->name( cookies => \SOAP::Data->value(@cookies) );
@@ -142,8 +136,8 @@ sub getAttributes {
             "SOAP attributes request for " . $h->{ $self->{whatToTrace} } );
         push @tmp, SOAP::Data->name( error => 0 )->type('int');
         push @tmp,
-          SOAP::Data->name( attributes =>
-              _buildSoapHash( $h, split /\s+/, $self->{exportedAttr} ) );
+          SOAP::Data->name(
+            attributes => _buildSoapHash( $h, $self->exportedAttr ) );
         untie %$h;
     }
     my $res = SOAP::Data->name( session => \SOAP::Data->value(@tmp) );
@@ -296,8 +290,48 @@ sub getMenuApplications {
     }
 
     $self->{sessionInfo} = $h;
-    return _buildSoapHash( { menu => $self->appslist() } );
 
+    # Build application list
+    my $appslist = $self->appslist();
+
+    # Close session
+    untie %$h;
+
+    # Return result
+    return _buildSoapHash( { menu => $appslist } );
+
+}
+
+#########################
+# Auxiliary subroutines #
+#########################
+
+## @method array exportedAttr
+# Parse XML string to sustitute macros
+# @return list of session data available through getAttribute SOAP request
+sub exportedAttr {
+    my $self = shift;
+    if ( $self->{exportedAttr} and $self->{exportedAttr} !~ /^\s*\+/ ) {
+        return split /\s+/, $self->{exportedAttr};
+    }
+    else {
+        my @attributes = (
+            'authenticationLevel', 'groups',
+            'ipAddr',              'xForwardedForAddr',
+            'startTime',           '_utime'
+        );
+        if ( my $exportedAttr = $self->{exportedAttr} ) {
+            $exportedAttr =~ s/^\s*\+\s+//;
+            @attributes = ( @attributes, split( /\s+/, $exportedAttr ) );
+        }
+
+        # convert @attributes into hash to remove duplicates
+        my %attributes = map( { $_ => 1 } @attributes );
+        %attributes =
+          ( %attributes, %{ $self->{exportedVars} }, %{ $self->{macros} }, );
+
+        return sort keys %attributes;
+    }
 }
 
 #######################

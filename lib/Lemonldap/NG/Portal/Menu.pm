@@ -23,7 +23,7 @@ sub menuInit {
     $self->{apps}->{imgpath} ||= '/apps/';
 
     # Modules to display
-    $self->{menuModules} ||= "Appslist ChangePassword Logout";
+    $self->{menuModules} ||= "Appslist ChangePassword LoginHistory Logout";
     $self->{menuDisplayModules} = $self->displayModules();
 
     # Extract password from POST data
@@ -34,7 +34,8 @@ sub menuInit {
     $self->{user}            = $self->{sessionInfo}->{_user};
 
     # Try to change password
-    $self->{menuError} = $self->_subProcess(qw(passwordDBInit modifyPassword))
+    $self->{menuError} =
+      $self->_subProcess(qw(passwordDBInit modifyPassword sendPasswordMail))
       unless $self->{ignorePasswordChange};
 
     # Default menu error code
@@ -64,6 +65,7 @@ sub menuInit {
                     33,    #PE_PP_EXP_WARNING
                     34,    #PE_PASSWORD_MISMATCH
                     39,    #PE_BADOLDPASSWORD
+                    74,    #PE_MUST_SUPPLY_OLD_PASSWORD
                 )
             )
         )
@@ -100,6 +102,16 @@ sub displayModules {
             my $moduleHash = { $module => 1 };
             $moduleHash->{'APPSLIST_LOOP'} = $self->appslist()
               if ( $module eq 'Appslist' );
+            if ( $module eq 'LoginHistory' ) {
+                $moduleHash->{'SUCCESS_LOGIN'} =
+                  $self->mkSessionArray(
+                    $self->{sessionInfo}->{loginHistory}->{successLogin},
+                    "", 0, 0 );
+                $moduleHash->{'FAILED_LOGIN'} =
+                  $self->mkSessionArray(
+                    $self->{sessionInfo}->{loginHistory}->{failedLogin},
+                    "", 0, 1 );
+            }
             push @$displayModules, $moduleHash;
         }
     }

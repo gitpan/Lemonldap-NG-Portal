@@ -9,7 +9,7 @@ use strict;
 use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_LDAP 'ldap';    #link protected ldap
 
-our $VERSION = '1.0.6';
+our $VERSION = '1.2.0';
 
 ## @method int userDBInit()
 # Transform ldapGroupAttributeNameSearch in ARRAY ref
@@ -79,6 +79,11 @@ sub search {
     if ( $mesg->code() != 0 ) {
         $self->lmLog( 'LDAP Search error: ' . $mesg->error, 'error' );
         return PE_LDAPERROR;
+    }
+    unless ( $mesg->count() == 1 ) {
+        $self->lmLog( 'More than one entry returned by LDAP directory',
+            'error' );
+        return PE_BADCREDENTIALS;
     }
     unless ( $self->{entry} = $mesg->entry(0) ) {
         my $user = $self->{mail} || $self->{user};

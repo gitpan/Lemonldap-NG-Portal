@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::MailReset;
 use strict;
 use warnings;
 
-our $VERSION = '1.1.0';
+our $VERSION = '1.2.0';
 
 use Lemonldap::NG::Portal::Simple qw(:all);
 use base qw(Lemonldap::NG::Portal::SharedConf Exporter);
@@ -27,6 +27,7 @@ use POSIX;
 # - itself:
 #   - smtpInit
 #   - extractMailInfo
+#   - getMailUser
 #   - storeMailSession
 #   - sendConfirmationMail
 #   - changePassword
@@ -37,7 +38,6 @@ use POSIX;
 #   - setGroups
 # - userDB module:
 #   - userDBInit
-#   - getUser
 #   - setSessionInfo
 # - passwordDB module:
 #   - passwordDBInit
@@ -50,14 +50,16 @@ sub process {
 
     $self->{error} = $self->_subProcess(
         qw(smtpInit userDBInit passwordDBInit extractMailInfo
-          getUser setSessionInfo setMacros setLocalGroups setGroups setPersistentSessionInfo
-          storeMailSession sendConfirmationMail changePassword sendPasswordMail)
+          getMailUser setSessionInfo setMacros setGroups
+          setPersistentSessionInfo setLocalGroups storeMailSession
+          sendConfirmationMail changePassword sendPasswordMail)
     );
 
     return (
         (
                  $self->{error} <= 0
               or $self->{error} == PE_PASSWORD_OK
+              or $self->{error} == PE_MAILCONFIRMOK
               or $self->{error} == PE_MAILOK
         ) ? 0 : 1
     );
@@ -85,8 +87,10 @@ sub smtpInit {
 sub extractMailInfo {
     my ($self) = splice @_;
 
-    return PE_MAILFORMEMPTY
-      unless ( $self->param('mail') || $self->param('mail_token') );
+    unless ( $self->param('mail') || $self->param('mail_token') ) {
+        return PE_MAILFIRSTACCESS if ( $self->request_method =~ /GET/ );
+        return PE_MAILFORMEMPTY;
+    }
 
     $self->{mail_token}      = $self->param('mail_token');
     $self->{newpassword}     = $self->param('newpassword');
@@ -106,10 +110,11 @@ sub extractMailInfo {
             $self->{mailAddress} = $h->{ $self->{mailSessionKey} };
             $self->lmLog( "User associated to token: " . $self->{mail},
                 'debug' );
-        }
 
-        # Close session, it will be deleted after password change success
-        untie %$h;
+            # Close session, it will be deleted after password change success
+            untie %$h;
+
+        }
 
         return PE_BADMAILTOKEN unless ( $self->{mail} );
     }
@@ -119,7 +124,27 @@ sub extractMailInfo {
         $self->{mail} = $self->param('mail');
     }
 
+    $self->{userControl} ||= '^[\w\.\-@]+$';
+
+    # Check mail
+    return PE_MALFORMEDUSER unless ( $self->{mail} =~ /$self->{userControl}/o );
+
     PE_OK;
+}
+
+## @method int getMailUser
+# Search for user using UserDB module
+# @return Lemonldap::NG::Portal constant
+sub getMailUser {
+    my ($self) = splice @_;
+
+    my $error = $self->getUser();
+
+    if ( $error == PE_USERNOTFOUND or $error == PE_BADCREDENTIALS ) {
+        return PE_MAILNOTFOUND;
+    }
+
+    return $error;
 }
 
 ## @method int storeMailSession
@@ -146,6 +171,10 @@ sub storeMailSession {
     # Store expiration timestamp for further use
     $h->{mailSessionTimeoutTimestamp}    = $time + $mailTimeout;
     $self->{mailSessionTimeoutTimestamp} = $time + $mailTimeout;
+
+    # Store start timestamp for further use
+    $h->{mailSessionStartTimestamp}    = $time;
+    $self->{mailSessionStartTimestamp} = $time;
 
     # Store mail
     $h->{ $self->{mailSessionKey} } =
@@ -174,19 +203,40 @@ sub sendConfirmationMail {
 
     # Check if confirmation mail has already been sent
     my $mail_session = $self->getMailSession( $self->{mail} );
-    my $mail_already_sent = ( $mail_session and !$self->{id} ) ? 1 : 0;
+    $self->{mail_already_sent} = ( $mail_session and !$self->{id} ) ? 1 : 0;
+
+    # Read mail session to get creation and expiration dates
+    $self->{id} = $mail_session unless $self->{id};
+
+    $self->lmLog( "Mail session found: $mail_session", 'debug' );
+
+    my $h = $self->getApacheSession( $mail_session, 1 );
+    $self->{mailSessionTimeoutTimestamp} = $h->{mailSessionTimeoutTimestamp};
+    $self->{mailSessionStartTimestamp}   = $h->{mailSessionStartTimestamp};
+    untie %$h;
+
+    # Mail session expiration date
+    my $expTimestamp = $self->{mailSessionTimeoutTimestamp};
+
+    $self->lmLog( "Mail expiration timestamp: $expTimestamp", 'debug' );
+
+    $self->{expMailDate} =
+      &POSIX::strftime( "%d/%m/%Y", localtime $expTimestamp );
+    $self->{expMailTime} = &POSIX::strftime( "%H:%M", localtime $expTimestamp );
+
+    # Mail session start date
+    my $startTimestamp = $self->{mailSessionStartTimestamp};
+
+    $self->lmLog( "Mail start timestamp: $startTimestamp", 'debug' );
+
+    $self->{startMailDate} =
+      &POSIX::strftime( "%d/%m/%Y", localtime $startTimestamp );
+    $self->{startMailTime} =
+      &POSIX::strftime( "%H:%M", localtime $startTimestamp );
 
     # Ask if user want another confirmation email
-    if ( $mail_already_sent and !$self->param('resendconfirmation') ) {
+    if ( $self->{mail_already_sent} and !$self->param('resendconfirmation') ) {
         return PE_MAILCONFIRMATION_ALREADY_SENT;
-    }
-    else {
-        $self->{id} = $mail_session unless $self->{id};
-
-        my $h = $self->getApacheSession( $mail_session, 1 );
-        $self->{mailSessionTimeoutTimestamp} =
-          $h->{mailSessionTimeoutTimestamp};
-        untie %$h;
     }
 
     # Get mail address
@@ -213,16 +263,10 @@ sub sendConfirmationMail {
     else {
 
         # Use HTML template
-        my $tplfile =
-          (     -e $self->getApacheHtdocsPath() 
-              . "skins/"
-              . $self->{portalSkin}
-              . "/mail_confirm.tpl" )
-          ? $self->getApacheHtdocsPath()
-          . "skins/"
-          . $self->{portalSkin}
-          . "/mail_confirm.tpl"
-          : $self->getApacheHtdocsPath() . "skins/common/mail_confirm.tpl";
+        my $tplfile = $self->getApacheHtdocsPath
+          . "skins/$self->{portalSkin}/mail_confirm.tpl";
+        $tplfile = $self->getApacheHtdocsPath . "skins/common/mail_confirm.tpl"
+          unless ( -e $tplfile );
         my $template = HTML::Template->new(
             filename => $tplfile,
             filter   => sub { $self->translate_template(@_) }
@@ -231,17 +275,9 @@ sub sendConfirmationMail {
         $html = 1;
     }
 
-    # Mail date expiration
-    my $expTimestamp = $self->{mailSessionTimeoutTimestamp};
-
-    $self->lmLog( "Mail expiration timestamp: $expTimestamp", 'debug' );
-
-    my $expMailDate = &POSIX::strftime( "%d/%m/%Y", localtime $expTimestamp );
-    my $expMailTime = &POSIX::strftime( "%H:%M",    localtime $expTimestamp );
-
     # Replace variables in body
-    $body =~ s/\$expMailDate/$expMailDate/g;
-    $body =~ s/\$expMailTime/$expMailTime/g;
+    $body =~ s/\$expMailDate/$self->{expMailDate}/g;
+    $body =~ s/\$expMailTime/$self->{expMailTime}/g;
     $body =~ s/\$url/$url/g;
     $body =~ s/\$(\w+)/decode("utf8",$self->{sessionInfo}->{$1})/ge;
 
@@ -249,7 +285,7 @@ sub sendConfirmationMail {
     return PE_MAILERROR
       unless $self->send_mail( $self->{mailAddress}, $subject, $body, $html );
 
-    PE_MAILOK;
+    PE_MAILCONFIRMOK;
 }
 
 ## @method int changePassword
@@ -277,21 +313,32 @@ sub changePassword {
 
     # Else a password is required
     else {
-        return PE_PASSWORDFORMEMPTY
-          unless ( $self->{newpassword} && $self->{confirmpassword} );
+        unless ( $self->{newpassword} && $self->{confirmpassword} ) {
+            return PE_PASSWORDFIRSTACCESS if ( $self->request_method =~ /GET/ );
+            return PE_PASSWORDFORMEMPTY;
+        }
     }
 
     # Modify the password
     my $result = $self->modifyPassword();
 
     # Mail token can be used only one time, delete the session if all is ok
-    if ( $result == PE_PASSWORD_OK ) {
+    if ( $result == PE_PASSWORD_OK or $result == PE_OK ) {
 
         # Get the corresponding session
         my $h = $self->getApacheSession( $self->{mail_token} );
 
-        # Delete it
-        tied(%$h)->delete() if ref $h;
+        if ( ref $h ) {
+
+            $self->lmLog( "Delete mail session " . $self->{mail_token},
+                'debug' );
+
+            # Delete it
+            tied(%$h)->delete();
+        }
+        else {
+            $self->lmLog( "Mail session not found", 'warn' );
+        }
 
         # Force result to PE_OK to continue the process
         $result = PE_OK;
@@ -325,16 +372,10 @@ sub sendPasswordMail {
     else {
 
         # Use HTML template
-        my $tplfile =
-          (     -e $self->getApacheHtdocsPath() 
-              . "skins/"
-              . $self->{portalSkin}
-              . "/mail_password.tpl" )
-          ? $self->getApacheHtdocsPath()
-          . "skins/"
-          . $self->{portalSkin}
-          . "/mail_password.tpl"
-          : $self->getApacheHtdocsPath() . "skins/common/mail_password.tpl";
+        my $tplfile = $self->getApacheHtdocsPath
+          . "skins/$self->{portalSkin}/mail_password.tpl";
+        $tplfile = $self->getApacheHtdocsPath . "skins/common/mail_password.tpl"
+          unless ( -e $tplfile );
         my $template = HTML::Template->new(
             filename => $tplfile,
             filter   => sub { $self->translate_template(@_) }

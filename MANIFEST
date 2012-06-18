@@ -35,6 +35,7 @@ example/skins/common/apps/web.png
 example/skins/common/apps/wheels.png
 example/skins/common/bullet_go.png
 example/skins/common/buttons.css
+example/skins/common/calendar.png
 example/skins/common/cancel.png
 example/skins/common/CAS.png
 example/skins/common/door_out.png
@@ -55,6 +56,7 @@ example/skins/common/notification.xsl
 example/skins/common/ok.png
 example/skins/common/openid-16x16.gif
 example/skins/common/portal.js
+example/skins/common/redirect.tpl
 example/skins/common/SAML.png
 example/skins/common/saml2-metadata.tpl
 example/skins/common/SSL.png
@@ -84,6 +86,7 @@ example/skins/dark/notification.tpl
 example/skins/dark/openid.tpl
 example/skins/dark/openidform.tpl
 example/skins/dark/password.tpl
+example/skins/dark/redirect.tpl
 example/skins/dark/standardform.tpl
 example/skins/dark/yubikeyform.tpl
 example/skins/impact/authmessage.tpl
@@ -111,6 +114,7 @@ example/skins/impact/openid.tpl
 example/skins/impact/openidform.tpl
 example/skins/impact/password.tpl
 example/skins/impact/README
+example/skins/impact/redirect.tpl
 example/skins/impact/standardform.tpl
 example/skins/impact/yubikeyform.tpl
 example/skins/pastel/confirm.tpl
@@ -131,6 +135,7 @@ example/skins/pastel/notification.tpl
 example/skins/pastel/openid.tpl
 example/skins/pastel/openidform.tpl
 example/skins/pastel/password.tpl
+example/skins/pastel/redirect.tpl
 example/skins/pastel/standardform.tpl
 example/skins/pastel/yubikeyform.tpl
 example/soapconfigtest.pl
@@ -146,6 +151,7 @@ lib/Lemonldap/NG/Portal/_Multi.pm
 lib/Lemonldap/NG/Portal/_Proxy.pm
 lib/Lemonldap/NG/Portal/_Remote.pm
 lib/Lemonldap/NG/Portal/_SAML.pm
+lib/Lemonldap/NG/Portal/_Slave.pm
 lib/Lemonldap/NG/Portal/_SMTP.pm
 lib/Lemonldap/NG/Portal/_SOAP.pm
 lib/Lemonldap/NG/Portal/_WebForm.pm
@@ -153,11 +159,13 @@ lib/Lemonldap/NG/Portal/AuthApache.pm
 lib/Lemonldap/NG/Portal/AuthCAS.pm
 lib/Lemonldap/NG/Portal/AuthChoice.pm
 lib/Lemonldap/NG/Portal/AuthDBI.pm
+lib/Lemonldap/NG/Portal/AuthDemo.pm
 lib/Lemonldap/NG/Portal/AuthLDAP.pm
 lib/Lemonldap/NG/Portal/AuthMulti.pm
 lib/Lemonldap/NG/Portal/AuthNull.pm
 lib/Lemonldap/NG/Portal/AuthOpenID.pm
 lib/Lemonldap/NG/Portal/AuthProxy.pm
+lib/Lemonldap/NG/Portal/AuthRadius.pm
 lib/Lemonldap/NG/Portal/AuthRemote.pm
 lib/Lemonldap/NG/Portal/AuthSAML.pm
 lib/Lemonldap/NG/Portal/AuthSlave.pm
@@ -180,12 +188,14 @@ lib/Lemonldap/NG/Portal/OpenID/Server.pm
 lib/Lemonldap/NG/Portal/OpenID/SREG.pm
 lib/Lemonldap/NG/Portal/PasswordDBChoice.pm
 lib/Lemonldap/NG/Portal/PasswordDBDBI.pm
+lib/Lemonldap/NG/Portal/PasswordDBDemo.pm
 lib/Lemonldap/NG/Portal/PasswordDBLDAP.pm
 lib/Lemonldap/NG/Portal/PasswordDBNull.pm
 lib/Lemonldap/NG/Portal/SharedConf.pm
 lib/Lemonldap/NG/Portal/Simple.pm
 lib/Lemonldap/NG/Portal/UserDBChoice.pm
 lib/Lemonldap/NG/Portal/UserDBDBI.pm
+lib/Lemonldap/NG/Portal/UserDBDemo.pm
 lib/Lemonldap/NG/Portal/UserDBLDAP.pm
 lib/Lemonldap/NG/Portal/UserDBMulti.pm
 lib/Lemonldap/NG/Portal/UserDBNull.pm

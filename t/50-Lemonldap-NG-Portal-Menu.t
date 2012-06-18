@@ -129,7 +129,7 @@ ok( $displayNok == 0, 'Display auto nok' );
 
 # Connect as another user with different rights
 $p->{sessionInfo}->{uid} = "toto";
-my $appLoop2 = $p->appslist();
+my $appLoop2   = $p->appslist();
 my $displayOk2 = 0;
 
 foreach (@$appLoop2) {
@@ -140,5 +140,5 @@ foreach (@$appLoop2) {
     }
 }
 
-ok( $displayOk2 != 0,  'Display auto ok for different user' );
+ok( $displayOk2 != 0, 'Display auto ok for different user' );
 

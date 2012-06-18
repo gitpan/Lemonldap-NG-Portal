@@ -9,7 +9,7 @@ use Lemonldap::NG::Portal::Simple;
 use base qw(Lemonldap::NG::Portal::_WebForm Lemonldap::NG::Portal::_DBI);
 use strict;
 
-our $VERSION = '1.0.2';
+our $VERSION = '1.2.0';
 our $initDone;
 
 BEGIN {
@@ -89,6 +89,12 @@ sub authLogout {
 # @return result
 sub authForce {
     return 0;
+}
+
+## @method string getDisplayType
+# @return display type
+sub getDisplayType {
+    return "standardform";
 }
 
 1;

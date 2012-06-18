@@ -10,7 +10,7 @@ use Lemonldap::NG::Portal::_LDAP 'ldap';    #link protected ldap
 use Lemonldap::NG::Portal::_WebForm;
 use Lemonldap::NG::Portal::UserDBLDAP;      #inherits
 
-our $VERSION = '1.1.0';
+our $VERSION = '1.2.0';
 use base qw(Lemonldap::NG::Portal::_WebForm);
 
 *_formateFilter = *Lemonldap::NG::Portal::UserDBLDAP::formateFilter;
@@ -77,6 +77,12 @@ sub authLogout {
 # @return result
 sub authForce {
     return 0;
+}
+
+## @method string getDisplayType
+# @return display type
+sub getDisplayType {
+    return "standardform";
 }
 
 1;

@@ -12,7 +12,7 @@ use Lemonldap::NG::Portal::UserDBLDAP;      #inherits
 
 #inherits Lemonldap::NG::Portal::_SMTP
 
-our $VERSION = '1.1.0';
+our $VERSION = '1.2.0';
 
 *_formateFilter = *Lemonldap::NG::Portal::UserDBLDAP::formateFilter;
 *_search        = *Lemonldap::NG::Portal::UserDBLDAP::search;
@@ -56,12 +56,6 @@ sub modifyPassword {
         $self->{dn},              $self->{newpassword},
         $self->{confirmpassword}, $self->{oldpassword}
     );
-
-    # Update password in session if needed
-    my $infos;
-    $infos->{_password} = $self->{newpassword};
-    $self->updateSession($infos)
-      if ( $self->{storePassword} and $code == PE_PASSWORD_OK );
 
     return $code unless ( $code == PE_PASSWORD_OK );
 

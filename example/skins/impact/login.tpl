@@ -67,8 +67,17 @@
 
         <TMPL_IF NAME="module">
         <div class="authLogo">
-        <img src="/skins/common/<TMPL_VAR NAME="module">.png" />
+        <img src="<TMPL_VAR NAME="SKIN_PATH">/common/<TMPL_VAR NAME="module">.png" />
         </div>
+        </TMPL_IF>
+
+        <TMPL_IF NAME="CHECK_LOGINS">
+        <p>
+        <label for="checkLogins">
+            <input type="checkbox" id="checkLogins" name="checkLogins" <TMPL_IF NAME="ASK_LOGINS">checked</TMPL_IF>/>
+            <lang en="Check my last logins" fr="Voir mes dernières connexions"/>
+        </label>
+        </p>
         </TMPL_IF>
 
         <hr class="solid" />
@@ -113,7 +122,7 @@
       <p><span class="text-error"><TMPL_VAR NAME="AUTH_ERROR"></span></p>
       <form action="#" method="post" class="login">
         <TMPL_VAR NAME="HIDDEN_INPUTS">
-        <input type="hidden" name="url" value="" />
+        <input type="hidden" name="url" value="<TMPL_VAR NAME="AUTH_URL">" />
         <input type="hidden" name="timezone" />
         <TMPL_INCLUDE NAME="standardform.tpl">
       </form>
@@ -141,7 +150,7 @@
       <p><span class="text-error"><TMPL_VAR NAME="AUTH_ERROR"></span></p>
       <form action="#" method="post" class="login">
         <TMPL_VAR NAME="HIDDEN_INPUTS">
-        <input type="hidden" name="url" value="" />
+        <input type="hidden" name="url" value="<TMPL_VAR NAME="AUTH_URL">" />
         <input type="hidden" name="timezone" />
         <TMPL_INCLUDE NAME="openidform.tpl">
       </form>
@@ -169,7 +178,7 @@
       <p><span class="text-error"><TMPL_VAR NAME="AUTH_ERROR"></span></p>
       <form action="#" method="post" class="login">
         <TMPL_VAR NAME="HIDDEN_INPUTS">
-        <input type="hidden" name="url" value="" />
+        <input type="hidden" name="url" value="<TMPL_VAR NAME="AUTH_URL">" />
         <input type="hidden" name="timezone" />
         <TMPL_INCLUDE NAME="yubikeyform.tpl">
       </form>
@@ -181,7 +190,7 @@
 
       <div id="content-all">
       <div class="title">
-        <img src="/skins/<TMPL_VAR NAME="SKIN">/images/logo-info.png" />
+        <img src="<TMPL_VAR NAME="SKIN_PATH">/<TMPL_VAR NAME="SKIN">/images/logo-info.png" />
         <lang en="Password change" fr="Changement de mot de passe" />
       </div>
       <hr class="solid" />
@@ -194,7 +203,7 @@
     <TMPL_IF NAME="PORTAL_URL">
     <div id="content-all">
       <div class="title">
-        <img src="/skins/<TMPL_VAR NAME="SKIN">/images/logo-info.png" />
+        <img src="<TMPL_VAR NAME="SKIN_PATH">/<TMPL_VAR NAME="SKIN">/images/logo-info.png" />
         <lang en="SSO session inactive" fr="Session SSO inactive" />
       </div>
       <hr class="solid" />
@@ -205,7 +214,7 @@
       </div>
       </TMPL_IF>
       <p>
-        <img src="/skins/<TMPL_VAR NAME="SKIN">/images/arrow.png" /><a href="<TMPL_VAR NAME="PORTAL_URL">" class="positive"><lang en="Go to portal" fr="Aller au portail" /></a>
+        <img src="<TMPL_VAR NAME="SKIN_PATH">/<TMPL_VAR NAME="SKIN">/images/arrow.png" /><a href="<TMPL_VAR NAME="PORTAL_URL">" class="positive"><lang en="Go to portal" fr="Aller au portail" /></a>
       </p>
     </div>
     </TMPL_IF>
@@ -213,13 +222,13 @@
     <TMPL_IF NAME="LOGOUT_URL">
     <div id="content-all">
       <div class="title">
-        <img src="/skins/<TMPL_VAR NAME="SKIN">/images/logo-info.png" />
+        <img src="<TMPL_VAR NAME="SKIN_PATH">/<TMPL_VAR NAME="SKIN">/images/logo-info.png" />
         <lang en="Close your SSO session" fr="Fermer votre Session SSO" />
       </div>
       <hr class="solid" />
       <p class="text-error"><TMPL_VAR NAME="AUTH_ERROR"></p>
       <p>
-        <img src="/skins/<TMPL_VAR NAME="SKIN">/images/arrow.png" /><a href="<TMPL_VAR NAME="LOGOUT_URL">" class="negative"><lang en="Logout" fr="Se d&eacute;connecter"/></a>
+        <img src="<TMPL_VAR NAME="SKIN_PATH">/<TMPL_VAR NAME="SKIN">/images/arrow.png" /><a href="<TMPL_VAR NAME="LOGOUT_URL">" class="negative"><lang en="Logout" fr="Se d&eacute;connecter"/></a>
       </p>
     </div>
     </TMPL_IF>

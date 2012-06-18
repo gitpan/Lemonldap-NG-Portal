@@ -1,49 +1,47 @@
 ##@file
-# Apache authentication backend file
+# Demo authentication backend file
 
 ##@class
-# Apache authentication backend class
-package Lemonldap::NG::Portal::AuthApache;
+# Demo authentication backend class
+package Lemonldap::NG::Portal::AuthDemo;
 
 use strict;
 use Lemonldap::NG::Portal::Simple;
+use base qw(Lemonldap::NG::Portal::_WebForm);
 
 our $VERSION = '1.2.0';
 
 ## @apmethod int authInit()
+# Initialize demo accounts
 # @return Lemonldap::NG::Portal constant
 sub authInit {
-    PE_OK;
-}
-
-## @apmethod int extractFormInfo()
-# Read username return by Apache authentication system.
-# By default, authentication is valid if REMOTE_USER environment
-# variable is set.
-# @return Lemonldap::NG::Portal constant
-sub extractFormInfo {
-    my $self = shift;
-    unless ( $self->{user} = $ENV{REMOTE_USER} ) {
-        $self->lmLog( 'Apache is not configured to authenticate users!',
-            'error' );
-        return PE_ERROR;
-    }
-
-    # This is needed for Kerberos authentication
-    $self->{user} =~ s/^(.*)@.*$/$1/g;
-    PE_OK;
-}
-
-## @apmethod int setAuthSessionInfo()
-# Set _user and authenticationLevel.
-# @return Lemonldap::NG::Portal constant
-sub setAuthSessionInfo {
     my $self = shift;
 
-    # Store user submitted login for basic rules
-    $self->{sessionInfo}->{'_user'} = $self->{'user'};
+    # Sample accounts from Doctor Who characters
+    $self->{_demoAccounts} = {
+        'rtyler' => {
+            'uid'  => 'rtyler',
+            'cn'   => 'Rose Tyler',
+            'mail' => 'rtyler@badwolf.org',
+        },
+        'msmith' => {
+            'uid'  => 'msmith',
+            'cn'   => 'Mickey Smith',
+            'mail' => 'msmith@badwolf.org',
+        },
+        'dwho' => {
+            'uid'  => 'dwho',
+            'cn'   => 'Doctor Who',
+            'mail' => 'dwho@badwolf.org',
+        },
+    };
 
-    $self->{sessionInfo}->{authenticationLevel} = $self->{apacheAuthnLevel};
+    $self->{_authnLevel} = 0;
+
+    # Add warning in log
+    $self->lmLog(
+        "Using demonstration mode, go in Manager to edit the configuration",
+        'warn' );
 
     PE_OK;
 }
@@ -52,6 +50,10 @@ sub setAuthSessionInfo {
 # Does nothing.
 # @return Lemonldap::NG::Portal constant
 sub authenticate {
+    my $self = shift;
+
+    return PE_BADCREDENTIALS unless ( $self->{user} eq $self->{password} );
+
     PE_OK;
 }
 
@@ -79,7 +81,7 @@ sub authForce {
 ## @method string getDisplayType
 # @return display type
 sub getDisplayType {
-    return "logo";
+    return "standardform";
 }
 
 1;
@@ -89,15 +91,15 @@ __END__
 
 =encoding utf8
 
-Lemonldap::NG::Portal::AuthApache - Perl extension for building Lemonldap::NG
-compatible portals with Apache authentication.
+Lemonldap::NG::Portal::AuthDemo - Perl extension for building Lemonldap::NG
+compatible portals with built-in authentication.
 
 =head1 SYNOPSIS
 
   use Lemonldap::NG::Portal::SharedConf;
   my $portal = new Lemonldap::NG::Portal::Simple(
          configStorage     => {...}, # See Lemonldap::NG::Portal
-         authentication    => 'Apache',
+         authentication    => 'Demo',
     );
 
   if($portal->process()) {
@@ -110,20 +112,16 @@ compatible portals with Apache authentication.
     print $portal->redirect( -uri => 'https://portal/menu');
   }
   else {
-    # If the user enters here, IT MEANS THAT APACHE AUTHENTICATION DOES NOT WORK
     print $portal->header('text/html; charset=utf8'); # DON'T FORGET THIS (see CGI(3))
     print "<html><body><h1>Unable to work</h1>";
     print "This server isn't well configured. Contact your administrator.";
     print "</body></html>";
   }
 
-and of course, configure Apache to protect the portal.
-
 =head1 DESCRIPTION
 
-This library just overload few methods of Lemonldap::NG::Portal::Simple to use
-Apache authentication mechanism: we've just try to get REMOTE_USER environment
-variable.
+This library just overload few methods of Lemonldap::NG::Portal::Simple to 
+create sessions for sample users.
 
 See L<Lemonldap::NG::Portal::Simple> for usage and other methods.
 
@@ -134,8 +132,7 @@ L<http://lemonldap-ng.org/>
 
 =head1 AUTHOR
 
-Thomas Chemineau, E<lt>thomas.chemineau@linagora.comE<gt>,
-Xavier Guimard, E<lt>x.guimard@free.frE<gt>
+Clement Oudot, E<lt>clement@oodo.netE<gt>
 
 =head1 BUG REPORT
 
@@ -149,9 +146,7 @@ L<http://forge.objectweb.org/project/showfiles.php?group_id=274>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2007, 2010 by Thomas Chemineau,
-E<lt>thomas.chemineau@linagora.comE<gt> and
-Xavier Guimard E<lt>x.guimard@free.frE<gt>
+Copyright (C) 2010 by Clement Oudot
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.10.0 or,

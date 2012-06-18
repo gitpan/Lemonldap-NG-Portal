@@ -178,7 +178,7 @@ margin:20px auto;
 width:400px;
 }
 
-#menucontent #password {
+#menucontent #password, #menucontent #loginHistory {
 text-align:center;
 padding:10px 20px 20px 20px;
 background:#E4E4E4;
@@ -251,8 +251,10 @@ padding:6px 2px 5px 2px;
 }
 
 .ui-tabs-nav li{
-display:inline;
+display:inline-block;
 margin-left:10px;
+margin-top:5px;
+margin-bottom:5px;
 }
 
 .ui-tabs-nav li a{
