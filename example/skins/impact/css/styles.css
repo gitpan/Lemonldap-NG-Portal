@@ -274,7 +274,9 @@ div.category {
 
 div.category h3.catname {
 	background-color:#C7DFC3;
+	border-radius:10px 10px 0 0;
 	-moz-border-radius:10px 10px 0 0;
+	-webkit-border-radius:10px 10px 0 0;
 	margin:0;
 	padding:10px;
 }
@@ -319,12 +321,14 @@ div.application p.appdesc {
   background-color: #C7DFC3;
   border: 1px solid #B5CFB6;
   border-bottom: 0px;
+  border-radius: 10px 10px 0px 0px;
   -moz-border-radius: 10px 10px 0px 0px;
   -webkit-border-radius: 10px 10px 0px 0px;
 }
 
 #authMenu {
   border-bottom: 1px solid #B5CFB6;
+  border-radius: 10px;
   -moz-border-radius: 10px;
   -webkit-border-radius: 10px;
 }

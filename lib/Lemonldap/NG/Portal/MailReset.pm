@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::MailReset;
 use strict;
 use warnings;
 
-our $VERSION = '1.2.0';
+our $VERSION = '1.2.1';
 
 use Lemonldap::NG::Portal::Simple qw(:all);
 use base qw(Lemonldap::NG::Portal::SharedConf Exporter);
@@ -264,8 +264,8 @@ sub sendConfirmationMail {
 
         # Use HTML template
         my $tplfile = $self->getApacheHtdocsPath
-          . "skins/$self->{portalSkin}/mail_confirm.tpl";
-        $tplfile = $self->getApacheHtdocsPath . "skins/common/mail_confirm.tpl"
+          . "/skins/$self->{portalSkin}/mail_confirm.tpl";
+        $tplfile = $self->getApacheHtdocsPath . "/skins/common/mail_confirm.tpl"
           unless ( -e $tplfile );
         my $template = HTML::Template->new(
             filename => $tplfile,
@@ -373,8 +373,9 @@ sub sendPasswordMail {
 
         # Use HTML template
         my $tplfile = $self->getApacheHtdocsPath
-          . "skins/$self->{portalSkin}/mail_password.tpl";
-        $tplfile = $self->getApacheHtdocsPath . "skins/common/mail_password.tpl"
+          . "/skins/$self->{portalSkin}/mail_password.tpl";
+        $tplfile =
+          $self->getApacheHtdocsPath . "/skins/common/mail_password.tpl"
           unless ( -e $tplfile );
         my $template = HTML::Template->new(
             filename => $tplfile,

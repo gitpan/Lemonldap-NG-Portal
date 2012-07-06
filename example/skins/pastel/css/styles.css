@@ -40,8 +40,10 @@ padding:0;
 background:#fff;
 border:1px solid #C6D880;
 text-align:center;
+box-shadow:0 3px 6px rgba(0, 0, 0, 0.25);
 -moz-box-shadow:0 3px 6px rgba(0, 0, 0, 0.25);
 -webkit-box-shadow:0 3px 6px rgba(0, 0, 0, 0.25);
+border-radius:10px 10px 10px 10px;
 -moz-border-radius:10px 10px 10px 10px;
 -webkit-border-radius:10px 10px 10px 10px;
 }
@@ -60,6 +62,7 @@ padding:5px;
 background-color:#f5f5f5;
 border:1px solid #dedede;
 font-size:8pt;
+border-radius:10px 10px 10px 10px;
 -moz-border-radius:10px 10px 10px 10px;
 -webkit-border-radius:10px 10px 10px 10px;
 }
@@ -89,8 +92,10 @@ margin:20px 50px;
 padding:0;
 display:none;
 text-align:left;
+box-shadow:0 3px 6px rgba(0, 0, 0, 0.25);
 -moz-box-shadow:0 3px 6px rgba(0, 0, 0, 0.25);
 -webkit-box-shadow:0 3px 6px rgba(0, 0, 0, 0.25);
+border-radius:10px 10px 10px 10px;
 -moz-border-radius:10px 10px 10px 10px;
 -webkit-border-radius:10px 10px 10px 10px;
 }
@@ -128,8 +133,10 @@ background-image:url("../../common/warning_triangle.png");
 
 #authMenu ul {
 margin:0px 200px -20px 200px;
+box-shadow:0 3px 6px rgba(0, 0, 0, 0.25);
 -moz-box-shadow:0 3px 6px rgba(0, 0, 0, 0.25);
 -webkit-box-shadow:0 3px 6px rgba(0, 0, 0, 0.25);
+border-radius:10px 10px 10px 10px;
 -moz-border-radius:10px 10px 10px 10px;
 -webkit-border-radius:10px 10px 10px 10px;
 }
@@ -143,8 +150,10 @@ text-align:center;
 background-color:#dff4ff;
 border:1px solid #c2e1ef;
 color:#336699;
+box-shadow:0 3px 6px rgba(0, 0, 0, 0.25);
 -moz-box-shadow:0 3px 6px rgba(0, 0, 0, 0.25);
 -webkit-box-shadow:0 3px 6px rgba(0, 0, 0, 0.25);
+border-radius:10px 10px 10px 10px;
 -moz-border-radius:10px 10px 10px 10px;
 -webkit-border-radius:10px 10px 10px 10px;
 }
@@ -190,6 +199,7 @@ display:inline;
 margin-left:10px;
 padding:9px 10px 6px 10px;
 font-size:10pt;
+border-radius:10px 10px 10px 10px;
 -moz-border-radius:10px 10px 10px 10px;
 -webkit-border-radius:10px 10px 10px 10px;
 }
@@ -215,8 +225,10 @@ clear:both;
 
 div.category {
 border:1px solid #c2e1ef;
+box-shadow:0 3px 6px rgba(0, 0, 0, 0.25);
 -moz-box-shadow:0 3px 6px rgba(0, 0, 0, 0.25);
 -webkit-box-shadow:0 3px 6px rgba(0, 0, 0, 0.25);
+border-radius:10px 10px 10px 10px;
 -moz-border-radius:10px 10px 10px 10px;
 -webkit-border-radius:10px 10px 10px 10px;
 margin:10px 50px;
@@ -227,7 +239,9 @@ clear:both;
 div.category h3.catname {
 background-color:#dff4ff;
 color:#336699;
+border-radius:10px 10px 0 0;
 -moz-border-radius:10px 10px 0 0;
+-webkit-border-radius:10px 10px 0 0;
 margin:0;
 padding:10px;
 }
