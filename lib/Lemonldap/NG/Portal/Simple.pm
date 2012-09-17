@@ -14,7 +14,7 @@ use warnings;
 use MIME::Base64;
 use Lemonldap::NG::Common::CGI;
 use CGI::Cookie;
-require POSIX;
+use POSIX qw(strftime);
 use Lemonldap::NG::Portal::_i18n;    #inherits
 use Lemonldap::NG::Common::Apache::Session
   ;    #link protected session Apache::Session object
@@ -63,7 +63,7 @@ use Digest::MD5;
 #inherits Apache::Session
 #link Lemonldap::NG::Common::Apache::Session::SOAP protected globalStorage
 
-our $VERSION = '1.2.1';
+our $VERSION = '1.2.2';
 
 use base qw(Lemonldap::NG::Common::CGI Exporter);
 our @ISA;
@@ -422,7 +422,7 @@ sub new {
 
             # Get the type
             $tmp->{type} =~ s/.*:://;
-            $tmp->{type} =~ s/(CBDI|RDBI)/DBI/;    # CDBI/RDBI are DBI
+            $tmp->{type} =~ s/(CDBI|RDBI)/DBI/;    # CDBI/RDBI are DBI
 
             # If type not File or DBI, abort
             $self->abort("Only File or DBI supported for Notifications")
@@ -443,8 +443,10 @@ sub new {
         $self->loadModule('Lemonldap::NG::Portal::_SOAP');
         if ( $self->{notification} and $ENV{PATH_INFO} ) {
             $self->{CustomSOAPServices} ||= {};
-            $self->{CustomSOAPServices}->{'/notification'} =
-              { f => 'newNotification', o => $self->{notifObject} };
+            $self->{CustomSOAPServices}->{'/notification'} = {
+                f => 'newNotification deleteNotification',
+                o => $self->{notifObject}
+            };
         }
         $self->startSoapServices();
     }
@@ -468,8 +470,7 @@ sub new {
 # @param module module name
 # @return boolean
 sub loadModule {
-    my $self   = shift;
-    my $module = shift;
+    my ($self, $module) = splice @_;
 
     return 1 unless $module;
 
@@ -1080,7 +1081,7 @@ sub updateSession {
             }
 
             # Store updateTime
-            $h->{updateTime} = &POSIX::strftime( "%Y%m%d%H%M%S", localtime() );
+            $h->{updateTime} = strftime( "%Y%m%d%H%M%S", localtime() );
 
             untie %$h;
         }
@@ -1850,6 +1851,7 @@ sub existingSession {
 #@return Lemonldap::NG::Portal constant
 sub extractFormInfo {
     my $self = shift;
+    return PE_OK if $self->{skipExtractFormInfo};
     $self->{checkLogins} = $self->param('checkLogins');
     return $self->SUPER::extractFormInfo;
 }
@@ -1938,12 +1940,12 @@ sub setSessionInfo {
     # Date and time
     if ( $self->{updateSession} ) {
         $self->{sessionInfo}->{updateTime} =
-          &POSIX::strftime( "%Y%m%d%H%M%S", localtime() );
+          strftime( "%Y%m%d%H%M%S", localtime() );
     }
     else {
         $self->{sessionInfo}->{_utime} ||= time();
         $self->{sessionInfo}->{startTime} =
-          &POSIX::strftime( "%Y%m%d%H%M%S", localtime() );
+          strftime( "%Y%m%d%H%M%S", localtime() );
     }
 
     # Get environment variables matching exportedVars
@@ -2237,7 +2239,7 @@ sub mkSessionArray {
         $tmp .= "<tr>";
         $tmp .= "<td>$session->{user}</td>" if ($displayUser);
         $tmp .=
-"<td><script>var _date=new Date($session->{_utime}*1000);document.write(_date.toLocaleString());</script></td>";
+"<td><script type=\"text/javascript\">var _date=new Date($session->{_utime}*1000);document.write(_date.toLocaleString());</script></td>";
         $tmp .= "<td>$session->{ipAddr}</td>";
         $tmp .= "<td>" . ( $session->{$_} || "" ) . "</td>"
           foreach ( keys %{ $self->{sessionDataToRemember} } );
@@ -2502,8 +2504,7 @@ sub autoRedirect {
             $self->lmLog( 'CDA request', 'debug' );
             $self->{urldc} .= ( $self->{urldc} =~ /\?/ ? '&' : '?' )
               . (
-                $self->{securedCookie} < 2
-                  or $ssl
+                ( $self->{securedCookie} < 2 or $ssl )
                 ? $self->{cookieName} . "=" . $self->{id}
                 : $self->{cookieName} . "http="
                   . $self->{sessionInfo}->{_httpSession}

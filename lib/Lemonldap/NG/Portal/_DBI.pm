@@ -12,7 +12,7 @@ use strict;
 
 our @EXPORT = qw(dbh);
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.2.2';
 
 ## @method protected Lemonldap::NG::Portal::_DBI dbh(string dbiChain, string dbiUser, string dbiPassword)
 # Create connection to database
@@ -59,7 +59,7 @@ sub hash_password {
     }
     else {
         $self->lmLog( "No valid password hash, using clear text for password",
-            'debug' );
+            'warning' );
         return $password;
     }
 

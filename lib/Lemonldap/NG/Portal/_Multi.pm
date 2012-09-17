@@ -12,7 +12,7 @@ package Lemonldap::NG::Portal::_Multi;
 
 use Lemonldap::NG::Portal::Simple;
 
-our $VERSION = '1.0.6';
+our $VERSION = '1.2.2';
 
 ## @cmethod Lemonldap::NG::Portal::_Multi new(Lemonldap::NG::Portal::Simple portal)
 # Constructor
@@ -68,10 +68,14 @@ sub try {
     my $old = $self->{stack}->[$type]->[0]->{n};
     my $ci;
 
+    # Store last module used
+    $self->{last}->[$type] = $old;
+
     if ( $ci = $self->{p}->safe->reval( $self->{stack}->[$type]->[0]->{c} ) ) {
 
         # Log used module
-        $self->{p}->lmLog( "Multi (type $type): trying module $old", 'debug' );
+        $self->{p}
+          ->lmLog( "Multi (type $type): trying $sub for module $old", 'debug' );
 
         # Run subroutine
         $res = $self->{p}->$s();
@@ -104,6 +108,7 @@ sub try {
 # return true if an other module is available
 sub next {
     my ( $self, $type ) = splice @_;
+
     if ( $self->{stack}->[$type]->[0]->{n} eq
             $self->{stack}->[ 1 - $type ]->[0]->{n}
         and $self->{stack}->[ 1 - $type ]->[1] )
@@ -111,7 +116,10 @@ sub next {
         shift @{ $self->{stack}->[ 1 - $type ] };
     }
     shift @{ $self->{stack}->[$type] };
+
+    # Manage end of the stack
     return 0 unless ( @{ $self->{stack}->[$type] } );
+
     %{ $self->{p} } = (
         %{ $self->{p} },
         %{ $self->{p}->{multi}->{ $self->{stack}->[$type]->[0]->{n} } }
@@ -126,9 +134,11 @@ sub next {
 sub replay {
     my ( $self, $sub ) = splice @_;
     my @subs = ();
+    $self->{p}->lmLog( "Replay all methods until sub $sub", 'debug' );
+
     foreach (
         qw(authInit extractFormInfo userDBInit getUser setAuthSessionInfo
-        setSessionInfo setGroups authFinish)
+        setSessionInfo setGroups authenticate authFinish)
       )
     {
         push @subs, $_;

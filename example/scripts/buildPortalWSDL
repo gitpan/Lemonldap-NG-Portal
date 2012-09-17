@@ -14,7 +14,7 @@ my $portal = $self->{portal};
 $portal .= "index.pl" if ( $portal =~ /\/$/ );
 
 my @cookies = ( $self->{cookieName} );
-push @cookies, "$self->{cookieName}.http"
+push @cookies, "$self->{cookieName}http"
   if ( $self->{securedCookie} >= 2 );
 my $cookieList = join "\n",
   map { "<element name='$_' type='xsd:string'></element>" } @cookies;
@@ -130,13 +130,24 @@ $attrList
     <wsdl:part name="notification" type="xsd:string" />
   </wsdl:message>
   <wsdl:message name="newNotificationResponse">
-    <wsdl:part name="result" type="xsd:string" />
+    <wsdl:part name="result" type="xsd:int" />
+  </wsdl:message>
+  <wsdl:message name="deleteNotificationRequest">
+    <wsdl:part name="uid" type="xsd:string" />
+    <wsdl:part name="myref" type="xsd:string" />
+  </wsdl:message>
+  <wsdl:message name="deleteNotificationResponse">
+    <wsdl:part name="result" type="xsd:int" />
   </wsdl:message>
 
   <wsdl:portType name="notificationPortType">
     <wsdl:operation name="newNotification" parameterOrder="notification">
       <wsdl:input message="impl:newNotificationRequest" name="newNotificationRequest" />
       <wsdl:output message="impl:newNotificationResponse" name="newNotificationResponse" />
+    </wsdl:operation>
+    <wsdl:operation name="deleteNotification" parameterOrder="uid myref">
+      <wsdl:input message="impl:deleteNotificationRequest" name="deleteNotificationRequest" />
+      <wsdl:output message="impl:deleteNotificationResponse" name="deleteNotificationResponse" />
     </wsdl:operation>
   </wsdl:portType>
 
@@ -148,6 +159,15 @@ $attrList
         <wsdlsoap:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:Lemonldap/NG/Common/CGI/SOAPService" use="encoded" />
       </wsdl:input>
       <wsdl:output name="newNotificationResponse">
+        <wsdlsoap:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:Lemonldap/NG/Common/CGI/SOAPService" use="encoded" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="deleteNotification">
+      <wsdlsoap:operation soapAction="" />
+      <wsdl:input name="deleteNotificationRequest">
+        <wsdlsoap:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:Lemonldap/NG/Common/CGI/SOAPService" use="encoded" />
+      </wsdl:input>
+      <wsdl:output name="deleteNotificationResponse">
         <wsdlsoap:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:Lemonldap/NG/Common/CGI/SOAPService" use="encoded" />
       </wsdl:output>
     </wsdl:operation>

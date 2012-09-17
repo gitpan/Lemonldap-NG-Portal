@@ -15,7 +15,7 @@ use CGI::Cookie;
 #inherits Lemonldap::NG::Portal::Notification::DBI
 #inherits Lemonldap::NG::Portal::Notification::File
 
-our $VERSION = '1.1.0';
+our $VERSION = '1.2.2';
 our ( $msg, $parser );
 
 ## @cmethod Lemonldap::NG::Portal::Notification new(hashref storage)
@@ -91,7 +91,7 @@ sub getNotification {
     my $style_file = (
         -e $portal->{notificationXSLTfile}
         ? $portal->{notificationXSLTfile}
-        : $portal->getApacheHtdocsPath() . "skins/common/notification.xsl"
+        : $portal->getApacheHtdocsPath() . "/skins/common/notification.xsl"
     );
     my $style_doc  = $parser->parse_file($style_file);
     my $stylesheet = $xslt->parse_stylesheet($style_doc);
@@ -383,6 +383,62 @@ sub newNotification {
         $count++;
         my ( $r, $err ) = $self->_newNotif(@$_);
         die "$err" unless ($r);
+    }
+    return $count;
+}
+
+## @method int deleteNotification(string $uid, string $myref)
+# Delete notifications for the connected user
+# @param $uid of the user
+# @param $myref notification's reference
+# @return number of deleted notifications
+sub deleteNotification {
+    my ( $self, $uid, $myref ) = splice @_;
+    my @data;
+
+    # Check input parameters
+    unless ( $uid and $myref ) {
+        $self->lmLog(
+            "SOAP service deleteNotification called without all parameters",
+            'error' );
+        return 0;
+    }
+
+    $self->lmLog(
+"SOAP service deleteNotification called for uid $uid and reference $myref",
+        'debug'
+    );
+
+    # Get notifications
+    my $user = $self->_get($uid);
+
+    # Return 0 if no files were found
+    return 0 unless ($user);
+
+    # counting
+    my $count = 0;
+
+    foreach my $ref ( keys %$user ) {
+        my $xml = $parser->parse_string( $user->{$ref} );
+
+        # Browse notification in file
+        foreach my $notif (
+            $xml->documentElement->getElementsByTagName('notification') )
+        {
+
+            # Get notification's data
+            if ( $notif->getAttribute('reference') eq $myref ) {
+                push @data, $ref;
+            }
+
+            # Delete the notification (really)
+            foreach (@data) {
+                if ( $self->purge($_) ) {
+                    $self->lmLog( "Notification $_ was removed.", 'debug' );
+                    $count++;
+                }
+            }
+        }
     }
     return $count;
 }

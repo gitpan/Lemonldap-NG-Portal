@@ -43,12 +43,12 @@ my @h = (
     # 9 http://testexample2.com/
     'aHR0cDovL3Rlc3RleGFtcGxlMi5jb20vCg==' => PE_BADURL,
     'Undeclared virtual host in untrusted domain'
-    . ' (looks like a trusted domain, but is not)',
+      . ' (looks like a trusted domain, but is not)',
 
     # 10 http://test.example3.com/
-   'aHR0cDovL3Rlc3QuZXhhbXBsZTMuY29tLwo=' => PE_BADURL,
-   'Undeclared virtual host in untrusted domain (domain name'
-   . ' "example3.com" is trusted, but domain "*.example3.com" not)',
+    'aHR0cDovL3Rlc3QuZXhhbXBsZTMuY29tLwo=' => PE_BADURL,
+    'Undeclared virtual host in untrusted domain (domain name'
+      . ' "example3.com" is trusted, but domain "*.example3.com" not)',
 
     # 11 http://example3.com/
     'aHR0cDovL2V4YW1wbGUzLmNvbS8K' => PE_OK,

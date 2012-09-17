@@ -411,9 +411,12 @@ sub issuerForUnAuthUser {
             }
 
             # Send logout response
-            if (my $tmp = $self->sendLogoutResponseToServiceProvider( $logout, $method )) {
+            if ( my $tmp =
+                $self->sendLogoutResponseToServiceProvider( $logout, $method ) )
+            {
                 return $tmp;
-            } else {
+            }
+            else {
                 return $self->sendSLOErrorResponse( $logout, $method );
             }
         }
@@ -724,9 +727,12 @@ sub issuerForUnAuthUser {
         eval { tied(%$relayInfos)->delete(); };
 
         # Send SLO response
-        if (my $tmp = $self->sendLogoutResponseToServiceProvider( $logout, $method )) {
+        if ( my $tmp =
+            $self->sendLogoutResponseToServiceProvider( $logout, $method ) )
+        {
             return $tmp;
-        } else {
+        }
+        else {
             $self->lmLog( "Fail to send SLO response", 'error' );
             return PE_SAML_SLO_ERROR;
         }
@@ -1937,9 +1943,15 @@ sub issuerForAuthUser {
 
             # If no waiting SP, return directly SLO response
             unless ($provider_nb) {
-                if (my $tmp = $self->sendLogoutResponseToServiceProvider( $logout, $method )) {
+                if (
+                    my $tmp = $self->sendLogoutResponseToServiceProvider(
+                        $logout, $method
+                    )
+                  )
+                {
                     return $tmp;
-                } else {
+                }
+                else {
                     $self->lmLog( "Fail to send SLO response", 'error' );
                     return $self->sendSLOErrorResponse( $logout, $method );
                 }

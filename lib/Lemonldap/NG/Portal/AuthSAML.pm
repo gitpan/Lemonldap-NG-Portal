@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_SAML;    #inherits
 use Lemonldap::NG::Common::Conf::SAML::Metadata;
 
-our $VERSION = '1.2.0';
+our $VERSION = '1.2.2';
 our @ISA     = qw(Lemonldap::NG::Portal::_SAML);
 
 ## @apmethod int authInit()
@@ -1302,6 +1302,9 @@ sub authLogout {
 
         $self->{postUrl} = $slo_url;
         $self->{postFields} = { 'SAMLRequest' => $slo_body };
+        # RelayState
+        $self->{postFields}->{'RelayState'} = $logout->msg_relayState
+          if ( $logout->msg_relayState );
 
         # Post done in Portal/Simple.pm
         return PE_OK;

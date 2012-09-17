@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Lemonldap-NG-Portal
-version:            1.2.1
+version:            1.2.2
 abstract:           The authentication portal part of Lemonldap::NG Web-SSO
 author:
     - Xavier Guimard <x.guimard@free.fr>, Clément Oudot <clement@oodo.net>, Thomas Chemineau <thomas.chemineau@gmail.com>, Mikael Ates <mikael.ates@univ-st-etienne.fr>
@@ -18,11 +18,12 @@ requires:
     Clone:                0
     File::Basename:       0
     HTML::Template:       0
-    Lemonldap::NG::Common:  1.2.1
-    Lemonldap::NG::Handler:  1.2.1
+    Lemonldap::NG::Common:  1.2.2
+    Lemonldap::NG::Handler:  1.2.2
     MIME::Lite:           0
     Net::LDAP:            0
     String::Random:       0
+    Test::Pod:            0
     URI:                  0
     XML::LibXML:          0
     XML::LibXSLT:         0

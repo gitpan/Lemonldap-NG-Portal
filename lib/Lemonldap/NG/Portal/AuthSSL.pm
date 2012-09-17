@@ -9,8 +9,10 @@ use strict;
 use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::AuthNull;
 
-our $VERSION = '1.2.0';
+our $VERSION = '1.2.2';
 our @ISA     = qw(Lemonldap::NG::Portal::AuthNull);
+
+*authenticate = *extractFormInfo;
 
 ## @apmethod int authInit()
 # Check if SSL environment variables are set.

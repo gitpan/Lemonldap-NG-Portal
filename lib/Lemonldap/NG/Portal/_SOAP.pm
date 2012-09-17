@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::_LibAccess;
 require SOAP::Lite;
 use base qw(Lemonldap::NG::Portal::_LibAccess);
 
-our $VERSION = '1.2.0';
+our $VERSION = '1.2.2';
 
 ## @method void startSoapServices()
 # Check the URI requested (PATH_INFO environment variable) and launch the
@@ -76,21 +76,32 @@ _RETURN $getCookiesResponse Response
 #@return session => { error => code , cookies => { cookieName1 => value ,... } }
 sub getCookies {
     my ( $self, $user, $password, $sessionid ) = splice @_;
+
     $self->{user}     = $user;
     $self->{password} = $password;
     $self->{id}       = $sessionid if ( defined($sessionid) && $sessionid );
     $self->{error}    = PE_OK;
-    $self->lmLog( "SOAP authentication request for $self->{user}", 'debug' );
+    $self->lmLog( "SOAP authentication request for $user", 'debug' );
+
+    # Skip extractFormInfo step, as we already get input data
+    $self->{skipExtractFormInfo} = 1;
+
+    # User and password are required
     unless ( $self->{user} && $self->{password} ) {
         $self->{error} = PE_FORMEMPTY;
     }
+
+    # Launch process
     else {
         $self->{error} = $self->_subProcess(
-            qw(authInit userDBInit getUser setAuthSessionInfo
+            qw(authInit userDBInit extractFormInfo getUser setAuthSessionInfo
               setSessionInfo setMacros setGroups setPersistentSessionInfo
               setLocalGroups authenticate grantSession removeOther
               store authFinish buildCookie)
         );
+        $self->lmLog(
+            "SOAP authentication result for $user: code $self->{error}",
+            'debug' );
         $self->updateSession();
     }
     my @tmp = ();

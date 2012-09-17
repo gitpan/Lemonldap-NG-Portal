@@ -6,7 +6,7 @@
 # change 'tests => 1' to 'tests => last_test_to_print';
 
 package My::Portal;
-use Test::More tests => 13;
+use Test::More tests => 14;
 use IO::String;
 use strict;
 
@@ -101,6 +101,11 @@ my ( $test, $testU );
 
     ok( ( $p->process() == 1 and $p->{error} == PE_OK and $test == 1 ),
         'Second module was called' );
+
+    ok(
+        ( $p->getDisplayType() eq "display2" ),
+        'Display type from module 2 was found'
+    );
 
     ok(
         $p = My::Portal->new(
@@ -222,6 +227,10 @@ sub authenticate {
     Lemonldap::NG::Portal::Simple::PE_ERROR;
 }
 
+sub getDisplayType {
+    return "display1";
+}
+
 package Lemonldap::NG::Portal::Auth2;
 
 sub authInit {
@@ -237,7 +246,11 @@ sub setAuthSessionInfo {
 }
 
 sub authenticate {
-    Lemonldap::NG::Portal::Simple::PE_ERROR;
+    Lemonldap::NG::Portal::Simple::PE_OK;
+}
+
+sub getDisplayType {
+    return "display2";
 }
 
 package Lemonldap::NG::Portal::UserDB1;
