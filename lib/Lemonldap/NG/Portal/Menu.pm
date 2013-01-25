@@ -12,7 +12,7 @@ use Lemonldap::NG::Portal::_LibAccess;
 use base qw(Lemonldap::NG::Portal::_LibAccess);
 use Clone qw(clone);
 
-our $VERSION  = '1.1.0';
+our $VERSION = '1.2.2_01';
 our $catlevel = 0;
 
 ## @method void menuInit()
@@ -39,6 +39,7 @@ sub menuInit {
       unless $self->{ignorePasswordChange};
 
     # Default menu error code
+    $self->{menuError} = PE_PASSWORD_OK if ( $self->{passwordWasChanged} );
     $self->{menuError} ||= $self->{error};
 
     # Tab to display

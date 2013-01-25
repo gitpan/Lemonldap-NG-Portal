@@ -9,7 +9,7 @@ use strict;
 use Lemonldap::NG::Portal::Simple;
 use URI::Escape;
 
-our $VERSION = '1.2.0';
+our $VERSION = '1.2.2_01';
 our $initDone;
 
 BEGIN {
@@ -62,6 +62,19 @@ sub extractFormInfo {
           $self->{authChoiceParam} . '='
           . uri_escape( $self->param( $self->{authChoiceParam} ) );
         $local_url .= ( $local_url =~ /\?/ ? '&' : '?' ) . $url_param;
+    }
+
+    # Forward hidden fields
+    if ( exists $self->{portalHiddenFormValues} ) {
+
+        $self->lmLog( "Add hidden values to CAS redirect URL\n", 'debug' );
+
+        foreach ( keys %{ $self->{portalHiddenFormValues} } ) {
+            $local_url .=
+                ( $local_url =~ /\?/ ? '&' : '?' ) 
+              . $_ . '='
+              . uri_escape( $self->{portalHiddenFormValues}->{$_} );
+        }
     }
 
     # Act as a proxy if proxied services configured

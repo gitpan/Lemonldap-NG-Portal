@@ -9,12 +9,13 @@ use strict;
 use Lemonldap::NG::Portal::Simple qw(:all);
 use Lemonldap::NG::Common::Conf;            #link protected lmConf Configuration
 use Lemonldap::NG::Common::Conf::Constants; #inherits
+use Regexp::Assemble;
 
 *EXPORT_OK   = *Lemonldap::NG::Portal::Simple::EXPORT_OK;
 *EXPORT_TAGS = *Lemonldap::NG::Portal::Simple::EXPORT_TAGS;
 *EXPORT      = *Lemonldap::NG::Portal::Simple::EXPORT;
 
-our $VERSION = '1.2.0';
+our $VERSION = '1.2.2_01';
 use base qw(Lemonldap::NG::Portal::Simple);
 our $confCached;
 
@@ -56,32 +57,22 @@ sub getConf {
                 $Lemonldap::NG::Common::Conf::msg );
         }
         %$confCached = ( %$gConf, %$lConf );
+
+        my $re = Regexp::Assemble->new();
+        foreach ( keys %{ $confCached->{locationRules} } ) {
+            $_ = quotemeta($_);
+            $re->add($_);
+        }
+        $confCached->{reVHosts} = $re->as_string;
+
     }
 
     %$self = ( %$self, %$confCached, %args, );
-
-    # localStorage should be declared in configuration object
-    # See Handler::SharedConf
-    foreach (qw(localStorage localStorageOptions)) {
-        $self->{$_} ||= $self->__lmConf->{$_};
-    }
 
     $self->lmLog( "Now using configuration: " . $confCached->{cfgNum},
         'debug' );
 
     1;
-}
-
-## @method list getProtectedSites()
-# With SharedConf, $locationRules contains a hash table with virtual hosts as
-# keys. So we can use it to know all protected virtual hosts.
-# @return list list of protected virtual hosts.
-sub getProtectedSites {
-    my $self = shift;
-    my @tab  = ();
-    return ( keys %{ $self->{locationRules} } )
-      if ( ref $self->{locationRules} );
-    return ();
 }
 
 sub __lmConf {

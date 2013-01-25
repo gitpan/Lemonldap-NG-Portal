@@ -5,7 +5,7 @@
 # Alias for Lemonldap::NG::SharedConf
 package Lemonldap::NG::Portal;
 
-our $VERSION = '1.2.2';
+our $VERSION = '1.2.2_01';
 use Lemonldap::NG::Portal::SharedConf;
 use base 'Lemonldap::NG::Portal::SharedConf';
 
@@ -366,8 +366,7 @@ session information.
 =item * globalStorageOptions : parameters to bind to L<Apache::Session> module
 
 =item * locationRules : this parameter is used by L<Lemonldap::NG::Handler> to
-read the rules. It can be set in the portal just to display protected sites by
-the function C<getProtectedSites>.
+read the rules.
 
 =item * authentication: sheme to authenticate users (default: "ldap"). It can
 be set to:
@@ -411,16 +410,6 @@ configuration.
 
 =item * ldapPpolicyControl : set it to 1 if you want to use LDAP Password
 Policy
-
-=item * useLocalCachedConf : for each authentication, the portal process reads
-its configuration. With a shared configuration stored on a network and if the
-system has a heavy load and if you have a running L<Lemonldap::NG::Handler>
-instance on the same server, you can used the configuration stored in the local
-cache but setting this parameter to 1.
-
-=item * localStorage, localStorageOptions : if the above option is set to 1, you
-have to set the good values in those parameters. See L<Lemonldap::NG::Handler>
-for the syntax.
 
 =item * ldapGroupBase : this parameter can be used to store in the Lemonldap::NG
 groups system all the LDAP groups that contains the user. Set here the LDAP base

@@ -11,7 +11,7 @@ use MIME::Lite;
 use MIME::Base64;
 use Encode;
 
-our $VERSION = '1.2.2';
+our $VERSION = '1.2.2_01';
 
 ## @method string gen_password(string regexp)
 # Generate a complex password based on a regular expression
@@ -39,7 +39,8 @@ sub send_mail {
     my $charset = $self->{mailCharset} ? $self->{mailCharset} : "utf-8";
 
     # Encode the body with the given charset
-    $body = encode( $charset, $body );
+    $body    = encode( $charset, $body );
+    $subject = encode( $charset, $subject );
 
     # Debug messages
     $self->lmLog( "SMTP From " . $self->{mailFrom}, 'debug' );

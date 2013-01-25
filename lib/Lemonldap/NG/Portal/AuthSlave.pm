@@ -10,7 +10,7 @@ use Lemonldap::NG::Portal::_Slave;
 use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::AuthNull;
 
-our $VERSION = '1.2.0';
+our $VERSION = '1.2.2_01';
 our @ISA     = qw(Lemonldap::NG::Portal::AuthNull);
 
 ## @apmethod int extractFormInfo()

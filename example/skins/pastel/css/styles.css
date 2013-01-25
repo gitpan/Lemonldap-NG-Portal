@@ -251,6 +251,8 @@ margin:10px;
 padding:5px;
 float:left;
 width:30%;
+height:50px;
+overflow:hidden;
 }
 
 div.application:hover {

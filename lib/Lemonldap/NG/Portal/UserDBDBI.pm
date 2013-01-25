@@ -9,7 +9,7 @@ use strict;
 use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_DBI;    #inherits
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.2.2_01';
 
 ## @apmethod int userDBInit()
 # Set default values
@@ -65,6 +65,31 @@ sub getUser {
         $self->lmLog( "User $user not found", 'notice' );
         return PE_BADCREDENTIALS;
     }
+
+    # In mail process, get user value
+    if ( $self->{mail} ) {
+        $table = $self->{dbiAuthTable};
+        $pivot = $self->{dbiAuthLoginCol};
+        $user  = $self->{entry}->{ $self->{userPivot} };
+        eval {
+            $sth = $dbh->prepare("SELECT * FROM $table WHERE $pivot=?");
+            $sth->execute($user);
+        };
+        if ($@) {
+            $self->lmLog( "DBI error: $@", 'error' );
+            return PE_ERROR;
+        }
+
+        my $results;
+
+        unless ( $results = $sth->fetchrow_hashref() ) {
+            $self->lmLog( "User $user not found", 'notice' );
+            return PE_BADCREDENTIALS;
+        }
+
+        $self->{user} = $results->{$pivot};
+    }
+
     PE_OK;
 }
 
@@ -73,6 +98,9 @@ sub getUser {
 # @return Lemonldap::NG::Portal constant
 sub setSessionInfo {
     my $self = shift;
+
+    # Set _user unless already defined
+    $self->{sessionInfo}->{_user} ||= $self->{user};
 
     # Return if no data to collect
     return PE_OK

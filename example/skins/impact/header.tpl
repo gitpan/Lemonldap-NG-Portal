@@ -24,6 +24,7 @@
             var login='<TMPL_VAR NAME="LOGIN">';
             var newwindow='<TMPL_VAR NAME="NEWWINDOW">';
             var antiframe='<TMPL_VAR NAME="ANTIFRAME">';
+            var appslistorder='<TMPL_VAR NAME="APPSLIST_ORDER">';
         //]]></script>
         <script type="text/javascript" src="<TMPL_VAR NAME="SKIN_PATH">/common/portal.js"></script>
         <TMPL_INCLUDE NAME="customhead.tpl">

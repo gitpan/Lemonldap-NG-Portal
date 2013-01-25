@@ -20,7 +20,7 @@ use URI;                   # Get metadata URL path
 # Special comments for doxygen
 #inherits Lemonldap::NG::Common::Conf::SAML::Metadata protected service_metadata
 
-our $VERSION = '1.2.2';
+our $VERSION = '1.2.2_01';
 our $samlCache;
 our $initGlibDone;
 
@@ -792,13 +792,10 @@ sub createAuthnRequest {
     }
 
     # Set RelayState
-    my $infos;
-    foreach (qw /urldc checkLogins/) {
-        $infos->{$_} = $self->{$_} if $self->{$_};
+    if ( my $relaystate = $self->storeRelayState(qw /urldc checkLogins/) ) {
+        $login->msg_relayState($relaystate);
+        $self->lmLog( "Set $relaystate in RelayState", 'debug' );
     }
-    my $relaystate = $self->storeRelayState($infos);
-    $login->msg_relayState($relaystate);
-    $self->lmLog( "Set $relaystate in RelayState", 'debug' );
 
     # Customize request
     my $request = $login->request();
@@ -1163,7 +1160,14 @@ sub acceptSSO {
 # corresponding session_id
 # @param infos HASH reference of information
 sub storeRelayState {
-    my ( $self, $infos ) = splice @_;
+    my ( $self, @data ) = splice @_;
+
+    # check if there are data to store
+    my $infos;
+    foreach (@data) {
+        $infos->{$_} = $self->{$_} if $self->{$_};
+    }
+    return unless ($infos);
 
     # Create relaystate session
     my $samlSessionInfo = $self->getSamlSession();
@@ -1212,7 +1216,14 @@ sub extractRelayState {
         $self->{$_} = $samlSessionInfo->{$_};
     }
 
-    untie %$samlSessionInfo;
+    # delete relaystate session
+    eval { tied(%$samlSessionInfo)->delete(); };
+    if ($@) {
+        $self->lmLog( "Unable to delete relaystate $relaystate", 'error' );
+    }
+    else {
+        $self->lmLog( "Relaystate $relaystate was deleted", 'debug' );
+    }
 
     return 1;
 }
@@ -1359,13 +1370,10 @@ sub createLogoutRequest {
     }
 
     # Set RelayState
-    my $infos;
-    foreach (qw /urldc checkLogins/) {
-        $infos->{$_} = $self->{$_} if $self->{$_};
+    if ( my $relaystate = $self->storeRelayState(qw /urldc/) ) {
+        $logout->msg_relayState($relaystate);
+        $self->lmLog( "Set $relaystate in RelayState", 'debug' );
     }
-    my $relaystate = $self->storeRelayState($infos);
-    $logout->msg_relayState($relaystate);
-    $self->lmLog( "Set $relaystate in RelayState", 'debug' );
 
     # Signature
     if ( $signSLOMessage == 0 ) {
@@ -1576,9 +1584,9 @@ sub storeReplayProtection {
 
     return 0 unless $samlSessionInfo;
 
-    $samlSessionInfo->{type}   = 'assertion';    # Session type
-    $samlSessionInfo->{_utime} = time();         # Creation time
-    $samlSessionInfo->{ID}     = $samlID;
+    $samlSessionInfo->{type}       = 'assertion';    # Session type
+    $samlSessionInfo->{_utime}     = time();         # Creation time
+    $samlSessionInfo->{_assert_id} = $samlID;
 
     if ( defined $samlData && $samlData ) {
         $samlSessionInfo->{data} = $samlData;
@@ -1609,7 +1617,7 @@ sub replayProtection {
 
     my $sessions =
       $self->{samlStorage}
-      ->searchOn( $self->{samlStorageOptions}, "ID", $samlID );
+      ->searchOn( $self->{samlStorageOptions}, "_assert_id", $samlID );
 
     if ( my @keys = keys %$sessions ) {
 
@@ -1708,7 +1716,7 @@ sub storeArtifact {
 
     $samlSessionInfo->{type}     = 'artifact';                   # Session type
     $samlSessionInfo->{_utime}   = time();                       # Creation time
-    $samlSessionInfo->{ID}       = $id;
+    $samlSessionInfo->{_art_id}  = $id;
     $samlSessionInfo->{message}  = $message;
     $samlSessionInfo->{_saml_id} = $session_id if $session_id;
 
@@ -1735,7 +1743,8 @@ sub loadArtifact {
     }
 
     my $sessions =
-      $self->{samlStorage}->searchOn( $self->{samlStorageOptions}, "ID", $id );
+      $self->{samlStorage}
+      ->searchOn( $self->{samlStorageOptions}, "_art_id", $id );
 
     if ( my @keys = keys %$sessions ) {
 
@@ -2236,6 +2245,21 @@ sub disableSignatureVerification {
     eval {
         Lasso::Profile::set_signature_verify_hint( $profile,
             Lasso::Constants::PROFILE_SIGNATURE_VERIFY_HINT_IGNORE );
+    };
+
+    return $self->checkLassoError($@);
+}
+
+## @method boolean forceSignatureVerification(Lasso::Profile profile)
+# Modify Lasso signature hint to force signature verification
+# @param profile Lasso profile object
+# @return result
+sub forceSignatureVerification {
+    my ( $self, $profile ) = splice @_;
+
+    eval {
+        Lasso::Profile::set_signature_verify_hint( $profile,
+            Lasso::Constants::PROFILE_SIGNATURE_VERIFY_HINT_FORCE );
     };
 
     return $self->checkLassoError($@);
@@ -3231,6 +3255,10 @@ Modify Lasso signature hint to force signature
 =head2 disableSignatureVerification
 
 Modify Lasso signature hint to disable signature verification
+
+=head2 forceSignatureVerification
+
+Modify Lasso signature hint to force signature verification
 
 =head2 getAuthnContext
 

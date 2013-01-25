@@ -7,7 +7,7 @@ package Lemonldap::NG::Portal::UserDBMulti;
 
 use Lemonldap::NG::Portal::_Multi;    #inherits
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.2.2_01';
 
 sub userDBInit {
     my $self = shift;

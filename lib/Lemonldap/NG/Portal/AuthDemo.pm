@@ -9,7 +9,7 @@ use strict;
 use Lemonldap::NG::Portal::Simple;
 use base qw(Lemonldap::NG::Portal::_WebForm);
 
-our $VERSION = '1.2.0';
+our $VERSION = '1.2.2_01';
 
 ## @apmethod int authInit()
 # Initialize demo accounts

@@ -9,7 +9,7 @@ use strict;
 use Lemonldap::NG::Portal::Simple;
 use utf8;
 
-our $VERSION = '1.2.0';
+our $VERSION = '1.2.2_01';
 
 ## @method array display()
 # Call portal process and set template parameters
@@ -109,6 +109,7 @@ sub display {
                 APPSLIST_MENU => $self->{menuAppslistMenu},  # For old templates
                 APPSLIST_DESC => $self->{menuAppslistDesc},  # For old templates
                 SCRIPT_NAME   => $ENV{SCRIPT_NAME},
+                APPSLIST_ORDER => $self->{sessionInfo}->{'appsListOrder'},
             );
 
         }
@@ -203,6 +204,16 @@ sub display {
             LOGIN_INFO            => $self->loginInfo(),
         );
 
+        # Display captcha if it's enabled
+        if ( $self->{captcha_enabled} ) {
+            %templateParams = (
+                %templateParams,
+                CAPTCHA_IMG  => $self->{captcha_img},
+                CAPTCHA_CODE => $self->{captcha_code},
+                CAPTCHA_SIZE => $self->{captcha_size}
+            );
+        }
+
         # Show password form if password policy error
         if (
 
@@ -295,6 +306,20 @@ sub display {
 
         }
 
+    }
+
+    # Fill sessionInfo to eval rule if empty (unauthenticated user)
+    $self->{sessionInfo}->{_url}   ||= $self->{urldc};
+    $self->{sessionInfo}->{ipAddr} ||= $self->ipAddr;
+
+    # Load specific skin from skinRules
+    if ( $self->{portalSkinRules} ) {
+        foreach my $skinRule ( sort keys $self->{portalSkinRules} ) {
+            if ( $self->safe->reval($skinRule) ) {
+                $skin = $self->{portalSkinRules}->{$skinRule};
+                $self->lmLog( "Skin $skin selected from skin rule", 'debug' );
+            }
+        }
     }
 
     ## Common template params

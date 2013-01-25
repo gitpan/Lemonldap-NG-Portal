@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::_Remote;
 use Lemonldap::NG::Portal::Simple;
 use base qw(Lemonldap::NG::Portal::_Remote);
 
-our $VERSION = '1.2.0';
+our $VERSION = '1.2.2_01';
 
 *authInit = *Lemonldap::NG::Portal::_Remote::init;
 

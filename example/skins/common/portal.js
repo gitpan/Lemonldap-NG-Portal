@@ -29,6 +29,18 @@ $(document).ready(function(){
 		top.location.href = location.href;
 	}
 
+	/* Sortable menu */
+	$("#appslist").sortable({
+		axis: "y",
+		cursor: "move",
+		opacity: 0.5,
+		revert: true,
+		items: "> div.category",
+		update: function(){ getOrder(); },
+	});
+
+	restoreOrder();
+
 	/* Display message */
 	$("div.message").fadeIn('slow');
 
@@ -77,6 +89,69 @@ $(document).ready(function(){
 
 	}
 });
+
+/* Code from http://snipplr.com/view/29434/ */
+// set the list selector
+var setSelector = "#appslist";
+// function that writes the list order to session
+function getOrder() {
+	// save custom order to persistent session
+	$.ajax({
+		type:"POST",
+		url:scriptname,
+		data:{storeAppsListOrder:$(setSelector).sortable("toArray").join()},
+		dataType:'json',
+	});
+}
+
+// function that restores the list order from session
+function restoreOrder() {
+	var list = $(setSelector);
+	if (list == null) return;
+
+	// fetch the session value (saved order)
+	if (!appslistorder) return;
+
+	// make array from saved order
+	var IDs = appslistorder.split(",");
+
+	// fetch current order
+	var items = list.sortable("toArray");
+
+	// make array from current order
+	var rebuild = new Array();
+	for ( var v=0, len=items.length; v<len; v++ ){
+		rebuild[items[v]] = items[v];
+	}
+
+	for (var i = 0, n = IDs.length; i < n; i++) {
+
+		// item id from saved order
+		var itemID = IDs[i];
+
+		if (itemID in rebuild) {
+
+			// select item id from current order
+			var item = rebuild[itemID];
+
+			// select the item according to current order
+			var child = $(setSelector+".ui-sortable").children("#" + item);
+
+			// select the item according to the saved order
+			var savedOrd = $(setSelector+".ui-sortable").children("#" + itemID);
+
+			// remove all the items
+			child.remove();
+
+			// add the items in turn according to saved order
+			// we need to filter here since the "ui-sortable"
+			// class is applied to all ul elements and we
+			// only want the very first! You can modify this
+			// to support multiple lists - not tested!
+			$(setSelector+".ui-sortable").filter(":first").append(savedOrd);
+		}
+	}
+}
 
 /* function boolean isHiddenFormValueSet(string option)
  * Check if an hidden option is set

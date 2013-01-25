@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_SAML;
 our @ISA = qw(Lemonldap::NG::Portal::_SAML);
 
-our $VERSION = '1.2.0';
+our $VERSION = '1.2.2_01';
 
 ## @method void issuerDBInit()
 # Load and check SAML configuration
@@ -150,7 +150,17 @@ sub issuerForUnAuthUser {
               ->{samlSPMetaDataOptionsCheckSSOMessageSignature};
 
             if ($checkSSOMessageSignature) {
-                unless ( $self->checkSignatureStatus($login) ) {
+
+                $self->forceSignatureVerification($login);
+
+                if ($artifact) {
+                    $result = $self->processArtResponseMsg( $login, $request );
+                }
+                else {
+                    $result = $self->processAuthnRequestMsg( $login, $request );
+                }
+
+                unless ($result) {
                     $self->lmLog( "Signature is not valid", 'error' );
                     return PE_SAML_SIGNATURE_ERROR;
                 }
@@ -277,7 +287,10 @@ sub issuerForUnAuthUser {
               ->{samlSPMetaDataOptionsCheckSLOMessageSignature};
 
             if ($checkSLOMessageSignature) {
-                unless ( $self->checkSignatureStatus($logout) ) {
+
+                $self->forceSignatureVerification($logout);
+
+                unless ( $self->processLogoutRequestMsg( $logout, $request ) ) {
                     $self->lmLog( "Signature is not valid", 'error' );
                     return $self->sendSLOErrorResponse( $logout, $method );
                 }
@@ -1203,7 +1216,17 @@ sub issuerForAuthUser {
               ->{samlSPMetaDataOptionsCheckSSOMessageSignature};
 
             if ($checkSSOMessageSignature) {
-                unless ( $self->checkSignatureStatus($login) ) {
+
+                $self->forceSignatureVerification($login);
+
+                if ($artifact) {
+                    $result = $self->processArtResponseMsg( $login, $request );
+                }
+                else {
+                    $result = $self->processAuthnRequestMsg( $login, $request );
+                }
+
+                unless ($result) {
                     $self->lmLog( "Signature is not valid", 'error' );
                     return PE_SAML_SIGNATURE_ERROR;
                 }
@@ -1594,6 +1617,22 @@ sub issuerForAuthUser {
                     'debug' );
             }
 
+            # log that a SAML authn response is build
+            my $user = $self->{sessionInfo}->{ $self->{whatToTrace} };
+            my $nameIDLog;
+            foreach my $format qw(persistent transient) {
+                if ( $login->nameIdentifier->Format eq
+                    $self->getNameIDFormat($format) )
+                {
+                    $nameIDLog =
+                      " with $format NameID " . $login->nameIdentifier->content;
+                    last;
+                }
+            }
+            $self->_sub( 'userNotice',
+"SAML authentication response sent to SAML SP $spConfKey for $user$nameIDLog"
+            );
+
             # Build SAML response
             $protocolProfile = $login->protocolProfile();
 
@@ -1851,7 +1890,10 @@ sub issuerForAuthUser {
               ->{samlSPMetaDataOptionsCheckSLOMessageSignature};
 
             if ($checkSLOMessageSignature) {
-                unless ( $self->checkSignatureStatus($logout) ) {
+
+                $self->forceSignatureVerification($logout);
+
+                unless ( $self->processLogoutRequestMsg( $logout, $request ) ) {
                     $self->lmLog( "Signature is not valid", 'error' );
                     return $self->sendSLOErrorResponse( $logout, $method );
                 }

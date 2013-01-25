@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::_i18n;
 # Developpers warning : this file must stay UTF-8 encoded
 
 use AutoLoader qw(AUTOLOAD);
-our $VERSION = '1.2.0';
+our $VERSION = '1.2.2_01';
 
 ## @fn string msg(int msg, array ref lang)
 # @param $msg Number of msg to resolve
@@ -163,7 +163,7 @@ sub error_fr {
         'Mot de passe trop récent',
         'Mot de passe utilisé trop récemment',
         ' authentifications restantes, changez votre mot de passe !',
-' secondes avant expiration de votre mot de passe, pensez à le changer !',
+'%d jours, %d heures, %d minutes et %d secondes avant expiration de votre mot de passe, pensez à le changer !',
         'Les mots de passe ne correspondent pas',
         'Le mot de passe a été changé',
         'Vous avez un nouveau message',
@@ -206,6 +206,8 @@ sub error_fr {
         'La connexion au serveur Radius a échoué',
         "L'ancien mot de passe est obligatoire",
         'Vous venez d\'une adresse IP qui n\'est pas accréditée',
+        'Mauvais code',
+        'Vous devez entrez le captcha'
     ];
 }
 
@@ -247,7 +249,7 @@ sub error_en {
         'Password too young',
         'Password used too recently',
         ' authentications remaining, change your password!',
-        ' seconds before password expiration, change it!',
+'%d days, %d hours, %d minutes and %d seconds before password expiration, change it!',
         'Passwords mismatch',
         'Password successfully changed',
         'You have a new message',
@@ -290,6 +292,8 @@ sub error_en {
         'Radius connection has failed',
         'Old password is required',
         'You came from an unaccredited IP address',
+        'Wrong code',
+        'You have to tape the captcha'
     ];
 }
 
@@ -332,7 +336,7 @@ sub error_ro {
         'Prea parolă nouă',
         'Parola folosit prea recent',
         ' authentications rămase, schimbaţi-vă parola!',
-' secunde înainte de expirarea parola dvs., asiguraţi-vă pentru a schimba!',
+'%d zile, %d ora, %d minute şi %d secundes înainte de expirarea parola dvs., asiguraţi-vă pentru a schimba!',
         'Parolele nu se potrivesc',
         'Parola a fost schimbată',
         'Ai un mesaj nou',
@@ -375,6 +379,8 @@ sub error_ro {
         'Radius connection has failed',
         'Old password is required',
         'You came from an unaccredited IP address',
+        'Bad cod',
+        'trebuie să introduceţi CAPTCHA'
     ];
 }
 
@@ -414,7 +420,7 @@ sub msg_en {
         'Other active sessions',
         'Remove other sessions',
         'authentications remaining, change your password!',
-        'seconds before password expiration, change it!',
+'%d days, %d hours, %d minutes and %d seconds before password expiration, change it!',
         'Select your Identity Provider',
         'Redirection to your Identity Provider',
         'Remember my choice',
@@ -444,7 +450,7 @@ sub msg_fr {
         'Autres sessions ouvertes',
         'Fermer les autres sessions',
         'authentifications restantes, changez votre mot de passe !',
-'secondes avant expiration de votre mot de passe, pensez à le changer !',
+'%d jours, %d heures, %d minutes et %d secondes avant expiration de votre mot de passe, pensez à le changer !',
         'Choisissez votre fournisseur d\'identité',
         'Redirection vers votre fournisseur d\'identité',
         'Se souvenir de mon choix',

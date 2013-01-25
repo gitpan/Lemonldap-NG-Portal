@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::_SAML;
 use Encode;
 our @ISA = qw(Lemonldap::NG::Portal::_SAML);
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.2.2_01';
 
 ## @apmethod int userDBInit()
 # Check if authentication module is SAML

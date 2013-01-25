@@ -44,7 +44,7 @@ use Digest::MD5;
 #inherits Lemonldap::NG::Portal::IssuerDBOpenID
 #inherits Lemonldap::NG::Portal::IssuerDBSAML
 #inherits Lemonldap::NG::Portal::Menu
-#link Lemonldap::NG::Portal::Notification protected notification
+#link Lemonldap::NG::Common::Notification protected notification
 #inherits Lemonldap::NG::Portal::PasswordDBChoice;
 #inherits Lemonldap::NG::Portal::PasswordDBDBI;
 #inherits Lemonldap::NG::Portal::PasswordDBLDAP;
@@ -63,7 +63,7 @@ use Digest::MD5;
 #inherits Apache::Session
 #link Lemonldap::NG::Common::Apache::Session::SOAP protected globalStorage
 
-our $VERSION = '1.2.2';
+our $VERSION = '1.2.2_01';
 
 use base qw(Lemonldap::NG::Common::CGI Exporter);
 our @ISA;
@@ -145,6 +145,8 @@ use constant {
     PE_RADIUSCONNECTFAILED              => 73,
     PE_MUST_SUPPLY_OLD_PASSWORD         => 74,
     PE_FORBIDDENIP                      => 75,
+    PE_CAPTCHAERROR                     => 76,
+    PE_CAPTCHAEMPTY                     => 77,
 
     # Portal messages
     PM_USER                  => 0,
@@ -193,7 +195,7 @@ our @EXPORT = qw( PE_IMG_NOK PE_IMG_OK PE_INFO PE_REDIRECT PE_DONE PE_OK
   PE_MISSINGREQATTR PE_BADPARTNER PE_MAILCONFIRMATION_ALREADY_SENT
   PE_PASSWORDFORMEMPTY PE_CAS_SERVICE_NOT_ALLOWED PE_MAILFIRSTACCESS
   PE_MAILNOTFOUND PE_PASSWORDFIRSTACCESS PE_MAILCONFIRMOK
-  PE_MUST_SUPPLY_OLD_PASSWORD PE_FORBIDDENIP
+  PE_MUST_SUPPLY_OLD_PASSWORD PE_FORBIDDENIP PE_CAPTCHAERROR PE_CAPTCHAEMPTY
   PM_USER PM_DATE PM_IP PM_SESSIONS_DELETED PM_OTHER_SESSIONS
   PM_REMOVE_OTHER_SESSIONS PM_PP_GRACE PM_PP_EXP_WARNING
   PM_SAML_IDPSELECT PM_SAML_IDPCHOOSEN PM_REMEMBERCHOICE PM_SAML_SPLOGOUT
@@ -402,7 +404,7 @@ sub new {
 
     # Notifications
     if ( $self->{notification} ) {
-        require Lemonldap::NG::Portal::Notification;
+        require Lemonldap::NG::Common::Notification;
         my $tmp;
 
         # Use configuration options
@@ -433,8 +435,8 @@ sub new {
         }
 
         $tmp->{p}            = $self;
-        $self->{notifObject} = Lemonldap::NG::Portal::Notification->new($tmp);
-        $self->abort($Lemonldap::NG::Portal::Notification::msg)
+        $self->{notifObject} = Lemonldap::NG::Common::Notification->new($tmp);
+        $self->abort($Lemonldap::NG::Common::Notification::msg)
           unless ( $self->{notifObject} );
     }
 
@@ -462,6 +464,12 @@ sub new {
         $self->{trustedDomains} =~ s/\./\\./g;
     }
 
+    # init the captcha feature if it's enabled
+    if ( $self->{captcha_enabled} ) {
+        eval $self->initCaptcha();
+        $self->lmLog( "Can't init captcha: $@", "error" );
+    }
+
     return $self;
 }
 
@@ -470,7 +478,7 @@ sub new {
 # @param module module name
 # @return boolean
 sub loadModule {
-    my ($self, $module) = splice @_;
+    my ( $self, $module ) = splice @_;
 
     return 1 unless $module;
 
@@ -638,6 +646,13 @@ sub setDefaultValues {
     $self->{ldapPasswordResetAttributeValue} ||= "TRUE";
     $self->{mailOnPasswordChange}            ||= 0;
 
+    # Captcha parameters
+    $self->{captcha_enabled} = 0;
+    $self->{captcha_size}    = 6;
+    $self->{captcha_output} =
+      '/usr/local/lemonldap-ng/htdocs/portal/captcha_output/';
+    $self->{captcha_data} = '/usr/local/lemonldap-ng/data/captcha/data/';
+
     # Notification
     $self->{notificationWildcard} ||= "allusers";
 
@@ -744,6 +759,41 @@ sub buildHiddenForm {
     }
 
     return $val;
+}
+
+## @method void initCaptcha(void)
+# init captcha module and generate captcha
+# @return nothing
+sub initCaptcha {
+    require Authen::Captcha;
+
+    my $self = shift;
+
+    # Store captcha data
+    opendir( OUTPUT, $self->{captcha_output} )
+      or $self->lmLog( "Can't open captcha output dir", "error" );
+    opendir( DATA, $self->{captcha_data} )
+      or $self->lmLog( "Can't open captcha data dir", "error" );
+
+    # Clean previous captcha datas
+    foreach ( readdir(OUTPUT) ) {
+        next if ( $_ eq ".." or $_ eq "." );
+        system("rm -f $_ &>/dev/null")
+          or $self->lmLog( "Can't clean captcha output dir!", "warn" );
+    }
+
+    # Build Authen::Captcha object
+    $self->{captcha} = Authen::Captcha->new(
+        data_folder   => $self->{captcha_data},
+        output_folder => $self->{captcha_output}
+    );
+
+    # Generate a new captcha from captcha object
+    $self->{captcha_code} =
+      $self->{captcha}->generate_code( $self->{captcha_size} );
+    $self->{captcha_img} = "/captcha_output/" . $self->{captcha_code} . ".png";
+
+    closedir(DATA) and closedir(OUTPUT);
 }
 
 ## @method boolean isTrustedUrl(string url)
@@ -921,7 +971,8 @@ sub getApacheSession {
 
         # Session not available (expired ?)
         if ($id) {
-            $self->lmLog( "Session $id isn't yet available ($ENV{REMOTE_ADDR})",
+            $self->lmLog(
+                "Session $id can't be retrieved (" . $self->ipAddr . ")",
                 'info' )
               unless $noInfo;
         }
@@ -1162,7 +1213,7 @@ sub _subProcess {
 sub updateStatus {
     my $self = shift;
     print $Lemonldap::NG::Handler::Simple::statusPipe (
-        $self->{user} ? $self->{user} : $ENV{REMOTE_ADDR} )
+        $self->{user} ? $self->{user} : $self->ipAddr )
       . " => $ENV{SERVER_NAME}$ENV{SCRIPT_NAME} "
       . $self->{error} . "\n"
       if ($Lemonldap::NG::Handler::Simple::statusPipe);
@@ -1426,6 +1477,36 @@ sub stamp {
     return $self->{cipher} ? $self->{cipher}->encrypt( time() ) : 1;
 }
 
+## @method string convertSec(int sec)
+# Convert seconds to hours, minutes, seconds
+# @param $sec number of seconds
+# @return a formated time
+sub convertSec {
+    my ( $self, $sec ) = splice @_;
+    my ( $day, $hrs, $min ) = ( 0, 0, 0 );
+
+    # Calculate the minutes
+    if ( $sec > 60 ) {
+        $min = $sec / 60, $sec %= 60;
+        $min = int($min);
+    }
+
+    # Calculate the hours
+    if ( $min > 60 ) {
+        $hrs = $min / 60, $min %= 60;
+        $hrs = int($hrs);
+    }
+
+    # Calculate the days
+    if ( $hrs > 24 ) {
+        $day = $hrs / 24, $hrs %= 24;
+        $day = int($day);
+    }
+
+    # Return the date
+    return ( $day, $hrs, $min, $sec );
+}
+
 ###############################################################
 # MAIN subroutine: call all steps until one returns something #
 #                  different than PE_OK                       #
@@ -1563,7 +1644,7 @@ sub controlUrlOrigin {
 
 ##@apmethod int checkNotifBack()
 # Checks if a message has been notified to the connected user.
-# Call Lemonldap::NG::Portal::Notification::checkNotification()
+# Call Lemonldap::NG::Common::Notification::checkNotification()
 #@return Lemonldap::NG::Portal error code
 sub checkNotifBack {
     my $self = shift;
@@ -1664,21 +1745,35 @@ sub controlExistingSession {
                 }
 
                 # Call logout for the module used to authenticate
+                $self->lmLog(
+                    "Process logout for authentication module " . $h->{_auth},
+                    'debug' );
+
                 if ( $h->{'_auth'} ne $self->get_module('auth') ) {
-                    $self->loadModule(
-                        "Lemonldap::NG::Portal::Auth" . $h->{_auth} );
-                    eval {
-                        $self->{error} =
-                          $self->_sub( "Lemonldap::NG::Portal::Auth"
-                              . $h->{_auth}
-                              . "::authLogout" );
-                    };
+                    my $module_name =
+                      'Lemonldap::NG::Portal::Auth' . $h->{_auth};
+
+                    unless ( $self->loadModule($module_name) ) {
+                        $self->lmLog( "Unable to load $module_name", 'error' );
+                    }
+                    else {
+                        eval {
+                            $self->{error} = $self->_subProcess(
+                                $module_name . "::authInit",
+                                $module_name . "::authLogout"
+                            );
+                        };
+                    }
                 }
                 else {
-                    eval { $self->{error} = $self->_sub('authLogout'); };
+                    eval {
+                        $self->{error} =
+                          $self->_subProcess( 'authInit', 'authLogout' );
+                    };
                 }
                 if ($@) {
-                    $self->lmLog( "Error when calling authLogout: $@",
+                    $self->lmLog(
+                        "Error when calling authentication logout: $@",
                         'debug' );
                 }
                 return $self->{error} if $self->{error} > 0;
@@ -1746,6 +1841,15 @@ sub controlExistingSession {
                   . '{"auth":true}';
                 $self->quit();
             }
+
+            # Special ajax request "storeAppsListOrder"
+            if ( $self->param('storeAppsListOrder') ) {
+                my $order = $self->param('storeAppsListOrder');
+                $self->lmLog( "Get new apps list order: $order", 'debug' );
+                $self->updatePersistentSession( { appsListOrder => $order } );
+                $self->quit();
+            }
+
             $self->{id} = $id;
 
             # A session has been found => call existingSession
@@ -1917,7 +2021,7 @@ sub modifyPassword {
 }
 
 ##@apmethod int setSessionInfo()
-# Set ipAddr, xForwardedForAddr, startTime, updateTime, _utime and _userDB
+# Set ipAddr, startTime, updateTime, _utime and _userDB
 # Call setSessionInfo() in UserDB* module
 #@return Lemonldap::NG::Portal constant
 sub setSessionInfo {
@@ -1927,15 +2031,7 @@ sub setSessionInfo {
     $self->{sessionInfo}->{_userDB} = $self->get_module("user");
 
     # Store IP address from remote address or X-FORWARDED-FOR header
-    my $xheader = $ENV{HTTP_X_FORWARDED_FOR};
-    $xheader =~ s/(.*?)(\,)+.*/$1/ if $xheader;
-
-    if ( $xheader and $self->{useXForwardedForIP} ) {
-        $self->{sessionInfo}->{ipAddr} = $xheader;
-    }
-    else {
-        $self->{sessionInfo}->{ipAddr} = $ENV{REMOTE_ADDR};
-    }
+    $self->{sessionInfo}->{ipAddr} = $self->ipAddr;
 
     # Date and time
     if ( $self->{updateSession} ) {
@@ -2146,8 +2242,8 @@ sub removeOther {
     }
     if ( $self->{singleUserByIP} ) {
         my $sessions =
-          $self->{globalStorage}->searchOn( $self->{globalStorageOptions},
-            'ipAddr', $ENV{REMOTE_ADDR} );
+          $self->{globalStorage}
+          ->searchOn( $self->{globalStorageOptions}, 'ipAddr', $self->ipAddr );
         foreach my $id ( keys %$sessions ) {
             next if ( $current and $current eq $id );
             my $h = $self->getApacheSession( $id, 1 ) or next;
@@ -2404,7 +2500,7 @@ sub buildCookie {
 
 ##@apmethod int checkNotification()
 # Check if messages has to be notified.
-# Call Lemonldap::NG::Portal::Notification::getNotification().
+# Call Lemonldap::NG::Common::Notification::getNotification().
 #@return Lemonldap::NG::Portal constant
 sub checkNotification {
     my $self = shift;

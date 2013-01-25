@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_SAML;    #inherits
 use Lemonldap::NG::Common::Conf::SAML::Metadata;
 
-our $VERSION = '1.2.2';
+our $VERSION = '1.2.2_01';
 our @ISA     = qw(Lemonldap::NG::Portal::_SAML);
 
 ## @apmethod int authInit()
@@ -125,7 +125,18 @@ sub extractFormInfo {
               ->{samlIDPMetaDataOptionsCheckSSOMessageSignature};
 
             if ($checkSSOMessageSignature) {
-                unless ( $self->checkSignatureStatus($login) ) {
+
+                $self->forceSignatureVerification($login);
+
+                if ($artifact) {
+                    $result = $self->processArtResponseMsg( $login, $response );
+                }
+                else {
+                    $result =
+                      $self->processAuthnResponseMsg( $login, $response );
+                }
+
+                unless ($result) {
                     $self->lmLog( "Signature is not valid", 'error' );
                     return PE_SAML_SIGNATURE_ERROR;
                 }
@@ -404,7 +415,12 @@ sub extractFormInfo {
               ->{samlIDPMetaDataOptionsCheckSLOMessageSignature};
 
             if ($checkSLOMessageSignature) {
-                unless ( $self->checkSignatureStatus($logout) ) {
+
+                $self->forceSignatureVerification($logout);
+
+                $result = $self->processLogoutResponseMsg( $logout, $response );
+
+                unless ($result) {
                     $self->lmLog( "Signature is not valid", 'error' );
                     return PE_SAML_SIGNATURE_ERROR;
                 }
@@ -1302,6 +1318,7 @@ sub authLogout {
 
         $self->{postUrl} = $slo_url;
         $self->{postFields} = { 'SAMLRequest' => $slo_body };
+
         # RelayState
         $self->{postFields}->{'RelayState'} = $logout->msg_relayState
           if ( $logout->msg_relayState );

@@ -9,7 +9,7 @@ use strict;
 use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::AuthNull;
 
-our $VERSION = '1.2.2';
+our $VERSION = '1.2.2_01';
 our @ISA     = qw(Lemonldap::NG::Portal::AuthNull);
 
 *authenticate = *extractFormInfo;
@@ -35,7 +35,7 @@ sub extractFormInfo {
     }
     else {
         $self->_sub( 'userError',
-            "No certificate found for $ENV{REMOTE_ADDR}" );
+            "No certificate found for " . $self->ipAddr );
         return PE_CERTIFICATEREQUIRED;
     }
 }

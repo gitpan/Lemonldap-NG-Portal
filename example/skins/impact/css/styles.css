@@ -286,6 +286,8 @@ div.application {
 	padding:5px;
 	float:left;
 	width:200px;
+	height:70px;
+	overflow:hidden;
 }
 
 div.application:hover {

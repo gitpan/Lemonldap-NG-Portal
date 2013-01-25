@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::_CAS;
 use strict;
 use LWP::UserAgent;
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.2.2_01';
 
 ## @method hashref getCasSession(string id)
 # Try to recover the CAS session corresponding to id and return session datas

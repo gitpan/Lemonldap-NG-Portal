@@ -14,7 +14,7 @@ use Encode;
 use strict;
 
 our @EXPORT   = qw(ldap);
-our $VERSION  = '1.2.2';
+our $VERSION = '1.2.2_01';
 our $ppLoaded = 0;
 
 BEGIN {
@@ -170,14 +170,18 @@ sub userBind {
         if ( $resp->grace_authentications_remaining ) {
             $self->{portal}->info( "<h3>"
                   . $resp->grace_authentications_remaining . " "
-                  . $self->msg(PM_PP_GRACE)
+                  . $self->{portal}->msg(PM_PP_GRACE)
                   . "</h3>" );
         }
         if ( $resp->time_before_expiration ) {
-            $self->{portal}->info( "<h3>"
-                  . $resp->time_before_expiration . " "
-                  . $self->msg(PM_PP_EXP_WARNING)
-                  . "</h3>" );
+            $self->{portal}->info(
+                "<h3>"
+                  . sprintf(
+                    $self->{portal}->msg(PM_PP_EXP_WARNING),
+                    $self->{portal}->convertSec( $resp->time_before_expiration )
+                  )
+                  . "</h3>"
+            );
         }
 
         my $pp_error = $resp->pp_error;
@@ -256,8 +260,7 @@ sub userModifyPassword {
             return PE_BADOLDPASSWORD if ( $mesg->code == 53 );
         }
         else {
-            if ( $self->{portal}->{portalRequireOldPassword} )
-            {
+            if ( $self->{portal}->{portalRequireOldPassword} ) {
 
                 return PE_MUST_SUPPLY_OLD_PASSWORD if ( !$oldpassword );
 
@@ -413,11 +416,7 @@ sub ldap {
 # @param attributes to get from found groups (array ref)
 # @return string groups separated with multiValuesSeparator
 sub searchGroups {
-    my $self       = shift;
-    my $base       = shift;
-    my $key        = shift;
-    my $value      = shift;
-    my $attributes = shift;
+    my ( $self, $base, $key, $value, $attributes ) = splice @_;
 
     my $portal = $self->{portal};
     my $groups;
@@ -500,9 +499,7 @@ sub searchGroups {
 # @param attribute Attribute name
 # @return string value
 sub getLdapValue {
-    my $self      = shift;
-    my $entry     = shift;
-    my $attribute = shift;
+    my ( $self, $entry, $attribute ) = splice @_;
 
     return $entry->dn() if ( $attribute eq "dn" );
 

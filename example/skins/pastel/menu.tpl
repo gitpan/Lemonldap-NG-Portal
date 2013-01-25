@@ -42,7 +42,7 @@
 		<TMPL_IF NAME="category">
 		<!-- Category -->
 
-		<div class="category cat-level-<TMPL_VAR NAME="catlevel"> <TMPL_VAR NAME="catid">">
+		<div class="category cat-level-<TMPL_VAR NAME="catlevel"> <TMPL_VAR NAME="catid">" id="sort_<TMPL_VAR NAME="__counter__">">
 		<h3 class="catname"><TMPL_VAR NAME="catname"></h3>
 
 		<TMPL_IF applications>
