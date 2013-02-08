@@ -20,7 +20,7 @@ use URI;                   # Get metadata URL path
 # Special comments for doxygen
 #inherits Lemonldap::NG::Common::Conf::SAML::Metadata protected service_metadata
 
-our $VERSION = '1.2.2_01';
+our $VERSION = '1.2.3';
 our $samlCache;
 our $initGlibDone;
 
@@ -792,10 +792,13 @@ sub createAuthnRequest {
     }
 
     # Set RelayState
-    if ( my $relaystate = $self->storeRelayState(qw /urldc checkLogins/) ) {
-        $login->msg_relayState($relaystate);
-        $self->lmLog( "Set $relaystate in RelayState", 'debug' );
+    my $infos;
+    foreach (qw /urldc checkLogins/) {
+        $infos->{$_} = $self->{$_} if $self->{$_};
     }
+    my $relaystate = $self->storeRelayState($infos);
+    $login->msg_relayState($relaystate);
+    $self->lmLog( "Set $relaystate in RelayState", 'debug' );
 
     # Customize request
     my $request = $login->request();
@@ -1160,14 +1163,7 @@ sub acceptSSO {
 # corresponding session_id
 # @param infos HASH reference of information
 sub storeRelayState {
-    my ( $self, @data ) = splice @_;
-
-    # check if there are data to store
-    my $infos;
-    foreach (@data) {
-        $infos->{$_} = $self->{$_} if $self->{$_};
-    }
-    return unless ($infos);
+    my ( $self, $infos ) = splice @_;
 
     # Create relaystate session
     my $samlSessionInfo = $self->getSamlSession();
@@ -1216,14 +1212,7 @@ sub extractRelayState {
         $self->{$_} = $samlSessionInfo->{$_};
     }
 
-    # delete relaystate session
-    eval { tied(%$samlSessionInfo)->delete(); };
-    if ($@) {
-        $self->lmLog( "Unable to delete relaystate $relaystate", 'error' );
-    }
-    else {
-        $self->lmLog( "Relaystate $relaystate was deleted", 'debug' );
-    }
+    untie %$samlSessionInfo;
 
     return 1;
 }
@@ -1370,10 +1359,13 @@ sub createLogoutRequest {
     }
 
     # Set RelayState
-    if ( my $relaystate = $self->storeRelayState(qw /urldc/) ) {
-        $logout->msg_relayState($relaystate);
-        $self->lmLog( "Set $relaystate in RelayState", 'debug' );
+    my $infos;
+    foreach (qw /urldc checkLogins/) {
+        $infos->{$_} = $self->{$_} if $self->{$_};
     }
+    my $relaystate = $self->storeRelayState($infos);
+    $logout->msg_relayState($relaystate);
+    $self->lmLog( "Set $relaystate in RelayState", 'debug' );
 
     # Signature
     if ( $signSLOMessage == 0 ) {
@@ -3337,15 +3329,57 @@ L<Lemonldap::NG::Portal::AuthSAML>, L<Lemonldap::NG::Portal::UserDBSAML>
 
 =head1 AUTHOR
 
-Xavier Guimard, E<lt>x.guimard@free.frE<gt>,
-Clement Oudot, E<lt>coudot@linagora.comE<gt>
+=over
+
+=item Clement Oudot, E<lt>clem.oudot@gmail.comE<gt>
+
+=item François-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
+
+=item Xavier Guimard, E<lt>x.guimard@free.frE<gt>
+
+=item Sandro Cazzaniga, E<lt>cazzaniga.sandro@gmail.comE<gt>
+
+=item Thomas Chemineau, E<lt>thomas.chemineau@gmail.comE<gt>
+
+=back
+
+=head1 BUG REPORT
+
+Use OW2 system to report bug or ask for features:
+L<http://jira.ow2.org>
+
+=head1 DOWNLOAD
+
+Lemonldap::NG is available at
+L<http://forge.objectweb.org/project/showfiles.php?group_id=274>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009, 2010 by Xavier Guimard, Clement Oudot
+=over
+
+=item Copyright (C) 2009, 2010, 2011, 2012 by Xavier Guimard, E<lt>x.guimard@free.frE<gt>
+
+=item Copyright (C) 2012 by Sandro Cazzaniga, E<lt>cazzaniga.sandro@gmail.comE<gt>
+
+=item Copyright (C) 2012 by François-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
+
+=item Copyright (C) 2010, 2011, 2012, 2013 by Clement Oudot, E<lt>clem.oudot@gmail.comE<gt>
+
+=item Copyright (C) 2010, 2011 by Thomas Chemineau, E<lt>thomas.chemineau@gmail.comE<gt>
+
+=back
 
 This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.10.0 or,
-at your option, any later version of Perl 5 you may have available.
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2, or (at your option)
+any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see L<http://www.gnu.org/licenses/>.
 
 =cut

@@ -44,7 +44,7 @@ use Digest::MD5;
 #inherits Lemonldap::NG::Portal::IssuerDBOpenID
 #inherits Lemonldap::NG::Portal::IssuerDBSAML
 #inherits Lemonldap::NG::Portal::Menu
-#link Lemonldap::NG::Common::Notification protected notification
+#link Lemonldap::NG::Portal::Notification protected notification
 #inherits Lemonldap::NG::Portal::PasswordDBChoice;
 #inherits Lemonldap::NG::Portal::PasswordDBDBI;
 #inherits Lemonldap::NG::Portal::PasswordDBLDAP;
@@ -63,7 +63,7 @@ use Digest::MD5;
 #inherits Apache::Session
 #link Lemonldap::NG::Common::Apache::Session::SOAP protected globalStorage
 
-our $VERSION = '1.2.2_01';
+our $VERSION = '1.2.3';
 
 use base qw(Lemonldap::NG::Common::CGI Exporter);
 our @ISA;
@@ -145,8 +145,6 @@ use constant {
     PE_RADIUSCONNECTFAILED              => 73,
     PE_MUST_SUPPLY_OLD_PASSWORD         => 74,
     PE_FORBIDDENIP                      => 75,
-    PE_CAPTCHAERROR                     => 76,
-    PE_CAPTCHAEMPTY                     => 77,
 
     # Portal messages
     PM_USER                  => 0,
@@ -195,7 +193,7 @@ our @EXPORT = qw( PE_IMG_NOK PE_IMG_OK PE_INFO PE_REDIRECT PE_DONE PE_OK
   PE_MISSINGREQATTR PE_BADPARTNER PE_MAILCONFIRMATION_ALREADY_SENT
   PE_PASSWORDFORMEMPTY PE_CAS_SERVICE_NOT_ALLOWED PE_MAILFIRSTACCESS
   PE_MAILNOTFOUND PE_PASSWORDFIRSTACCESS PE_MAILCONFIRMOK
-  PE_MUST_SUPPLY_OLD_PASSWORD PE_FORBIDDENIP PE_CAPTCHAERROR PE_CAPTCHAEMPTY
+  PE_MUST_SUPPLY_OLD_PASSWORD PE_FORBIDDENIP
   PM_USER PM_DATE PM_IP PM_SESSIONS_DELETED PM_OTHER_SESSIONS
   PM_REMOVE_OTHER_SESSIONS PM_PP_GRACE PM_PP_EXP_WARNING
   PM_SAML_IDPSELECT PM_SAML_IDPCHOOSEN PM_REMEMBERCHOICE PM_SAML_SPLOGOUT
@@ -404,7 +402,7 @@ sub new {
 
     # Notifications
     if ( $self->{notification} ) {
-        require Lemonldap::NG::Common::Notification;
+        require Lemonldap::NG::Portal::Notification;
         my $tmp;
 
         # Use configuration options
@@ -435,8 +433,8 @@ sub new {
         }
 
         $tmp->{p}            = $self;
-        $self->{notifObject} = Lemonldap::NG::Common::Notification->new($tmp);
-        $self->abort($Lemonldap::NG::Common::Notification::msg)
+        $self->{notifObject} = Lemonldap::NG::Portal::Notification->new($tmp);
+        $self->abort($Lemonldap::NG::Portal::Notification::msg)
           unless ( $self->{notifObject} );
     }
 
@@ -458,16 +456,10 @@ sub new {
     $self->{trustedDomains} = "*"
       if ( $self->{trustedDomains} =~ /(^|\s)\*(\s|$)/ );
     if ( $self->{trustedDomains} and $self->{trustedDomains} ne "*" ) {
-        $self->{trustedDomains} =~ s#(^|\s+)\.#[^/]+.#g;
+        $self->{trustedDomains} =~ s#(^|\s+)\.#${1}[^/]+.#g;
         $self->{trustedDomains} =
           '(' . join( '|', split( /\s+/, $self->{trustedDomains} ) ) . ')';
         $self->{trustedDomains} =~ s/\./\\./g;
-    }
-
-    # init the captcha feature if it's enabled
-    if ( $self->{captcha_enabled} ) {
-        eval $self->initCaptcha();
-        $self->lmLog( "Can't init captcha: $@", "error" );
     }
 
     return $self;
@@ -646,13 +638,6 @@ sub setDefaultValues {
     $self->{ldapPasswordResetAttributeValue} ||= "TRUE";
     $self->{mailOnPasswordChange}            ||= 0;
 
-    # Captcha parameters
-    $self->{captcha_enabled} = 0;
-    $self->{captcha_size}    = 6;
-    $self->{captcha_output} =
-      '/usr/local/lemonldap-ng/htdocs/portal/captcha_output/';
-    $self->{captcha_data} = '/usr/local/lemonldap-ng/data/captcha/data/';
-
     # Notification
     $self->{notificationWildcard} ||= "allusers";
 
@@ -759,41 +744,6 @@ sub buildHiddenForm {
     }
 
     return $val;
-}
-
-## @method void initCaptcha(void)
-# init captcha module and generate captcha
-# @return nothing
-sub initCaptcha {
-    require Authen::Captcha;
-
-    my $self = shift;
-
-    # Store captcha data
-    opendir( OUTPUT, $self->{captcha_output} )
-      or $self->lmLog( "Can't open captcha output dir", "error" );
-    opendir( DATA, $self->{captcha_data} )
-      or $self->lmLog( "Can't open captcha data dir", "error" );
-
-    # Clean previous captcha datas
-    foreach ( readdir(OUTPUT) ) {
-        next if ( $_ eq ".." or $_ eq "." );
-        system("rm -f $_ &>/dev/null")
-          or $self->lmLog( "Can't clean captcha output dir!", "warn" );
-    }
-
-    # Build Authen::Captcha object
-    $self->{captcha} = Authen::Captcha->new(
-        data_folder   => $self->{captcha_data},
-        output_folder => $self->{captcha_output}
-    );
-
-    # Generate a new captcha from captcha object
-    $self->{captcha_code} =
-      $self->{captcha}->generate_code( $self->{captcha_size} );
-    $self->{captcha_img} = "/captcha_output/" . $self->{captcha_code} . ".png";
-
-    closedir(DATA) and closedir(OUTPUT);
 }
 
 ## @method boolean isTrustedUrl(string url)
@@ -1644,7 +1594,7 @@ sub controlUrlOrigin {
 
 ##@apmethod int checkNotifBack()
 # Checks if a message has been notified to the connected user.
-# Call Lemonldap::NG::Common::Notification::checkNotification()
+# Call Lemonldap::NG::Portal::Notification::checkNotification()
 #@return Lemonldap::NG::Portal error code
 sub checkNotifBack {
     my $self = shift;
@@ -2500,7 +2450,7 @@ sub buildCookie {
 
 ##@apmethod int checkNotification()
 # Check if messages has to be notified.
-# Call Lemonldap::NG::Common::Notification::getNotification().
+# Call Lemonldap::NG::Portal::Notification::getNotification().
 #@return Lemonldap::NG::Portal constant
 sub checkNotification {
     my $self = shift;
@@ -3025,7 +2975,19 @@ L<http://lemonldap-ng.org/>
 
 =head1 AUTHOR
 
-Xavier Guimard, E<lt>x.guimard@free.frE<gt>
+=over
+
+=item Clement Oudot, E<lt>clem.oudot@gmail.comE<gt>
+
+=item François-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
+
+=item Xavier Guimard, E<lt>x.guimard@free.frE<gt>
+
+=item Sandro Cazzaniga, E<lt>cazzaniga.sandro@gmail.comE<gt>
+
+=item Thomas Chemineau, E<lt>thomas.chemineau@gmail.comE<gt>
+
+=back
 
 =head1 BUG REPORT
 
@@ -3039,11 +3001,31 @@ L<http://forge.objectweb.org/project/showfiles.php?group_id=274>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2005, 2009, 2010 by Xavier Guimard E<lt>x.guimard@free.frE<gt> and
-Clement Oudot, E<lt>coudot@linagora.comE<gt>
+=over
+
+=item Copyright (C) 2006, 2007, 2008, 2009, 2010, 2012 by Xavier Guimard, E<lt>x.guimard@free.frE<gt>
+
+=item Copyright (C) 2012 by Sandro Cazzaniga, E<lt>cazzaniga.sandro@gmail.comE<gt>
+
+=item Copyright (C) 2012, 2012, 2013 by François-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
+
+=item Copyright (C) 2006, 2008, 2009, 2010, 2011, 2012, 2012, 2013 by Clement Oudot, E<lt>clem.oudot@gmail.comE<gt>
+
+=item Copyright (C) 2010, 2011 by Thomas Chemineau, E<lt>thomas.chemineau@gmail.comE<gt>
+
+=back
 
 This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.10.0 or,
-at your option, any later version of Perl 5 you may have available.
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2, or (at your option)
+any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see L<http://www.gnu.org/licenses/>.
 
 =cut

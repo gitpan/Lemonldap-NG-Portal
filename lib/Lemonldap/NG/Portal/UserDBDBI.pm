@@ -9,7 +9,7 @@ use strict;
 use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_DBI;    #inherits
 
-our $VERSION = '1.2.2_01';
+our $VERSION = '1.2.3';
 
 ## @apmethod int userDBInit()
 # Set default values

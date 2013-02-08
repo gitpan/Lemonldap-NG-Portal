@@ -5,7 +5,7 @@
 # Alias for Lemonldap::NG::SharedConf
 package Lemonldap::NG::Portal;
 
-our $VERSION = '1.2.2_01';
+our $VERSION = '1.2.3';
 use Lemonldap::NG::Portal::SharedConf;
 use base 'Lemonldap::NG::Portal::SharedConf';
 
@@ -366,7 +366,8 @@ session information.
 =item * globalStorageOptions : parameters to bind to L<Apache::Session> module
 
 =item * locationRules : this parameter is used by L<Lemonldap::NG::Handler> to
-read the rules.
+read the rules. It can be set in the portal just to display protected sites by
+the function C<getProtectedSites>.
 
 =item * authentication: sheme to authenticate users (default: "ldap"). It can
 be set to:
@@ -410,6 +411,16 @@ configuration.
 
 =item * ldapPpolicyControl : set it to 1 if you want to use LDAP Password
 Policy
+
+=item * useLocalCachedConf : for each authentication, the portal process reads
+its configuration. With a shared configuration stored on a network and if the
+system has a heavy load and if you have a running L<Lemonldap::NG::Handler>
+instance on the same server, you can used the configuration stored in the local
+cache but setting this parameter to 1.
+
+=item * localStorage, localStorageOptions : if the above option is set to 1, you
+have to set the good values in those parameters. See L<Lemonldap::NG::Handler>
+for the syntax.
 
 =item * ldapGroupBase : this parameter can be used to store in the Lemonldap::NG
 groups system all the LDAP groups that contains the user. Set here the LDAP base
@@ -476,7 +487,15 @@ L<http://lemonldap-ng.org/>
 
 =head1 AUTHOR
 
-Xavier Guimard, E<lt>x.guimard@free.frE<gt>
+=over
+
+=item Clement Oudot, E<lt>clem.oudot@gmail.comE<gt>
+
+=item François-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
+
+=item Xavier Guimard, E<lt>x.guimard@free.frE<gt>
+
+=back
 
 =head1 BUG REPORT
 
@@ -490,10 +509,27 @@ L<http://forge.objectweb.org/project/showfiles.php?group_id=274>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2005, 2007, 2010 by Xavier Guimard E<lt>x.guimard@free.frE<gt>
+=over
+
+=item Copyright (C) 2006, 2007, 2008, 2009, 2010 by Xavier Guimard, E<lt>x.guimard@free.frE<gt>
+
+=item Copyright (C) 2012 by François-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
+
+=item Copyright (C) 2006, 2010, 2011, 2012 by Clement Oudot, E<lt>clem.oudot@gmail.comE<gt>
+
+=back
 
 This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.10.0 or,
-at your option, any later version of Perl 5 you may have available.
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2, or (at your option)
+any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see L<http://www.gnu.org/licenses/>.
 
 =cut

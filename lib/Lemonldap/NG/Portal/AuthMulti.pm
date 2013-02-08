@@ -7,7 +7,7 @@ package Lemonldap::NG::Portal::AuthMulti;
 
 use Lemonldap::NG::Portal::_Multi;    #inherits
 
-our $VERSION = '1.2.2_01';
+our $VERSION = '1.2.2';
 
 sub authInit {
     my $self = shift;

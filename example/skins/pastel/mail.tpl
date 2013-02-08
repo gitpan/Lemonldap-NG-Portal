@@ -20,12 +20,6 @@
                 <tr><th><lang en="Mail" fr="Adresse mail"/></th>
                 <td><input name="mail" type="text" value="<TMPL_VAR NAME="MAIL">"/></td>
                 </tr>
- 
-                <img src="<TMPL_VAR NAME=CAPTCHA_IMG>" />
-                <lang en="Enter the captcha: " fr="Entrez le captcha: " /> 
-                <input type="text" NAME="captcha_user_code" size="<TMPL_VAR NAME=CAPTCHA_SIZE>" />
-                <input type="hidden" NAME="captcha_code" value="<TMPL_VAR NAME=CAPTCHA_CODE>" />
- 
                 <tr><td colspan="2">
                 <div class="buttons">
                 <button type="submit" class="positive">

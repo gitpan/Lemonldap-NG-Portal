@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::MailReset;
 use strict;
 use warnings;
 
-our $VERSION = '1.2.2_01';
+our $VERSION = '1.2.2';
 
 use Lemonldap::NG::Portal::Simple qw(:all);
 use base qw(Lemonldap::NG::Portal::SharedConf Exporter);
@@ -29,8 +29,6 @@ use POSIX qw(strftime);
 #   - extractMailInfo
 #   - getMailUser
 #   - storeMailSession
-#   - initCaptcha
-#   - checkCaptcha
 #   - sendConfirmationMail
 #   - changePassword
 #   - sendPasswordMail
@@ -52,17 +50,15 @@ sub process {
 
     $self->{error} = $self->_subProcess(
         qw(smtpInit userDBInit passwordDBInit extractMailInfo
-          getMailUser initCaptcha checkCaptcha setSessionInfo
-          setMacros setGroups setPersistentSessionInfo setLocalGroups
-          storeMailSession sendConfirmationMail changePassword sendPasswordMail)
+          getMailUser setSessionInfo setMacros setGroups
+          setPersistentSessionInfo setLocalGroups storeMailSession
+          sendConfirmationMail changePassword sendPasswordMail)
     );
 
     return (
         (
                  $self->{error} <= 0
               or $self->{error} == PE_PASSWORD_OK
-              or $self->{error} == PE_CAPTCHAERROR
-              or $self->{error} == PE_CAPTCHAEMPTY
               or $self->{error} == PE_MAILCONFIRMOK
               or $self->{error} == PE_MAILOK
         ) ? 0 : 1
@@ -439,7 +435,19 @@ L<http://lemonldap-ng.org/>
 
 =head1 AUTHOR
 
-Clement Oudot, E<lt>clement@oodo.netE<gt>
+=over
+
+=item Clement Oudot, E<lt>clem.oudot@gmail.comE<gt>
+
+=item François-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
+
+=item Xavier Guimard, E<lt>x.guimard@free.frE<gt>
+
+=item Sandro Cazzaniga, E<lt>cazzaniga.sandro@gmail.comE<gt>
+
+=item Thomas Chemineau, E<lt>thomas.chemineau@gmail.comE<gt>
+
+=back
 
 =head1 BUG REPORT
 
@@ -453,11 +461,31 @@ L<http://forge.objectweb.org/project/showfiles.php?group_id=274>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2005, 2009, 2010 by Xavier Guimard E<lt>x.guimard@free.frE<gt> and
-Clement Oudot, E<lt>clement@oodo.netE<gt>
+=over
+
+=item Copyright (C) 2010, 2012 by Xavier Guimard, E<lt>x.guimard@free.frE<gt>
+
+=item Copyright (C) 2012 by Sandro Cazzaniga, E<lt>cazzaniga.sandro@gmail.comE<gt>
+
+=item Copyright (C) 2012 by François-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
+
+=item Copyright (C) 2010, 2011, 2012 by Clement Oudot, E<lt>clem.oudot@gmail.comE<gt>
+
+=item Copyright (C) 2011 by Thomas Chemineau, E<lt>thomas.chemineau@gmail.comE<gt>
+
+=back
 
 This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.10.0 or,
-at your option, any later version of Perl 5 you may have available.
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2, or (at your option)
+any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see L<http://www.gnu.org/licenses/>.
 
 =cut
