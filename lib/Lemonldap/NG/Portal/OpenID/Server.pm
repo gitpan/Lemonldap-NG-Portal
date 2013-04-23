@@ -218,6 +218,8 @@ sub _mode_checkid {
 1;
 __END__
 
+=encoding utf8
+
 =head1 NAME
 
 Lemonldap::NG::Portal::OpenID::Server - Add capability to manage extensions to

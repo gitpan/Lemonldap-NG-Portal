@@ -12,7 +12,7 @@ package Lemonldap::NG::Portal::_Multi;
 
 use Lemonldap::NG::Portal::Simple;
 
-our $VERSION = '1.2.2';
+our $VERSION = '1.2.4';
 
 ## @cmethod Lemonldap::NG::Portal::_Multi new(Lemonldap::NG::Portal::Simple portal)
 # Constructor
@@ -69,7 +69,7 @@ sub try {
     my $ci;
 
     # Store last module used
-    $self->{last}->[$type] = $old;
+    $self->{last}->[$type] = $self->{stack}->[$type]->[0]->{m};
 
     if ( $ci = $self->{p}->safe->reval( $self->{stack}->[$type]->[0]->{c} ) ) {
 

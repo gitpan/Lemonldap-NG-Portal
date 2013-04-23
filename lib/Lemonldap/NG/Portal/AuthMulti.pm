@@ -7,7 +7,7 @@ package Lemonldap::NG::Portal::AuthMulti;
 
 use Lemonldap::NG::Portal::_Multi;    #inherits
 
-our $VERSION = '1.2.2';
+our $VERSION = '1.2.4';
 
 sub authInit {
     my $self = shift;
@@ -46,10 +46,7 @@ sub authForce {
 
 sub getDisplayType {
     my $self = shift;
-    my $s =
-        "Lemonldap::NG::Portal::Auth"
-      . $self->{_multi}->{last}->[0]
-      . "::getDisplayType";
+    my $s    = $self->{_multi}->{last}->[0] . "::getDisplayType";
     return &{$s};
 }
 

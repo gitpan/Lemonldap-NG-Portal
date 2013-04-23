@@ -47,8 +47,8 @@ WriteMakefile(
         'CGI'                    => 3.08,
         'Clone'                  => 0,
         'HTML::Template'         => 0,
-        'Lemonldap::NG::Common'  => '1.2.3',
-        'Lemonldap::NG::Handler' => '1.2.3',
+        'Lemonldap::NG::Common'  => '1.2.4',
+        'Lemonldap::NG::Handler' => '1.2.4',
         'Net::LDAP'              => 0.38,
     },
     (
