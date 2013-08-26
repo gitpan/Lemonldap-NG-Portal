@@ -5,7 +5,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 11;
+use Test::More tests => 13;
 
 BEGIN { use_ok( 'Lemonldap::NG::Portal::Simple', ':all' ) }
 
@@ -89,12 +89,34 @@ $p->{store}          = sub {
 };
 $p->{authenticate} = sub { PE_OK };
 $p->{authFinish}   = sub { PE_OK };
+
+$p->{macros} = {
+    macro1 => '"foo"',
+    macro2 => '$macro1',
+    macro3 => '$macro2',
+    macro4 => '$macro3',
+};
+$p->{groups} = {
+    group1 => '1',
+    group2 => '$groups =~ /\bgroup1\b/',
+    group3 => '$groups =~ /\bgroup2\b/',
+    group4 => '$groups =~ /\bgroup3\b/',
+};
+
 ok( $p->process > 0, 'User OK' );
+ok(
+    $p->{sessionInfo}->{macro4} eq "foo",
+    "Macros computed in alphanumeric order"
+);
+ok(
+    $p->{sessionInfo}->{groups} =~ /\bgroup4\b/,
+    "Groups computed in alphanumeric order"
+);
 
 # Cookie test
 ok( $p->{cookie}->[0]->value eq '1', 'Cookie value' );
 
 # Time conversion
-my ($d, $h, $m, $s) = $p->convertSec('123456');
-ok( $d == 1 && $h == 10 && $m == 17 && $s == 36, 'Time conversion');
+my ( $d, $h, $m, $s ) = $p->convertSec('123456');
+ok( $d == 1 && $h == 10 && $m == 17 && $s == 36, 'Time conversion' );
 

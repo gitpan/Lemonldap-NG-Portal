@@ -15,7 +15,9 @@ WriteMakefile(
             'Glib'                        => 0,
             'HTTP::Message'               => 0,
             'Lasso'                       => '2.3.0',
+            'Lemonldap::NG::Handler'      => '1.2.5',
             'LWP'                         => 0,
+            'LWP::Protocol::https'        => 0,
             'MIME::Lite'                  => 0,
             'Net::OpenID::Consumer'       => 0,
             'Net::OpenID::Server'         => 0,
@@ -44,12 +46,11 @@ WriteMakefile(
         'XML::Simple'           => 0,
     },
     PREREQ_PM => {
-        'CGI'                    => 3.08,
-        'Clone'                  => 0,
-        'HTML::Template'         => 0,
-        'Lemonldap::NG::Common'  => '1.2.4',
-        'Lemonldap::NG::Handler' => '1.2.4',
-        'Net::LDAP'              => 0.38,
+        'CGI'                   => 3.08,
+        'Clone'                 => 0,
+        'HTML::Template'        => 0,
+        'Lemonldap::NG::Common' => '1.2.5',
+        'Net::LDAP'             => 0.38,
     },
     (
         $] >= 5.005

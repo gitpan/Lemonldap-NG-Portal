@@ -14,7 +14,7 @@ use Lemonldap::NG::Common::Conf::Constants; #inherits
 *EXPORT_TAGS = *Lemonldap::NG::Portal::Simple::EXPORT_TAGS;
 *EXPORT      = *Lemonldap::NG::Portal::Simple::EXPORT;
 
-our $VERSION = '1.2.0';
+our $VERSION = '1.2.5';
 use base qw(Lemonldap::NG::Portal::Simple);
 our $confCached;
 
@@ -41,6 +41,10 @@ sub getConf {
     }
     else {
         %args = @_;
+    }
+
+    if ( defined( $args{configStorage} ) ) {
+        $self->{configStorage} = $args{configStorage};
     }
 
     my $num = $self->__lmConf->lastCfg;

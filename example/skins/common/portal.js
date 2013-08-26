@@ -36,7 +36,7 @@ $(document).ready(function(){
 		opacity: 0.5,
 		revert: true,
 		items: "> div.category",
-		update: function(){ getOrder(); },
+		update: function(){ getOrder(); }
 	});
 
 	restoreOrder();
@@ -100,7 +100,7 @@ function getOrder() {
 		type:"POST",
 		url:scriptname,
 		data:{storeAppsListOrder:$(setSelector).sortable("toArray").join()},
-		dataType:'json',
+		dataType:'json'
 	});
 }
 

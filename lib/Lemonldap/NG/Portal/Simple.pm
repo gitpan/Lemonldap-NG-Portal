@@ -63,7 +63,7 @@ use Digest::MD5;
 #inherits Apache::Session
 #link Lemonldap::NG::Common::Apache::Session::SOAP protected globalStorage
 
-our $VERSION = '1.2.3';
+our $VERSION = '1.2.5';
 
 use base qw(Lemonldap::NG::Common::CGI Exporter);
 our @ISA;
@@ -1254,6 +1254,9 @@ sub safe {
         # Refresh the portal object inside it
         $safe->{p} = $self;
 
+        # Refresh environment variables
+        $safe->share_from( 'main', ['%ENV'] );
+
         return $safe;
     }
 
@@ -1429,7 +1432,7 @@ sub stamp {
 
 ## @method string convertSec(int sec)
 # Convert seconds to hours, minutes, seconds
-#Â @param $sec number of seconds
+# @param $sec number of seconds
 # @return a formated time
 sub convertSec {
     my ( $self, $sec ) = splice @_;
@@ -1455,6 +1458,31 @@ sub convertSec {
 
     # Return the date
     return ( $day, $hrs, $min, $sec );
+}
+
+## @method string getSkin()
+# Return skin name
+# @return skin name
+sub getSkin {
+    my ($self) = splice @_;
+
+    my $skin = $self->{portalSkin};
+
+    # Fill sessionInfo to eval rule if empty (unauthenticated user)
+    $self->{sessionInfo}->{_url}   ||= $self->{urldc};
+    $self->{sessionInfo}->{ipAddr} ||= $self->ipAddr;
+
+    # Load specific skin from skinRules
+    if ( $self->{portalSkinRules} ) {
+        foreach my $skinRule ( sort keys %{ $self->{portalSkinRules} } ) {
+            if ( $self->safe->reval($skinRule) ) {
+                $skin = $self->{portalSkinRules}->{$skinRule};
+                $self->lmLog( "Skin $skin selected from skin rule", 'debug' );
+            }
+        }
+    }
+
+    return $skin;
 }
 
 ###############################################################
@@ -2020,8 +2048,9 @@ sub setSessionInfo {
 #@return Lemonldap::NG::Portal constant
 sub setMacros {
     my $self = shift;
-    while ( my ( $n, $e ) = each( %{ $self->{macros} } ) ) {
-        $self->{sessionInfo}->{$n} = $self->safe->reval($e);
+    foreach ( sort keys %{ $self->{macros} } ) {
+        $self->{sessionInfo}->{$_} =
+          $self->safe->reval( $self->{macros}->{$_} );
     }
     PE_OK;
 }
@@ -2031,27 +2060,17 @@ sub setMacros {
 # * store all groups name that the user match in $self->{sessionInfo}->{groups}
 #@return Lemonldap::NG::Portal constant
 sub setLocalGroups {
-    my $self   = shift;
-    my $groups = "";
-    while ( my ( $group, $expr ) = each %{ $self->{groups} } ) {
-        $groups .= $group . $self->{multiValuesSeparator}
-          if ( $self->safe->reval($expr) );
+    my $self = shift;
+    foreach ( sort keys %{ $self->{groups} } ) {
+        $self->{sessionInfo}->{groups} .= $self->{multiValuesSeparator} . $_
+          if ( $self->safe->reval( $self->{groups}->{$_} ) );
     }
 
-    # Join local and UserDB groups
-    if ($groups) {
-        $self->{sessionInfo}->{groups} .=
-          $self->{multiValuesSeparator} . $groups;
-    }
-
-    # Clear values separator at begin or end
+    # Clear values separator at the beginning
     if ( $self->{sessionInfo}->{groups} ) {
         $self->{sessionInfo}->{groups} =~
           s/^\Q$self->{multiValuesSeparator}\E//;
-        $self->{sessionInfo}->{groups} =~
-          s/\Q$self->{multiValuesSeparator}\E$//;
     }
-
     PE_OK;
 }
 

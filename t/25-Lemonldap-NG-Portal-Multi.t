@@ -73,12 +73,6 @@ my ( $test, $testU );
     $INC{'Lemonldap/NG/Portal/UserDB3.pm'} = 't/25-Lemonldap-NG-Portal-Multi.t';
     $INC{'Lemonldap/NG/Portal/UserDB4.pm'} = 't/25-Lemonldap-NG-Portal-Multi.t';
 
-    open LOG, '>/tmp/log';
-    print LOG Dumper( \%INC );
-    use Data::Dumper;
-    $| = 1;
-    close LOG;
-
     ok(
         $p = My::Portal->new(
             {

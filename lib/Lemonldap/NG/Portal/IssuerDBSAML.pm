@@ -1628,7 +1628,7 @@ sub issuerForAuthUser {
             # log that a SAML authn response is build
             my $user = $self->{sessionInfo}->{ $self->{whatToTrace} };
             my $nameIDLog;
-            foreach my $format qw(persistent transient) {
+            foreach my $format (qw(persistent transient)) {
                 if ( $login->nameIdentifier->Format eq
                     $self->getNameIDFormat($format) )
                 {

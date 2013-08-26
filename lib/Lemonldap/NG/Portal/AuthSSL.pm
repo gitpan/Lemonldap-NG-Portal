@@ -34,8 +34,7 @@ sub extractFormInfo {
         return PE_OK;
     }
     else {
-        $self->_sub( 'userError',
-            "No certificate found for " . $self->ipAddr );
+        $self->_sub( 'userError', "No certificate found for " . $self->ipAddr );
         return PE_CERTIFICATEREQUIRED;
     }
 }

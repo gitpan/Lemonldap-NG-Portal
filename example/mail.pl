@@ -7,7 +7,6 @@ use strict;
 # Load portal module
 my $portal = Lemonldap::NG::Portal::MailReset->new();
 
-my $skin       = $portal->{portalSkin};
 my $skin_dir   = $portal->getApacheHtdocsPath() . "/skins";
 my $portal_url = $portal->{portal};
 my $portalPath = $portal->{portal};
@@ -16,6 +15,8 @@ $portalPath =~ s#[^/]+\.pl$##;
 
 # Process
 $portal->process();
+
+my $skin = $portal->getSkin();
 
 # Template creation
 my $template = HTML::Template->new(
