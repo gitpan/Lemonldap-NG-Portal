@@ -25,9 +25,12 @@ use Digest::MD5;
 # Special comments for doxygen
 #inherits Lemonldap::NG::Portal::_SOAP
 #inherits Lemonldap::NG::Portal::AuthApache;
+#inherits Lemonldap::NG::Portal::AuthAD;
 #inherits Lemonldap::NG::Portal::AuthCAS;
 #inherits Lemonldap::NG::Portal::AuthChoice;
 #inherits Lemonldap::NG::Portal::AuthDBI;
+#inherits Lemonldap::NG::Portal::AuthFacebook;
+#inherits Lemonldap::NG::Portal::AuthGoogle;
 #inherits Lemonldap::NG::Portal::AuthLDAP;
 #inherits Lemonldap::NG::Portal::AuthMulti;
 #inherits Lemonldap::NG::Portal::AuthNull;
@@ -44,13 +47,16 @@ use Digest::MD5;
 #inherits Lemonldap::NG::Portal::IssuerDBOpenID
 #inherits Lemonldap::NG::Portal::IssuerDBSAML
 #inherits Lemonldap::NG::Portal::Menu
-#link Lemonldap::NG::Portal::Notification protected notification
+#link Lemonldap::NG::Common::Notification protected notification
 #inherits Lemonldap::NG::Portal::PasswordDBChoice;
 #inherits Lemonldap::NG::Portal::PasswordDBDBI;
 #inherits Lemonldap::NG::Portal::PasswordDBLDAP;
 #inherits Lemonldap::NG::Portal::PasswordDBNull;
+#inherits Lemonldap::NG::Portal::UserDBAD;
 #inherits Lemonldap::NG::Portal::UserDBChoice;
 #inherits Lemonldap::NG::Portal::UserDBDBI;
+#inherits Lemonldap::NG::Portal::UserDBFacebook;
+#inherits Lemonldap::NG::Portal::UserDBGoogle;
 #inherits Lemonldap::NG::Portal::UserDBLDAP;
 #inherits Lemonldap::NG::Portal::UserDBMulti;
 #inherits Lemonldap::NG::Portal::UserDBNull;
@@ -63,7 +69,7 @@ use Digest::MD5;
 #inherits Apache::Session
 #link Lemonldap::NG::Common::Apache::Session::SOAP protected globalStorage
 
-our $VERSION = '1.2.5';
+our $VERSION = '1.3.0';
 
 use base qw(Lemonldap::NG::Common::CGI Exporter);
 our @ISA;
@@ -145,6 +151,8 @@ use constant {
     PE_RADIUSCONNECTFAILED              => 73,
     PE_MUST_SUPPLY_OLD_PASSWORD         => 74,
     PE_FORBIDDENIP                      => 75,
+    PE_CAPTCHAERROR                     => 76,
+    PE_CAPTCHAEMPTY                     => 77,
 
     # Portal messages
     PM_USER                  => 0,
@@ -193,12 +201,13 @@ our @EXPORT = qw( PE_IMG_NOK PE_IMG_OK PE_INFO PE_REDIRECT PE_DONE PE_OK
   PE_MISSINGREQATTR PE_BADPARTNER PE_MAILCONFIRMATION_ALREADY_SENT
   PE_PASSWORDFORMEMPTY PE_CAS_SERVICE_NOT_ALLOWED PE_MAILFIRSTACCESS
   PE_MAILNOTFOUND PE_PASSWORDFIRSTACCESS PE_MAILCONFIRMOK
-  PE_MUST_SUPPLY_OLD_PASSWORD PE_FORBIDDENIP
+  PE_MUST_SUPPLY_OLD_PASSWORD PE_FORBIDDENIP PE_CAPTCHAERROR PE_CAPTCHAEMPTY
   PM_USER PM_DATE PM_IP PM_SESSIONS_DELETED PM_OTHER_SESSIONS
   PM_REMOVE_OTHER_SESSIONS PM_PP_GRACE PM_PP_EXP_WARNING
   PM_SAML_IDPSELECT PM_SAML_IDPCHOOSEN PM_REMEMBERCHOICE PM_SAML_SPLOGOUT
   PM_REDIRECTION PM_BACKTOSP PM_BACKTOCASURL PM_LOGOUT PM_OPENID_EXCHANGE
   PM_CDC_WRITER PM_OPENID_RPNS PM_OPENID_PA PM_OPENID_AP PM_ERROR_MSG
+  PM_LAST_LOGINS PM_LAST_FAILED_LOGINS
 );
 our %EXPORT_TAGS = ( 'all' => [ @EXPORT, 'import' ], );
 
@@ -224,7 +233,7 @@ sub new {
     binmode( STDOUT, ":utf8" );
     my $class = shift;
     return $class if ( ref($class) );
-    my $self = $class->SUPER::new();
+    my $self = $class->SUPER::new() or return undef;
 
     # Reinit _url
     $self->{_url} = '';
@@ -402,7 +411,7 @@ sub new {
 
     # Notifications
     if ( $self->{notification} ) {
-        require Lemonldap::NG::Portal::Notification;
+        require Lemonldap::NG::Common::Notification;
         my $tmp;
 
         # Use configuration options
@@ -424,17 +433,17 @@ sub new {
             $tmp->{type} =~ s/.*:://;
             $tmp->{type} =~ s/(CDBI|RDBI)/DBI/;    # CDBI/RDBI are DBI
 
-            # If type not File or DBI, abort
-            $self->abort("Only File or DBI supported for Notifications")
-              unless $tmp->{type} =~ /^(File|DBI)$/;
+            # If type not File, DBI or LDAP, abort
+            $self->abort("Only File, DBI or LDAP supported for Notifications")
+              unless $tmp->{type} =~ /^(File|DBI|LDAP)$/;
 
             # Force table name
             $tmp->{table} = 'notifications';
         }
 
         $tmp->{p}            = $self;
-        $self->{notifObject} = Lemonldap::NG::Portal::Notification->new($tmp);
-        $self->abort($Lemonldap::NG::Portal::Notification::msg)
+        $self->{notifObject} = Lemonldap::NG::Common::Notification->new($tmp);
+        $self->abort($Lemonldap::NG::Common::Notification::msg)
           unless ( $self->{notifObject} );
     }
 
@@ -462,22 +471,29 @@ sub new {
         $self->{trustedDomains} =~ s/\./\\./g;
     }
 
+    # Init the captcha feature if it's enabled
+    if ( $self->{captcha_login_enabled} || $self->{captcha_mail_enabled} ) {
+        eval { $self->initCaptcha(); };
+        $self->lmLog( "Can't init captcha: $@", "error" ) if $@;
+    }
+
     return $self;
 }
 
-##@method boolean loadModule(string module)
+##@method boolean loadModule(string module, boolean ignoreError)
 # Load a module into portal namespace
 # @param module module name
+# @param ignoreError set to 1 if error should not appear in logs
 # @return boolean
 sub loadModule {
-    my ( $self, $module ) = splice @_;
+    my ( $self, $module, $ignoreError ) = splice @_;
 
     return 1 unless $module;
 
     # Load module test
     eval "require $module";
     if ($@) {
-        $self->lmLog( "$module load error: $@", 'error' );
+        $self->lmLog( "$module load error: $@", 'error' ) unless $ignoreError;
         return 0;
     }
 
@@ -543,8 +559,7 @@ sub setDefaultValues {
     $self->{cookieName}     ||= "lemonldap";
     $self->{authentication} ||= 'LDAP';
     $self->{authentication} =~ s/^ldap/LDAP/;
-    $self->{SMTPServer}     ||= 'localhost';
-    $self->{mailLDAPFilter} ||= '(&(mail=$mail)(objectClass=inetOrgPerson))';
+    $self->{SMTPServer}           ||= 'localhost';
     $self->{randomPasswordRegexp} ||= '[A-Z]{3}[a-z]{5}.\d{2}';
     $self->{mailFrom}             ||= "noreply@" . $self->{domain};
     $self->{mailSubject}          ||= "[LemonLDAP::NG] Your new password";
@@ -558,6 +573,8 @@ sub setDefaultValues {
     $self->{confirmFormMethod}  ||= "post";
     $self->{redirectFormMethod} ||= "get";
     $self->{authChoiceParam}    ||= "lmAuth";
+    $self->{hiddenAttributes} = "_password"
+      unless defined $self->{hiddenAttributes};
 
     # Set default userDB and passwordDB to DBI if authentication is DBI
     if ( $self->{authentication} =~ /DBI/i ) {
@@ -609,6 +626,8 @@ sub setDefaultValues {
       unless defined $self->{samlAuthnContextMapTLSClient};
     $self->{samlAuthnContextMapKerberos} = 4
       unless defined $self->{samlAuthnContextMapKerberos};
+    $self->{samlRelayStateTimeout} = 600
+      unless defined $self->{samlRelayStateTimeout};
 
     # CAS
     $self->{casStorage} ||= $self->{globalStorage};
@@ -621,13 +640,16 @@ sub setDefaultValues {
     $self->{ldapAuthnLevel}   = 2 unless defined $self->{ldapAuthnLevel};
     $self->{dbiAuthnLevel}    = 2 unless defined $self->{dbiAuthnLevel};
     $self->{SSLAuthnLevel}    = 5 unless defined $self->{SSLAuthnLevel};
-    $self->{CAS_authnLevel}   = 1 unless defined $self->{CAS_authnLevel};
-    $self->{openIdAuthnLevel} = 1 unless defined $self->{openIdAuthnLevel};
-    $self->{twitterAuthnLevel} = 1
-      unless defined $self->{twitterAuthnLevel};
     $self->{apacheAuthnLevel} = 4 unless defined $self->{apacheAuthnLevel};
     $self->{nullAuthnLevel}   = 0 unless defined $self->{nullAuthnLevel};
     $self->{radiusAuthnLevel} = 3 unless defined $self->{radiusAuthnLevel};
+    foreach my $k (
+        qw(CAS_authnLevel openIdAuthnLevel twitterAuthnLevel googleAuthnLevel
+        facebookAuthnLevel)
+      )
+    {
+        $self->{$k} = 1 unless defined $self->{$k};
+    }
 
     # Other
     $self->{logoutServices} ||= {};
@@ -637,6 +659,13 @@ sub setDefaultValues {
     $self->{ldapPasswordResetAttribute}      ||= "pwdReset";
     $self->{ldapPasswordResetAttributeValue} ||= "TRUE";
     $self->{mailOnPasswordChange}            ||= 0;
+
+    # Captcha parameters
+    $self->{captcha_login_enabled} = 0
+      unless defined $self->{captcha_login_enabled};
+    $self->{captcha_mail_enabled} = 0
+      unless defined $self->{captcha_mail_enabled};
+    $self->{captcha_size} = 6 unless defined $self->{captcha_size};
 
     # Notification
     $self->{notificationWildcard} ||= "allusers";
@@ -734,16 +763,36 @@ sub buildHiddenForm {
           if $self->checkXSSAttack( $_, $self->{portalHiddenFormValues}->{$_} );
 
         # Build hidden input HTML code
-        $val .=
-            '<input type="hidden" name="' 
-          . $_ 
-          . '" id="' 
-          . $_
-          . '" value="'
+        $val .= qq{<input type="hidden" name="$_" id="$_" value="}
           . $self->{portalHiddenFormValues}->{$_} . '" />';
     }
 
     return $val;
+}
+
+## @method void initCaptcha(void)
+# init captcha module and generate captcha
+# @return nothing
+sub initCaptcha {
+    my $self = shift;
+
+    # Load module
+    require Authen::Captcha;
+
+    # Build Authen::Captcha object
+    $self->{captcha} = Authen::Captcha->new(
+        data_folder   => $self->{captcha_data},
+        output_folder => $self->{captcha_output}
+    );
+
+    # Generate a new captcha from captcha object
+    $self->{captcha_code} =
+      $self->{captcha}->generate_code( $self->{captcha_size} );
+    $self->{captcha_img} = "/captcha_output/" . $self->{captcha_code} . ".png";
+
+    $self->lmLog( "Captcha code generated: " . $self->{captcha_code}, 'debug' );
+
+    return;
 }
 
 ## @method boolean isTrustedUrl(string url)
@@ -872,6 +921,7 @@ sub error_type {
                 PE_NOTIFICATION,                  PE_BADURL,
                 PE_CONFIRM,                       PE_MAILFORMEMPTY,
                 PE_MAILCONFIRMATION_ALREADY_SENT, PE_PASSWORDFORMEMPTY,
+                PE_CAPTCHAEMPTY,
             )
         )
       );
@@ -1432,7 +1482,7 @@ sub stamp {
 
 ## @method string convertSec(int sec)
 # Convert seconds to hours, minutes, seconds
-# @param $sec number of seconds
+#Â @param $sec number of seconds
 # @return a formated time
 sub convertSec {
     my ( $self, $sec ) = splice @_;
@@ -1622,7 +1672,7 @@ sub controlUrlOrigin {
 
 ##@apmethod int checkNotifBack()
 # Checks if a message has been notified to the connected user.
-# Call Lemonldap::NG::Portal::Notification::checkNotification()
+# Call Lemonldap::NG::Common::Notification::checkNotification()
 #@return Lemonldap::NG::Portal error code
 sub checkNotifBack {
     my $self = shift;
@@ -2403,9 +2453,11 @@ sub store {
       or return PE_APACHESESSIONERROR;
     foreach my $k ( keys %{ $self->{sessionInfo} } ) {
         next unless defined $self->{sessionInfo}->{$k};
-        $self->lmLog(
-            "Store " . $self->{sessionInfo}->{$k} . " in session key $k",
-            'debug' );
+        my $displayValue = $self->{sessionInfo}->{$k};
+        if ( $self->{hiddenAttributes} =~ /\b$k\b/ ) {
+            $displayValue = '****';
+        }
+        $self->lmLog( "Store $displayValue in session key $k", 'debug' );
         $h->{$k} = $self->{sessionInfo}->{$k};
     }
     untie %$h;
@@ -2469,7 +2521,7 @@ sub buildCookie {
 
 ##@apmethod int checkNotification()
 # Check if messages has to be notified.
-# Call Lemonldap::NG::Portal::Notification::getNotification().
+# Call Lemonldap::NG::Common::Notification::getNotification().
 #@return Lemonldap::NG::Portal constant
 sub checkNotification {
     my $self = shift;
@@ -2697,7 +2749,7 @@ Lemonldap::NG::Portal::Simple - Base module for building Lemonldap::NG compatibl
   if($portal->process()) {
     # Write here the menu with CGI methods. This page is displayed ONLY IF
     # the user was not redirected here.
-    print $portal->header('text/html; charset=utf8'); # DON'T FORGET THIS (see L<CGI(3)>)
+    print $portal->header('text/html; charset=utf-8'); # DON'T FORGET THIS (see L<CGI(3)>)
     print "...";
 
     # or redirect the user to the menu
@@ -2707,7 +2759,7 @@ Lemonldap::NG::Portal::Simple - Base module for building Lemonldap::NG compatibl
     # Write here the html form used to authenticate with CGI methods.
     # $portal->error returns the error message if athentification failed
     # Warning: by defaut, input names are "user" and "password"
-    print $portal->header('text/html; charset=utf8'); # DON'T FORGET THIS (see L<CGI(3)>)
+    print $portal->header('text/html; charset=utf-8'); # DON'T FORGET THIS (see L<CGI(3)>)
     print "...";
     print '<form method="POST">';
     # In your form, the following value is required for redirection
@@ -2998,7 +3050,7 @@ L<http://lemonldap-ng.org/>
 
 =item Clement Oudot, E<lt>clem.oudot@gmail.comE<gt>
 
-=item François-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
+=item FranÃ§ois-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
 
 =item Xavier Guimard, E<lt>x.guimard@free.frE<gt>
 
@@ -3026,7 +3078,7 @@ L<http://forge.objectweb.org/project/showfiles.php?group_id=274>
 
 =item Copyright (C) 2012 by Sandro Cazzaniga, E<lt>cazzaniga.sandro@gmail.comE<gt>
 
-=item Copyright (C) 2012, 2012, 2013 by François-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
+=item Copyright (C) 2012, 2012, 2013 by FranÃ§ois-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
 
 =item Copyright (C) 2006, 2008, 2009, 2010, 2011, 2012, 2012, 2013 by Clement Oudot, E<lt>clem.oudot@gmail.comE<gt>
 

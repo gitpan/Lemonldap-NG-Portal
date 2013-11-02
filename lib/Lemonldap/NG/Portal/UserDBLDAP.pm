@@ -44,9 +44,16 @@ sub formateFilter {
       ? $self->{mailLDAPFilter}
       : $self->{AuthLDAPFilter}
       || $self->{LDAPFilter};
-    $self->lmLog( "LDAP submitted filter: " . $self->{LDAPFilter}, 'debug' )
-      if ( $self->{LDAPFilter} );
-    $self->{LDAPFilter} ||= '(&(uid=$user)(objectClass=inetOrgPerson))';
+    if ( $self->{LDAPFilter} ) {
+        $self->lmLog( "LDAP submitted filter: " . $self->{LDAPFilter},
+            'debug' );
+    }
+    else {
+        $self->{LDAPFilter} =
+          $self->{mail}
+          ? '(&(mail=$mail)(objectClass=inetOrgPerson))'
+          : '(&(uid=$user)(objectClass=inetOrgPerson))';
+    }
     $self->{LDAPFilter} =~ s/\$(user|_?password|mail)/$self->{$1}/g;
     $self->{LDAPFilter} =~ s/\$(\w+)/$self->{sessionInfo}->{$1}/g;
     $self->lmLog( "LDAP transformed filter: " . $self->{LDAPFilter}, 'debug' );

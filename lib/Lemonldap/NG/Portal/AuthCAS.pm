@@ -71,7 +71,7 @@ sub extractFormInfo {
 
         foreach ( keys %{ $self->{portalHiddenFormValues} } ) {
             $local_url .=
-                ( $local_url =~ /\?/ ? '&' : '?' ) 
+                ( $local_url =~ /\?/ ? '&' : '?' )
               . $_ . '='
               . uri_escape( $self->{portalHiddenFormValues}->{$_} );
         }
@@ -274,7 +274,7 @@ compatible portals with CAS authentication.
   if($portal->process()) {
     # Write here the menu with CGI methods. This page is displayed ONLY IF
     # the user was not redirected here.
-    print $portal->header('text/html; charset=utf8'); # DON'T FORGET THIS (see CGI(3))
+    print $portal->header('text/html; charset=utf-8'); # DON'T FORGET THIS (see CGI(3))
     print "...";
 
     # or redirect the user to the menu
@@ -282,7 +282,7 @@ compatible portals with CAS authentication.
   }
   else {
     # If the user enters here, IT MEANS THAT CAS REDIRECTION DOES NOT WORK
-    print $portal->header('text/html; charset=utf8'); # DON'T FORGET THIS (see CGI(3))
+    print $portal->header('text/html; charset=utf-8'); # DON'T FORGET THIS (see CGI(3))
     print "<html><body><h1>Unable to work</h1>";
     print "This server isn't well configured. Contact your administrator.";
     print "</body></html>";

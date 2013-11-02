@@ -55,8 +55,8 @@ sub authenticate {
     my $res = $self->{radius}->check_pwd( $self->{user}, $self->{password} );
 
     unless ( $res == 1 ) {
-        $self->lmLog( "Unable to authenticate " . $self->{user} . " !",
-            'notice' );
+        $self->_sub( 'userNotice',
+            "Unable to authenticate " . $self->{user} . " !" );
         return PE_BADCREDENTIALS;
     }
     return PE_OK;

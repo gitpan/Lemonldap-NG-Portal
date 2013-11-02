@@ -15,7 +15,7 @@ BEGIN { use_ok('Lemonldap::NG::Portal::SharedConf') }
 
 # Try to load an alternate conffile
 use File::Temp;
-my $dir = File::Temp->newdir();
+my $dir = File::Temp::tempdir();
 my $ini = File::Temp->new( DIR => $dir );
 
 print $ini "[all]

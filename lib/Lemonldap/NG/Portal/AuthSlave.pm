@@ -76,14 +76,14 @@ compatible portals with Apache authentication.
   if($portal->process()) {
     # Write here the menu with CGI methods. This page is displayed ONLY IF
     # the user was not redirected here.
-    print $portal->header('text/html; charset=utf8'); # DON'T FORGET THIS (see CGI(3))
+    print $portal->header('text/html; charset=utf-8'); # DON'T FORGET THIS (see CGI(3))
     print "...";
 
     # or redirect the user to the menu
     print $portal->redirect( -uri => 'https://portal/menu');
   }
   else {
-    print $portal->header('text/html; charset=utf8'); # DON'T FORGET THIS (see CGI(3))
+    print $portal->header('text/html; charset=utf-8'); # DON'T FORGET THIS (see CGI(3))
     print "<html><body><h1>Unable to work</h1>";
     print "This server isn't well configured. Contact your administrator.";
     print "</body></html>";
@@ -107,7 +107,7 @@ L<http://lemonldap-ng.org/>
 
 =item Clement Oudot, E<lt>clem.oudot@gmail.comE<gt>
 
-=item François-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
+=item FranÃ§ois-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
 
 =item Xavier Guimard, E<lt>x.guimard@free.frE<gt>
 
@@ -129,7 +129,7 @@ L<http://forge.objectweb.org/project/showfiles.php?group_id=274>
 
 =item Copyright (C) 2010 by Xavier Guimard, E<lt>x.guimard@free.frE<gt>
 
-=item Copyright (C) 2012 by François-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
+=item Copyright (C) 2012 by FranÃ§ois-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
 
 =item Copyright (C) 2011, 2012 by Clement Oudot, E<lt>clem.oudot@gmail.comE<gt>
 

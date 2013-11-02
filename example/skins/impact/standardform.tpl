@@ -7,10 +7,21 @@
           <input name="password" type="password" tabindex="2" /><br/>
         </p>
 
+        <TMPL_IF NAME=CAPTCHA_IMG>
+	<p>
+          <img src="<TMPL_VAR NAME=CAPTCHA_IMG>" />
+        </p>
+        <p>
+          <span class="text-label"><lang en="Captcha" fr="Captcha" /></span><br />
+          <input type="text" name="captcha_user_code" size="<TMPL_VAR NAME=CAPTCHA_SIZE>" tabindex="3" /><br />
+          <input type="hidden" name="captcha_code" value="<TMPL_VAR NAME=CAPTCHA_CODE>" />
+        </p>
+        </TMPL_IF>
+
         <TMPL_IF NAME="CHECK_LOGINS">
         <p>
         <label for="checkLogins">
-            <input type="checkbox" id="checkLogins" name="checkLogins" <TMPL_IF NAME="ASK_LOGINS">checked</TMPL_IF>/>
+            <input type="checkbox" id="checkLogins" name="checkLogins" <TMPL_IF NAME="ASK_LOGINS">checked</TMPL_IF> tabindex="4" />
             <lang en="Check my last logins" fr="Voir mes dernières connexions"/>
         </label>
         </p>
@@ -18,10 +29,10 @@
 
         <hr class="solid" />
         <div class="panel-buttons">
-          <button type="reset" class="negative" tabindex="4">
+          <button type="reset" class="negative" tabindex="10">
             <lang en="Cancel" fr="Annuler" />
           </button>
-          <button type="submit" class="positive" tabindex="3">
+          <button type="submit" class="positive" tabindex="8">
             <lang en="Connect" fr="Se connecter" />
           </button>
         </div>

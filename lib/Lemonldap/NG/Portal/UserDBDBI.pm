@@ -62,7 +62,7 @@ sub getUser {
     }
 
     unless ( $self->{entry} = $sth->fetchrow_hashref() ) {
-        $self->lmLog( "User $user not found", 'notice' );
+        $self->_sub( 'userNotice', "User $user not found" );
         return PE_BADCREDENTIALS;
     }
 
@@ -83,7 +83,7 @@ sub getUser {
         my $results;
 
         unless ( $results = $sth->fetchrow_hashref() ) {
-            $self->lmLog( "User $user not found", 'notice' );
+            $self->_sub( 'userNotice', "User $user not found" );
             return PE_BADCREDENTIALS;
         }
 

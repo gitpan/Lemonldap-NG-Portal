@@ -1,6 +1,7 @@
 Changes
 example/cas.pl
 example/cdc.pl
+example/index.fcgi
 example/index.pl
 example/index_simple.pl
 example/index_skin.pl
@@ -33,6 +34,10 @@ example/skins/common/apps/tools.png
 example/skins/common/apps/tux.png
 example/skins/common/apps/web.png
 example/skins/common/apps/wheels.png
+example/skins/common/browserid.js
+example/skins/common/BrowserID.png
+example/skins/common/browseridlogin.js
+example/skins/common/browseridlogout.js
 example/skins/common/bullet_go.png
 example/skins/common/buttons.css
 example/skins/common/calendar.png
@@ -41,13 +46,16 @@ example/skins/common/CAS.png
 example/skins/common/door_out.png
 example/skins/common/email.png
 example/skins/common/error.png
+example/skins/common/Facebook.png
 example/skins/common/favicon.ico
+example/skins/common/Google.png
 example/skins/common/inputicons.css
-example/skins/common/jquery-1.4.2.min.js
-example/skins/common/jquery-ui-1.8.5.custom.min.js
+example/skins/common/jquery-1.10.2.min.js
+example/skins/common/jquery-ui-1.10.3.custom.min.js
 example/skins/common/jquery.base64.js
 example/skins/common/jquery.cookie.js
 example/skins/common/key.png
+example/skins/common/lemonldap-ng_square.png
 example/skins/common/mail_confirm.tpl
 example/skins/common/mail_footer.tpl
 example/skins/common/mail_header.tpl
@@ -68,6 +76,7 @@ example/skins/common/vcard_edit.png
 example/skins/common/vcss-blue.gif
 example/skins/common/warning.png
 example/skins/common/warning_triangle.png
+example/skins/common/WebID.png
 example/skins/common/yubico-icon-small.gif
 example/skins/dark/confirm.tpl
 example/skins/dark/css/styles.css
@@ -141,6 +150,7 @@ example/skins/pastel/yubikeyform.tpl
 example/soapconfigtest.pl
 example/soaptest.pl
 lib/Lemonldap/NG/Portal.pm
+lib/Lemonldap/NG/Portal/_Browser.pm
 lib/Lemonldap/NG/Portal/_CAS.pm
 lib/Lemonldap/NG/Portal/_Choice.pm
 lib/Lemonldap/NG/Portal/_DBI.pm
@@ -155,11 +165,15 @@ lib/Lemonldap/NG/Portal/_Slave.pm
 lib/Lemonldap/NG/Portal/_SMTP.pm
 lib/Lemonldap/NG/Portal/_SOAP.pm
 lib/Lemonldap/NG/Portal/_WebForm.pm
+lib/Lemonldap/NG/Portal/AuthAD.pm
 lib/Lemonldap/NG/Portal/AuthApache.pm
+lib/Lemonldap/NG/Portal/AuthBrowserID.pm
 lib/Lemonldap/NG/Portal/AuthCAS.pm
 lib/Lemonldap/NG/Portal/AuthChoice.pm
 lib/Lemonldap/NG/Portal/AuthDBI.pm
 lib/Lemonldap/NG/Portal/AuthDemo.pm
+lib/Lemonldap/NG/Portal/AuthFacebook.pm
+lib/Lemonldap/NG/Portal/AuthGoogle.pm
 lib/Lemonldap/NG/Portal/AuthLDAP.pm
 lib/Lemonldap/NG/Portal/AuthMulti.pm
 lib/Lemonldap/NG/Portal/AuthNull.pm
@@ -171,6 +185,7 @@ lib/Lemonldap/NG/Portal/AuthSAML.pm
 lib/Lemonldap/NG/Portal/AuthSlave.pm
 lib/Lemonldap/NG/Portal/AuthSSL.pm
 lib/Lemonldap/NG/Portal/AuthTwitter.pm
+lib/Lemonldap/NG/Portal/AuthWebID.pm
 lib/Lemonldap/NG/Portal/AuthYubikey.pm
 lib/Lemonldap/NG/Portal/CDA.pm
 lib/Lemonldap/NG/Portal/CDC.pm
@@ -181,11 +196,9 @@ lib/Lemonldap/NG/Portal/IssuerDBOpenID.pm
 lib/Lemonldap/NG/Portal/IssuerDBSAML.pm
 lib/Lemonldap/NG/Portal/MailReset.pm
 lib/Lemonldap/NG/Portal/Menu.pm
-lib/Lemonldap/NG/Portal/Notification.pm
-lib/Lemonldap/NG/Portal/Notification/DBI.pm
-lib/Lemonldap/NG/Portal/Notification/File.pm
 lib/Lemonldap/NG/Portal/OpenID/Server.pm
 lib/Lemonldap/NG/Portal/OpenID/SREG.pm
+lib/Lemonldap/NG/Portal/PasswordDBAD.pm
 lib/Lemonldap/NG/Portal/PasswordDBChoice.pm
 lib/Lemonldap/NG/Portal/PasswordDBDBI.pm
 lib/Lemonldap/NG/Portal/PasswordDBDemo.pm
@@ -193,9 +206,12 @@ lib/Lemonldap/NG/Portal/PasswordDBLDAP.pm
 lib/Lemonldap/NG/Portal/PasswordDBNull.pm
 lib/Lemonldap/NG/Portal/SharedConf.pm
 lib/Lemonldap/NG/Portal/Simple.pm
+lib/Lemonldap/NG/Portal/UserDBAD.pm
 lib/Lemonldap/NG/Portal/UserDBChoice.pm
 lib/Lemonldap/NG/Portal/UserDBDBI.pm
 lib/Lemonldap/NG/Portal/UserDBDemo.pm
+lib/Lemonldap/NG/Portal/UserDBFacebook.pm
+lib/Lemonldap/NG/Portal/UserDBGoogle.pm
 lib/Lemonldap/NG/Portal/UserDBLDAP.pm
 lib/Lemonldap/NG/Portal/UserDBMulti.pm
 lib/Lemonldap/NG/Portal/UserDBNull.pm
@@ -204,6 +220,7 @@ lib/Lemonldap/NG/Portal/UserDBProxy.pm
 lib/Lemonldap/NG/Portal/UserDBRemote.pm
 lib/Lemonldap/NG/Portal/UserDBSAML.pm
 lib/Lemonldap/NG/Portal/UserDBSlave.pm
+lib/Lemonldap/NG/Portal/UserDBWebID.pm
 Makefile.PL
 MANIFEST			This list of files
 META.yml
@@ -221,8 +238,12 @@ t/24-Lemonldap-NG-Portal-AuthRemote.t
 t/25-Lemonldap-NG-Portal-Multi.t
 t/26-Lemonldap-NG-Portal-AuthChoice.t
 t/26-Lemonldap-NG-Portal-AuthProxy.t
+t/27-Lemonldap-NG-Portal-AuthFacebook.t
+t/27-Lemonldap-NG-Portal-AuthGoogle.t
 t/27-Lemonldap-NG-Portal-AuthOpenID.t
 t/27-Lemonldap-NG-Portal-IssuerDBOpenID.t
+t/27-Lemonldap-NG-Portal-UserDBFacebook.t
+t/27-Lemonldap-NG-Portal-UserDBGoogle.t
 t/27-Lemonldap-NG-Portal-UserDBOpenID.t
 t/30-Lemonldap-NG-Portal-UserDBNull.t
 t/40-Lemonldap-NG-Portal-CDA.t
@@ -232,4 +253,9 @@ t/61-Lemonldap-NG-Portal-SAML.t
 t/63-Lemonldap-NG-Portal-AuthSAML.t
 t/64-Lemonldap-NG-Portal-UserDBSAML.t
 t/65-Lemonldap-NG-Portal-IssuerDBCAS.t
+t/66-Lemonldap-NG-Portal-Captcha.t
+t/67-Lemonldap-NG-Portal-AuthBrowserID.t
 t/99-pod.t
+xt/PE_Constants.t
+xt/test-weaken-portal.t
+META.json                                Module JSON meta-data (added by MakeMaker)

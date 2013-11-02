@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::MailReset;
 use strict;
 use warnings;
 
-our $VERSION = '1.2.2';
+our $VERSION = '1.3.0';
 
 use Lemonldap::NG::Portal::Simple qw(:all);
 use base qw(Lemonldap::NG::Portal::SharedConf Exporter);
@@ -50,15 +50,16 @@ sub process {
 
     $self->{error} = $self->_subProcess(
         qw(smtpInit userDBInit passwordDBInit extractMailInfo
-          getMailUser setSessionInfo setMacros setGroups
-          setPersistentSessionInfo setLocalGroups storeMailSession
-          sendConfirmationMail changePassword sendPasswordMail)
+          getMailUser setSessionInfo setMacros setGroups setPersistentSessionInfo
+          setLocalGroups storeMailSession sendConfirmationMail changePassword sendPasswordMail)
     );
 
     return (
         (
                  $self->{error} <= 0
               or $self->{error} == PE_PASSWORD_OK
+              or $self->{error} == PE_CAPTCHAERROR
+              or $self->{error} == PE_CAPTCHAEMPTY
               or $self->{error} == PE_MAILCONFIRMOK
               or $self->{error} == PE_MAILOK
         ) ? 0 : 1
@@ -122,6 +123,51 @@ sub extractMailInfo {
 
         # Use submitted value
         $self->{mail} = $self->param('mail');
+
+        # Captcha for mail form
+        if ( $self->{captcha_mail_enabled} && $self->{mail} ) {
+            $self->{captcha_user_code}  = $self->param('captcha_user_code');
+            $self->{captcha_check_code} = $self->param('captcha_code');
+
+            unless ( $self->{captcha_user_code} && $self->{captcha_check_code} )
+            {
+                $self->lmLog( "Captcha not filled", 'warn' );
+                return PE_CAPTCHAEMPTY;
+            }
+
+            $self->lmLog(
+                "Captcha data received: "
+                  . $self->{captcha_user_code} . " and "
+                  . $self->{captcha_check_code},
+                'debug'
+            );
+
+            # Check captcha
+            my $captcha_result =
+              $self->checkCaptcha( $self->{captcha_user_code},
+                $self->{captcha_check_code} );
+
+            if ( $captcha_result != 1 ) {
+                if (   $captcha_result == -3
+                    or $captcha_result == -2 )
+                {
+                    $self->lmLog( "Captcha failed: wrong code", 'warn' );
+                    return PE_CAPTCHAERROR;
+                }
+                elsif ( $captcha_result == 0 ) {
+                    $self->lmLog(
+                        "Captcha failed: code not checked (file error)",
+                        'warn' );
+                    return PE_CAPTCHAERROR;
+                }
+                elsif ( $captcha_result == -1 ) {
+                    $self->lmLog( "Captcha failed: code has expired", 'warn' );
+                    return PE_CAPTCHAERROR;
+                }
+            }
+            $self->lmLog( "Captcha code verified", 'debug' );
+        }
+
     }
 
     $self->{userControl} ||= '^[\w\.\-@]+$';
@@ -439,7 +485,7 @@ L<http://lemonldap-ng.org/>
 
 =item Clement Oudot, E<lt>clem.oudot@gmail.comE<gt>
 
-=item François-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
+=item FranÃ§ois-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
 
 =item Xavier Guimard, E<lt>x.guimard@free.frE<gt>
 
@@ -467,7 +513,7 @@ L<http://forge.objectweb.org/project/showfiles.php?group_id=274>
 
 =item Copyright (C) 2012 by Sandro Cazzaniga, E<lt>cazzaniga.sandro@gmail.comE<gt>
 
-=item Copyright (C) 2012 by François-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
+=item Copyright (C) 2012 by FranÃ§ois-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
 
 =item Copyright (C) 2010, 2011, 2012 by Clement Oudot, E<lt>clem.oudot@gmail.comE<gt>
 

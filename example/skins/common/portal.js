@@ -16,10 +16,10 @@ if(autocomplete.match('1')){autocomplete='on';}
 if(autocomplete.match('0')){autocomplete='off';}
 
 /* Set newwindow value (default is false) */
-if(newwindow.match('1')){newwindow=true;}else{newwindow=false};
+if(newwindow.match('1')){newwindow=true;}else{newwindow=false;}
 
 /* Set antiframe value (default is true) */
-if(antiframe.match('0')){antiframe=false;}else{antiframe=true};
+if(antiframe.match('0')){antiframe=false;}else{antiframe=true;}
 
 /* jQuery */
 $(document).ready(function(){
@@ -48,12 +48,18 @@ $(document).ready(function(){
 	$("input[name=timezone]").val( -(new Date().getTimezoneOffset()/60) );
 
 	/* Menu tabs */
-	$("#menu").tabs();
-	$("#menu").tabs("select",displaytab);
+	var menuTabs = $("#menu").tabs({active:0});
+	var menuIndex = $('#menu a[href="#'+displaytab+'"]').parent().index(); 
+	menuTabs.tabs("option","active",menuIndex);
 
 	/* Authentication choice tabs */
-	$("#authMenu").tabs({cookie: {name: 'lemonldapauthchoice'}});
-	$("#authMenu").tabs("select",choicetab);
+	var authMenuTabs = $("#authMenu").tabs({active:0});
+	// TODO: cookie
+	//$("#authMenu").tabs({cookie: {name: 'lemonldapauthchoice'}});
+	if(choicetab){
+		var authMenuIndex = $('#authMenu a[href="#'+choicetab+'"]').parent().index(); 
+		authMenuTabs.tabs("option","active",authMenuIndex);
+	}
 
 	/* Focus on first visible input */
 	$("input[type!=hidden]:first").focus();

@@ -39,7 +39,7 @@ form input[name=user] {
   padding-left: 25px;
 }
 
-form input[type=password] {
+form input[type=password], form input[name=captcha_user_code] {
   border: 1px solid #aaa;
   padding: 5px;
   width: 200px;

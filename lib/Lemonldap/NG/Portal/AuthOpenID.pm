@@ -9,10 +9,11 @@ package Lemonldap::NG::Portal::AuthOpenID;
 use strict;
 use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Common::Regexp;
-use LWP::UserAgent;
+use Lemonldap::NG::Portal::_Browser;
 use Cache::FileCache;
 
-our $VERSION = '1.2.0';
+our @ISA     = (qw(Lemonldap::NG::Portal::_Browser));
+our $VERSION = '1.3.0';
 our $initDone;
 
 BEGIN {
@@ -48,11 +49,8 @@ sub authInit {
 sub extractFormInfo {
     my $self = shift;
 
-    my $ua = LWP::UserAgent->new();
-
-    # TODO : LWP options to use a proxy for example
     $self->{csr} = Net::OpenID::Consumer->new(
-        ua              => $ua,
+        ua              => $self->ua(),
         cache           => $self->{refLocalStorage} || Cache::FileCache->new,
         args            => $self,
         consumer_secret => $self->{openIdSecret},
@@ -79,7 +77,7 @@ sub extractFormInfo {
 
         # If confirmation is needed
         if ( my $setup_url = $csr->user_setup_url ) {
-            $self->lmLog( 'OpenID confirmation needed', 'info' );
+            $self->_sub( 'userInfo', 'OpenID confirmation needed' );
             print $self->redirect($setup_url);
             $self->quit();
         }
@@ -115,7 +113,8 @@ sub extractFormInfo {
         if ( $tmp =~
             $self->{_reopenIdIDPList} xor $self->{_openIdIDPListIsWhite} )
         {
-            $self->lmLog( "$url is forbidden for openID exchange", 'warn' );
+            $self->_sub( 'userNotice',
+                "$url is forbidden for openID exchange" );
             $self->{_msg} =
               "OpenID error: $tmp is forbidden for OpenID echange";
             return PE_BADPARTNER;
@@ -151,10 +150,7 @@ sub extractFormInfo {
         if ( $self->get_module('user') eq 'OpenID' ) {
             my ( @r, @o );
             while ( my ( $v, $k ) = each %{ $self->{exportedVars} } ) {
-                if ( $k =~
-/^(?:(?:(?:full|nick)nam|languag|postcod|timezon)e|country|gender|email|dob)$/
-                  )
-                {
+                if ( $k =~ Lemonldap::NG::Common::Regexp::OPENIDSREGATTR() ) {
                     if   ( $v =~ s/^!// ) { push @r, $k }
                     else                  { push @o, $k }
                 }
@@ -244,12 +240,12 @@ compatible portals with OpenID authentication.
   if($portal->process()) {
     # Write here the menu with CGI methods. This page is displayed ONLY IF
     # the user was not redirected here.
-    print $portal->header('text/html; charset=utf8'); # DON'T FORGET THIS (see CGI(3))
+    print $portal->header('text/html; charset=utf-8'); # DON'T FORGET THIS (see CGI(3))
     print "...";
   }
   else {
     # If the user enters here, IT MEANS THAT CAS REDIRECTION DOES NOT WORK
-    print $portal->header('text/html; charset=utf8'); # DON'T FORGET THIS (see CGI(3))
+    print $portal->header('text/html; charset=utf-8'); # DON'T FORGET THIS (see CGI(3))
     print "<html><body><h1>Unable to work</h1>";
     print "This server isn't well configured. Contact your administrator.";
     print "</body></html>";

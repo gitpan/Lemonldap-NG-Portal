@@ -100,14 +100,14 @@ compatible portals with authentication choice.
   if($portal->process()) {
     # Write here the menu with CGI methods. This page is displayed ONLY IF
     # the user was not redirected here.
-    print $portal->header('text/html; charset=utf8'); # DON'T FORGET THIS (see CGI(3))
+    print $portal->header('text/html; charset=utf-8'); # DON'T FORGET THIS (see CGI(3))
     print "...";
 
     # or redirect the user to the menu
     print $portal->redirect( -uri => 'https://portal/menu');
   }
   else {
-    print $portal->header('text/html; charset=utf8'); # DON'T FORGET THIS (see CGI(3))
+    print $portal->header('text/html; charset=utf-8'); # DON'T FORGET THIS (see CGI(3))
     print "<html><body><h1>Unable to work</h1>";
     print "This server isn't well configured. Contact your administrator.";
     print "</body></html>";

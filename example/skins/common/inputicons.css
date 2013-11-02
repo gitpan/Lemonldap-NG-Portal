@@ -5,7 +5,7 @@ background:#FFFFFF url("user_suit.png") 5px 5px no-repeat;
 padding-left:25px;
 }
 
-form input[type=password] {
+form input[type=password], form input[name=captcha_user_code] {
 background:#FFFFFF url("key.png") 5px 5px no-repeat;
 padding-left: 25px;
 }

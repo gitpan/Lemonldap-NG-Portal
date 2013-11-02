@@ -9,7 +9,7 @@ use strict;
 use Lemonldap::NG::Portal::Simple;
 use utf8;
 
-our $VERSION = '1.2.5';
+our $VERSION = '1.3.0';
 
 ## @method array display()
 # Call portal process and set template parameters
@@ -206,6 +206,16 @@ sub display {
             LOGIN_INFO            => $self->loginInfo(),
         );
 
+        # Display captcha if it's enabled
+        if ( $self->{captcha_login_enabled} ) {
+            %templateParams = (
+                %templateParams,
+                CAPTCHA_IMG  => $self->{captcha_img},
+                CAPTCHA_CODE => $self->{captcha_code},
+                CAPTCHA_SIZE => $self->{captcha_size}
+            );
+        }
+
         # Show password form if password policy error
         if (
 
@@ -286,9 +296,11 @@ sub display {
                     %templateParams,
                     DISPLAY_FORM => $displayType eq "standardform" ? 1 : 0,
                     DISPLAY_OPENID_FORM => $displayType eq "openidform" ? 1 : 0,
-                    DISPLAY_YUBIKEY_FORM => $displayType eq "yubikeyform"
-                    ? 1
+                    DISPLAY_YUBIKEY_FORM => $displayType eq "yubikeyform" ? 1
                     : 0,
+                    DISPLAY_LOGO_FORM => $displayType eq "logo" ? 1 : 0,
+                    module => $displayType eq "logo" ? $self->get_module('auth')
+                    : "",
                     AUTH_LOOP  => [],
                     PORTAL_URL => $displayType eq "logo" ? $self->{portal} : 0,
                     MSG        => $self->info(),
@@ -367,7 +379,7 @@ L<Lemonldap::NG::Portal>
 
 =item Clement Oudot, E<lt>clem.oudot@gmail.comE<gt>
 
-=item François-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
+=item FranÃ§ois-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
 
 =item Xavier Guimard, E<lt>x.guimard@free.frE<gt>
 
@@ -395,7 +407,7 @@ L<http://forge.objectweb.org/project/showfiles.php?group_id=274>
 
 =item Copyright (C) 2012 by Sandro Cazzaniga, E<lt>cazzaniga.sandro@gmail.comE<gt>
 
-=item Copyright (C) 2012 by François-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
+=item Copyright (C) 2012 by FranÃ§ois-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
 
 =item Copyright (C) 2010, 2011, 2012, 2013 by Clement Oudot, E<lt>clem.oudot@gmail.comE<gt>
 

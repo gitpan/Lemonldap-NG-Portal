@@ -9,12 +9,13 @@ use strict;
 use Lemonldap::NG::Portal::Simple qw(:all);
 use Lemonldap::NG::Common::Conf;            #link protected lmConf Configuration
 use Lemonldap::NG::Common::Conf::Constants; #inherits
+use Regexp::Assemble;
 
 *EXPORT_OK   = *Lemonldap::NG::Portal::Simple::EXPORT_OK;
 *EXPORT_TAGS = *Lemonldap::NG::Portal::Simple::EXPORT_TAGS;
 *EXPORT      = *Lemonldap::NG::Portal::Simple::EXPORT;
 
-our $VERSION = '1.2.5';
+our $VERSION = '1.3.0';
 use base qw(Lemonldap::NG::Portal::Simple);
 our $confCached;
 
@@ -47,45 +48,65 @@ sub getConf {
         $self->{configStorage} = $args{configStorage};
     }
 
-    my $num = $self->__lmConf->lastCfg;
+    my $num;
+    my $lConf;
+
+    # If useLocalConf is set, just verify that current conf has the same number
+    # than local cache one
+    if ( $confCached and $confCached->{useLocalConf} ) {
+        $lConf = $self->__lmConf->getLocalConf(PORTALSECTION);
+        eval { $num = $lConf->{cfgNum} };
+    }
+    else {
+        $num = $self->__lmConf->lastCfg();
+    }
 
     # Reload configuration
     unless ( $confCached and $confCached->{cfgNum} == $num ) {
-        $self->lmLog( "Cached configuration too old, get configuration $num",
-            'debug' );
-        my $gConf = $self->__lmConf->getConf( { cfgNum => $num } );
-        my $lConf = $self->__lmConf->getLocalConf(PORTALSECTION);
+        $lConf ||= $self->__lmConf->getLocalConf(PORTALSECTION);
+        my $prm = { cfgNum => $num };
+        if ( $args{useLocalConf} or $lConf->{useLocalConf} ) {
+            $prm->{local} = 1;
+            $self->lmLog( 'useLocalConf set to true', 'debug' );
+        }
+        my $gConf = $self->__lmConf->getConf($prm);
         unless ( ref($gConf) and ref($lConf) ) {
             $self->abort( "Cannot get configuration",
                 $Lemonldap::NG::Common::Conf::msg );
         }
+        $self->lmLog(
+            "Cached configuration too old, get configuration $num "
+              . "($Lemonldap::NG::Common::Conf::msg)",
+            'debug'
+        );
         %$confCached = ( %$gConf, %$lConf );
+
+        my $re = Regexp::Assemble->new();
+        foreach my $vhost ( keys %{ $confCached->{locationRules} } ) {
+            my $quotedVhost = quotemeta($vhost);
+            $self->lmLog( "Vhost $vhost added in reVHosts", 'debug' );
+            $re->add($quotedVhost);
+
+            # Add aliases
+            if ( $confCached->{vhostOptions}->{$vhost}->{vhostAliases} ) {
+                foreach my $alias ( split /\s+/,
+                    $confCached->{vhostOptions}->{$vhost}->{vhostAliases} )
+                {
+                    $self->lmLog( "Alias $alias added in reVHosts", 'debug' );
+                    $re->add( quotemeta($alias) );
+                }
+            }
+        }
+        $confCached->{reVHosts} = $re->as_string;
+
     }
 
     %$self = ( %$self, %$confCached, %args, );
-
-    # localStorage should be declared in configuration object
-    # See Handler::SharedConf
-    foreach (qw(localStorage localStorageOptions)) {
-        $self->{$_} ||= $self->__lmConf->{$_};
-    }
 
     $self->lmLog( "Now using configuration: " . $confCached->{cfgNum},
         'debug' );
 
     1;
-}
-
-## @method list getProtectedSites()
-# With SharedConf, $locationRules contains a hash table with virtual hosts as
-# keys. So we can use it to know all protected virtual hosts.
-# @return list list of protected virtual hosts.
-sub getProtectedSites {
-    my $self = shift;
-    my @tab  = ();
-    return ( keys %{ $self->{locationRules} } )
-      if ( ref $self->{locationRules} );
-    return ();
 }
 
 sub __lmConf {
@@ -127,7 +148,7 @@ compatible portals using a central configuration database.
   if($portal->process()) {
     # Write here the menu with CGI methods. This page is displayed ONLY IF
     # the user was not redirected here.
-    print $portal->header('text/html; charset=utf8'); # DON'T FORGET THIS (see L<CGI(3)>)
+    print $portal->header('text/html; charset=utf-8'); # DON'T FORGET THIS (see L<CGI(3)>)
     print "...";
 
     # or redirect the user to the menu
@@ -137,7 +158,7 @@ compatible portals using a central configuration database.
     # Write here the html form used to authenticate with CGI methods.
     # $portal->error returns the error message if athentification failed
     # Warning: by defaut, input names are "user" and "password"
-    print $portal->header('text/html; charset=utf8'); # DON'T FORGET THIS (see L<CGI(3)>)
+    print $portal->header('text/html; charset=utf-8'); # DON'T FORGET THIS (see L<CGI(3)>)
     print "...";
     print '<form method="POST">';
     # In your form, the following value is required for redirection
@@ -223,7 +244,7 @@ L<http://lemonldap-ng.org/>
 
 =item Clement Oudot, E<lt>clem.oudot@gmail.comE<gt>
 
-=item François-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
+=item FranÃ§ois-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
 
 =item Xavier Guimard, E<lt>x.guimard@free.frE<gt>
 
@@ -245,7 +266,7 @@ L<http://forge.objectweb.org/project/showfiles.php?group_id=274>
 
 =item Copyright (C) 2006, 2007, 2008, 2009, 2010 by Xavier Guimard, E<lt>x.guimard@free.frE<gt>
 
-=item Copyright (C) 2012 by François-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
+=item Copyright (C) 2012 by FranÃ§ois-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
 
 =item Copyright (C) 2006, 2009, 2010, 2011, 2012 by Clement Oudot, E<lt>clem.oudot@gmail.comE<gt>
 

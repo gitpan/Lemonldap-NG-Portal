@@ -100,7 +100,7 @@ sub check_password {
         return 1;
     }
     else {
-        $self->lmLog( "Bad password for $user", 'error' );
+        $self->_sub( 'userError', "Bad password for $user" );
         return 0;
     }
 

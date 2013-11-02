@@ -7,6 +7,7 @@ package Lemonldap::NG::Portal::UserDBOpenID;
 
 use strict;
 use Lemonldap::NG::Portal::Simple;
+use Lemonldap::NG::Common::Regexp;
 
 our $VERSION = '1.0.0';
 
@@ -16,15 +17,14 @@ our $VERSION = '1.0.0';
 sub userDBInit {
     my $self = shift;
 
-    if ( $self->get_module('auth') eq 'OpenID' ) {
-    }
-    else {
+    unless ( $self->get_module('auth') =~ /^OpenID/ ) {
         $self->lmLog(
 'UserDBOpenID isn\'t useable unless authentication module is set to OpenID',
             'error'
         );
         return PE_ERROR;
     }
+    PE_OK;
 }
 
 ## @apmethod int getUser()
@@ -42,20 +42,16 @@ sub getUser {
 sub setSessionInfo {
     my $self = shift;
     if ( ref( $self->{exportedVars} ) eq 'HASH' ) {
-        foreach my $k ( keys %{ $self->{exportedVars} } ) {
+        while ( my ( $k, $v ) = each %{ $self->{exportedVars} } ) {
             my $attr = $k;
             my $required = ( $attr =~ s/^!// );
-            if ( $self->{exportedVars}->{$k} =~
-/^(?:(?:(?:full|nick)nam|languag|postcod|timezon)e|country|gender|email|dob)$/
-              )
-            {
-                $self->{sessionInfo}->{$attr} =
-                  $self->param("openid.sreg.$self->{exportedVars}->{$k}");
+            if ( $v =~ Lemonldap::NG::Common::Regexp::OPENIDSREGATTR() ) {
+                $self->{sessionInfo}->{$attr} = $self->param("openid.sreg.$v");
             }
             else {
                 $self->lmLog(
                     'Ignoring attribute '
-                      . $self->{exportedVars}->{$k}
+                      . $v
                       . ' which is not a valid OpenID SREG attribute',
                     'warn'
                 );

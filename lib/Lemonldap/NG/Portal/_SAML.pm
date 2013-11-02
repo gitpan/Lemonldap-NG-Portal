@@ -7,10 +7,10 @@ package Lemonldap::NG::Portal::_SAML;
 
 use strict;
 use Lemonldap::NG::Common::Conf::SAML::Metadata;
+use Lemonldap::NG::Portal::_Browser;
 use XML::Simple;
 use MIME::Base64;
 use String::Random;
-use LWP::UserAgent;        # SOAP call
 use HTTP::Request;         # SOAP call
 use POSIX qw(strftime);    # Convert SAML2 date into timestamp
 use Time::Local;           # Convert SAML2 date into timestamp
@@ -20,7 +20,8 @@ use URI;                   # Get metadata URL path
 # Special comments for doxygen
 #inherits Lemonldap::NG::Common::Conf::SAML::Metadata protected service_metadata
 
-our $VERSION = '1.2.3';
+our @ISA     = (qw(Lemonldap::NG::Portal::_Browser));
+our $VERSION = '1.3.0';
 our $samlCache;
 our $initGlibDone;
 
@@ -45,7 +46,7 @@ BEGIN {
     # Load Lasso.pm
     eval 'use Lasso;';
     if ($@) {
-        print STDERR "Lasso.pm not loaded :$@";
+        print STDERR "Lasso.pm not loaded: $@";
         eval 'use constant LASSO => 0;use constant BADLASSO => 0;';
     }
     else {
@@ -792,13 +793,10 @@ sub createAuthnRequest {
     }
 
     # Set RelayState
-    my $infos;
-    foreach (qw /urldc checkLogins/) {
-        $infos->{$_} = $self->{$_} if $self->{$_};
+    if ( my $relaystate = $self->storeRelayState(qw /urldc checkLogins/) ) {
+        $login->msg_relayState($relaystate);
+        $self->lmLog( "Set $relaystate in RelayState", 'debug' );
     }
-    my $relaystate = $self->storeRelayState($infos);
-    $login->msg_relayState($relaystate);
-    $self->lmLog( "Set $relaystate in RelayState", 'debug' );
 
     # Customize request
     my $request = $login->request();
@@ -1163,7 +1161,14 @@ sub acceptSSO {
 # corresponding session_id
 # @param infos HASH reference of information
 sub storeRelayState {
-    my ( $self, $infos ) = splice @_;
+    my ( $self, @data ) = splice @_;
+
+    # check if there are data to store
+    my $infos;
+    foreach (@data) {
+        $infos->{$_} = $self->{$_} if $self->{$_};
+    }
+    return unless ($infos);
 
     # Create relaystate session
     my $samlSessionInfo = $self->getSamlSession();
@@ -1173,8 +1178,13 @@ sub storeRelayState {
     # Session type
     $samlSessionInfo->{_type} = "relaystate";
 
-    # UNIX time
-    $samlSessionInfo->{_utime} = time();
+    # Set _utime for session autoremove
+    # Use default session timeout and relayState session timeout to compute it
+    my $time                  = time();
+    my $timeout               = $self->{timeout};
+    my $samlRelayStateTimeout = $self->{samlRelayStateTimeout} || $timeout;
+
+    $samlSessionInfo->{_utime} = $time + ( $samlRelayStateTimeout - $timeout );
 
     # Store infos in relaystate session
     foreach ( keys %$infos ) {
@@ -1212,7 +1222,14 @@ sub extractRelayState {
         $self->{$_} = $samlSessionInfo->{$_};
     }
 
-    untie %$samlSessionInfo;
+    # delete relaystate session
+    eval { tied(%$samlSessionInfo)->delete(); };
+    if ($@) {
+        $self->lmLog( "Unable to delete relaystate $relaystate", 'error' );
+    }
+    else {
+        $self->lmLog( "Relaystate $relaystate was deleted", 'debug' );
+    }
 
     return 1;
 }
@@ -1359,13 +1376,10 @@ sub createLogoutRequest {
     }
 
     # Set RelayState
-    my $infos;
-    foreach (qw /urldc checkLogins/) {
-        $infos->{$_} = $self->{$_} if $self->{$_};
+    if ( my $relaystate = $self->storeRelayState(qw /urldc/) ) {
+        $logout->msg_relayState($relaystate);
+        $self->lmLog( "Set $relaystate in RelayState", 'debug' );
     }
-    my $relaystate = $self->storeRelayState($infos);
-    $logout->msg_relayState($relaystate);
-    $self->lmLog( "Set $relaystate in RelayState", 'debug' );
 
     # Signature
     if ( $signSLOMessage == 0 ) {
@@ -1654,10 +1668,6 @@ sub resolveArtifact {
     my ( $self, $profile, $artifact, $method ) = splice @_;
     my $message;
 
-    # LWP User Agent
-    my $ua = new LWP::UserAgent;
-    push @{ $ua->requests_redirectable }, 'POST';
-
     # Login profile
     if ( $profile->isa("Lasso::Login") ) {
 
@@ -1683,7 +1693,7 @@ sub resolveArtifact {
             'debug' );
 
         # SOAP call
-        my $soap_answer = $ua->request($request);
+        my $soap_answer = $self->ua()->request($request);
         if ( $soap_answer->code() == "200" ) {
             $message = $soap_answer->content();
             $self->lmLog( "Get message $message", 'debug' );
@@ -1890,10 +1900,6 @@ sub sendSOAPMessage {
     my ( $self, $endpoint, $message ) = splice @_;
     my $response;
 
-    # LWP User Agent
-    my $ua = new LWP::UserAgent;
-    push @{ $ua->requests_redirectable }, 'POST';
-
     my $request = HTTP::Request->new( 'POST' => $endpoint );
     $request->content_type('text/xml');
     $request->content($message);
@@ -1901,7 +1907,7 @@ sub sendSOAPMessage {
     $self->lmLog( "Send SOAP message $message to $endpoint", 'debug' );
 
     # SOAP call
-    my $soap_answer = $ua->request($request);
+    my $soap_answer = $self->ua()->request($request);
     if ( $soap_answer->code() == "200" ) {
         $response = $soap_answer->content();
         $self->lmLog( "Get response $response", 'debug' );
@@ -3333,7 +3339,7 @@ L<Lemonldap::NG::Portal::AuthSAML>, L<Lemonldap::NG::Portal::UserDBSAML>
 
 =item Clement Oudot, E<lt>clem.oudot@gmail.comE<gt>
 
-=item François-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
+=item FranÃ§ois-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
 
 =item Xavier Guimard, E<lt>x.guimard@free.frE<gt>
 
@@ -3361,7 +3367,7 @@ L<http://forge.objectweb.org/project/showfiles.php?group_id=274>
 
 =item Copyright (C) 2012 by Sandro Cazzaniga, E<lt>cazzaniga.sandro@gmail.comE<gt>
 
-=item Copyright (C) 2012 by François-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
+=item Copyright (C) 2012 by FranÃ§ois-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
 
 =item Copyright (C) 2010, 2011, 2012, 2013 by Clement Oudot, E<lt>clem.oudot@gmail.comE<gt>
 

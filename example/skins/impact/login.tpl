@@ -30,14 +30,13 @@
         <li title="<TMPL_VAR NAME="key">"><a href="#<TMPL_VAR NAME="key">"><TMPL_VAR NAME="name"></a></li>
         </TMPL_LOOP>
       </ul>
-      </div>
 
       <!-- Forms -->
       <TMPL_LOOP NAME="AUTH_LOOP">
 
       <div id="<TMPL_VAR NAME="key">">
 
-      <form action="#" method="post" class="login">
+      <form action="<TMPL_VAR NAME="url">" method="post" class="login <TMPL_IF NAME="module"><TMPL_VAR NAME="module"></TMPL_IF>">
 
       <!-- Hidden fields -->
       <TMPL_VAR NAME="HIDDEN_INPUTS">
@@ -97,6 +96,7 @@
       </div>
 
       </TMPL_LOOP>
+      </div> <!-- end authloop -->
 
     </div>
 
@@ -181,6 +181,63 @@
         <input type="hidden" name="url" value="<TMPL_VAR NAME="AUTH_URL">" />
         <input type="hidden" name="timezone" />
         <TMPL_INCLUDE NAME="yubikeyform.tpl">
+      </form>
+    </div>
+
+    </TMPL_IF>
+
+    <TMPL_IF NAME="DISPLAY_LOGO_FORM">
+
+    <div id="content-left">
+
+      <TMPL_INCLUDE NAME="authmessage.tpl">
+
+      <TMPL_IF NAME="LOGIN_INFO">
+      <div>
+        <TMPL_VAR NAME="LOGIN_INFO">
+      </div>
+      </TMPL_IF>
+
+    </div>
+
+    <div id="content-right">
+      <h1><lang en="Open your SSO session" fr="Ouvrir une session SSO" /></h1>
+      <hr class="solid" />
+      <p><span class="text-error"><TMPL_VAR NAME="AUTH_ERROR"></span></p>
+      <form action="#" method="post" class="login <TMPL_VAR NAME="module">">
+        <TMPL_VAR NAME="HIDDEN_INPUTS">
+        <input type="hidden" name="url" value="<TMPL_VAR NAME="AUTH_URL">" />
+        <input type="hidden" name="timezone" />
+
+        <table>
+                <TMPL_IF NAME="module">
+                <tr class="authLogo"><td>
+                <img src="<TMPL_VAR NAME="SKIN_PATH">/common/<TMPL_VAR NAME="module">.png" />
+                </td></tr>
+                </TMPL_IF>
+
+                <TMPL_IF NAME="CHECK_LOGINS">
+                <tr><td colspan="2"><div class="buttons">
+                <label for="checkLogins">
+                    <input type="checkbox" id="checkLogins" name="checkLogins" <TMPL_IF NAME="ASK_LOGINS">checked</TMPL_IF>/>
+                    <lang en="Check my last logins" fr="Voir mes dernières connexions"/>
+                </label>
+                </div></td></tr>
+                </TMPL_IF>
+
+                <tr><td>
+                <div class="buttons">
+                <button type="reset" class="negative" tabindex="4">
+                        <img src="<TMPL_VAR NAME="SKIN_PATH">/common/cancel.png" alt="" />
+                        <lang en="Cancel" fr="Annuler" />
+                </button>
+                <button type="submit" class="positive" tabindex="3">
+                        <img src="<TMPL_VAR NAME="SKIN_PATH">/common/accept.png" alt="" />
+                        <lang en="Connect" fr="Se connecter" />
+                </button>
+                </div></td></tr>
+
+        </table>
       </form>
     </div>
 

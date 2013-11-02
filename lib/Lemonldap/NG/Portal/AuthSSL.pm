@@ -9,10 +9,8 @@ use strict;
 use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::AuthNull;
 
-our $VERSION = '1.2.3';
+our $VERSION = '1.3.0';
 our @ISA     = qw(Lemonldap::NG::Portal::AuthNull);
-
-*authenticate = *extractFormInfo;
 
 ## @apmethod int authInit()
 # Check if SSL environment variables are set.
@@ -33,8 +31,13 @@ sub extractFormInfo {
         $self->{user} = $user;
         return PE_OK;
     }
+    elsif ( $ENV{SSL_CLIENT_S_DN} ) {
+        $self->_sub( 'userError',
+            "$self->{SSLVar} was not found in user certificate" );
+        return PE_BADCERTIFICATE;
+    }
     else {
-        $self->_sub( 'userError', "No certificate found for " . $self->ipAddr );
+        $self->_sub( 'userError', 'No certificate found' );
         return PE_CERTIFICATEREQUIRED;
     }
 }
@@ -50,6 +53,17 @@ sub setAuthSessionInfo {
 
     $self->{sessionInfo}->{authenticationLevel} = $self->{SSLAuthnLevel};
     PE_OK;
+}
+
+## @apmethod int authenticate()
+# Just test that SSL authentication has been done: job is done in
+# extractFormInfo()
+# @return Lemonldap::NG::Portal constant
+sub authenticate {
+    my $self = shift;
+    return ( $self->{user} and $ENV{ $self->{SSLVar} } )
+      ? PE_OK
+      : $self->extractFormInfo();
 }
 
 ## @method string getDisplayType
@@ -98,7 +112,7 @@ With Lemonldap::NG::Portal::Simple:
   if($portal->process()) {
     # Write here the menu with CGI methods. This page is displayed ONLY IF
     # the user was not redirected here.
-    print $portal->header('text/html; charset=utf8'); # DON'T FORGET THIS (see CGI(3))
+    print $portal->header('text/html; charset=utf-8'); # DON'T FORGET THIS (see CGI(3))
     print "...";
 
     # or redirect the user to the menu
@@ -106,7 +120,7 @@ With Lemonldap::NG::Portal::Simple:
   }
   else {
     # If the user enters here, IT MEANS THAT YOUR SSL PARAMETERS ARE BAD
-    print $portal->header('text/html; charset=utf8'); # DON'T FORGET THIS (see CGI(3))
+    print $portal->header('text/html; charset=utf-8'); # DON'T FORGET THIS (see CGI(3))
     print "<html><body><h1>Unable to work</h1>";
     print "This server isn't well configured. Contact your administrator.";
     print "</body></html>";
@@ -149,7 +163,7 @@ L<http://lemonldap-ng.org/>
 
 =item Clement Oudot, E<lt>clem.oudot@gmail.comE<gt>
 
-=item François-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
+=item FranÃ§ois-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
 
 =item Xavier Guimard, E<lt>x.guimard@free.frE<gt>
 
@@ -171,7 +185,7 @@ L<http://forge.objectweb.org/project/showfiles.php?group_id=274>
 
 =item Copyright (C) 2006, 2007, 2008, 2009, 2010 by Xavier Guimard, E<lt>x.guimard@free.frE<gt>
 
-=item Copyright (C) 2012, 2013 by François-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
+=item Copyright (C) 2012, 2013 by FranÃ§ois-Xavier Deltombe, E<lt>fxdeltombe@gmail.com.E<gt>
 
 =item Copyright (C) 2006, 2009, 2010, 2012 by Clement Oudot, E<lt>clem.oudot@gmail.comE<gt>
 

@@ -33,8 +33,6 @@
         </ul>
       </TMPL_IF>
 
-      </div>
-
       <div id="content-all-info2">
 
       <TMPL_IF DISPLAY_MODULES>
@@ -188,6 +186,7 @@
 
       </TMPL_IF>
 
+        </div>
       </div>
     </div>
   </div>

@@ -55,6 +55,8 @@ if (
            $portal->{error} == PE_MAILFORMEMPTY
         or $portal->{error} == PE_MAILFIRSTACCESS
         or $portal->{error} == PE_MAILNOTFOUND
+        or $portal->{error} == PE_CAPTCHAERROR
+        or $portal->{error} == PE_CAPTCHAEMPTY
     )
     and !$portal->{mail_token}
   )
@@ -65,6 +67,15 @@ if (
         DISPLAY_CONFIRMMAILSENT => 0,
         DISPLAY_MAILSENT        => 0,
         DISPLAY_PASSWORD_FORM   => 0,
+    );
+}
+
+# Display captcha if it's enabled
+if ( $portal->{captcha_mail_enabled} ) {
+    $template->param(
+        CAPTCHA_IMG  => $portal->{captcha_img},
+        CAPTCHA_CODE => $portal->{captcha_code},
+        CAPTCHA_SIZE => $portal->{captcha_size}
     );
 }
 
@@ -123,6 +134,6 @@ if ( my $customParams = $portal->getCustomTemplateParameters() ) {
     }
 }
 
-print $portal->header('text/html; charset=utf8');
+print $portal->header('text/html; charset=utf-8');
 print $template->output;
 

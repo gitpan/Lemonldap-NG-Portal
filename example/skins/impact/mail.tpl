@@ -20,6 +20,15 @@
             <th><lang en="Mail" fr="Adresse mail"/></th>
             <td><input name="mail" type="text" value="<TMPL_VAR NAME="MAIL">" /></td>
           </tr>
+          <TMPL_IF NAME=CAPTCHA_IMG>
+          <tr><td></td><td>
+            <img src="<TMPL_VAR NAME=CAPTCHA_IMG>" />
+          </td></tr>
+          <tr><th><lang en="Captcha" fr="Captcha" /></th>
+             <td><input type="text" name="captcha_user_code" size="<TMPL_VAR NAME=CAPTCHA_SIZE>" />
+             <input type="hidden" name="captcha_code" value="<TMPL_VAR NAME=CAPTCHA_CODE>" /></td>
+          </tr>
+          </TMPL_IF>
           <tr>
             <td colspan="2">
               <div class="buttons">

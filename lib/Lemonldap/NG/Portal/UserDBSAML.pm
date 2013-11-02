@@ -18,7 +18,7 @@ our $VERSION = '1.0.0';
 # @return Lemonldap::NG::Portal error code
 sub userDBInit {
     my $self = shift;
-    if ( $self->get_module('auth') eq 'SAML' ) {
+    if ( $self->get_module('auth') =~ /^SAML/ ) {
         return PE_OK;
     }
     else {
