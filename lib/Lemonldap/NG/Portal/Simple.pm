@@ -69,7 +69,7 @@ use Digest::MD5;
 #inherits Apache::Session
 #link Lemonldap::NG::Common::Apache::Session::SOAP protected globalStorage
 
-our $VERSION = '1.3.0';
+our $VERSION = '1.3.1';
 
 use base qw(Lemonldap::NG::Common::CGI Exporter);
 our @ISA;
@@ -469,12 +469,6 @@ sub new {
         $self->{trustedDomains} =
           '(' . join( '|', split( /\s+/, $self->{trustedDomains} ) ) . ')';
         $self->{trustedDomains} =~ s/\./\\./g;
-    }
-
-    # Init the captcha feature if it's enabled
-    if ( $self->{captcha_login_enabled} || $self->{captcha_mail_enabled} ) {
-        eval { $self->initCaptcha(); };
-        $self->lmLog( "Can't init captcha: $@", "error" ) if $@;
     }
 
     return $self;

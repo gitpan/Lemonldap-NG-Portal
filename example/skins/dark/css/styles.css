@@ -85,7 +85,7 @@ border-radius:10px 10px 10px 10px;
 }
 
 #logincontent, #mailcontent, #errorcontent, #menucontent {
-height:410px;
+min-height:400px;
 }
 
 #logincontent form, #mailcontent form, #notifcontent form {
@@ -97,11 +97,11 @@ border-radius:10px 10px 10px 10px;
 -moz-border-radius:10px 10px 10px 10px;
 -webkit-border-radius:10px 10px 10px 10px;
 color:#000;
-}
-
-#logincontent form {
 min-height:200px;
 height:auto;
+}
+
+#authMenu form {
 margin: 20px;
 }
 

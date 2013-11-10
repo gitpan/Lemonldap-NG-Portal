@@ -1,10 +1,10 @@
 {
-   "abstract" : "The authentication portal part of Lemonldap::NG Web-SSO system.",
+   "abstract" : "The authentication portal part of Lemonldap::NG Web-SSO",
    "author" : [
       "Xavier Guimard <x.guimard@free.fr>, Clément Oudot <clement@oodo.net>, Thomas Chemineau <thomas.chemineau@gmail.com>, Mikael Ates <mikael.ates@univ-st-etienne.fr>"
    ],
    "dynamic_config" : 1,
-   "generated_by" : "ExtUtils::MakeMaker version 6.78, CPAN::Meta::Converter version 2.120351",
+   "generated_by" : "ExtUtils::MakeMaker version 6.66, CPAN::Meta::Converter version 2.132830",
    "license" : [
       "open_source"
    ],
@@ -77,6 +77,6 @@
          }
       }
    },
-   "release_status" : "stable",
-   "version" : "v1.3.0"
+   "release_status" : "testing",
+   "version" : "v1.3.0_01"
 }

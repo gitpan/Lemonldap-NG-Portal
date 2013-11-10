@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::MailReset;
 use strict;
 use warnings;
 
-our $VERSION = '1.3.0';
+our $VERSION = '1.3.1';
 
 use Lemonldap::NG::Portal::Simple qw(:all);
 use base qw(Lemonldap::NG::Portal::SharedConf Exporter);
@@ -88,6 +88,11 @@ sub smtpInit {
 sub extractMailInfo {
     my ($self) = splice @_;
 
+    if ( $self->{captcha_mail_enabled} ) {
+        eval { $self->initCaptcha(); };
+        $self->lmLog( "Can't init captcha: $@", "error" ) if $@;
+    }
+
     unless ( $self->param('mail') || $self->param('mail_token') ) {
         return PE_MAILFIRSTACCESS if ( $self->request_method =~ /GET/ );
         return PE_MAILFORMEMPTY;
@@ -125,7 +130,11 @@ sub extractMailInfo {
         $self->{mail} = $self->param('mail');
 
         # Captcha for mail form
-        if ( $self->{captcha_mail_enabled} && $self->{mail} ) {
+        # Only if mail session does not already exist
+        if (   $self->{captcha_mail_enabled}
+            && $self->{mail}
+            && !$self->getMailSession( $self->{mail} ) )
+        {
             $self->{captcha_user_code}  = $self->param('captcha_user_code');
             $self->{captcha_check_code} = $self->param('captcha_code');
 

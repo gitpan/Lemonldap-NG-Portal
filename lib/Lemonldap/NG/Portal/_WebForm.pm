@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::_WebForm;
 use Lemonldap::NG::Portal::Simple qw(:all);
 use strict;
 
-our $VERSION = '1.3.0';
+our $VERSION = '1.3.1';
 
 ## @apmethod int authInit()
 # Does nothing.
@@ -22,6 +22,12 @@ sub authInit {
 # @return Lemonldap::NG::Portal constant
 sub extractFormInfo {
     my $self = shift;
+
+    # Init captcha
+    if ( $self->{captcha_login_enabled} ) {
+        eval { $self->initCaptcha(); };
+        $self->lmLog( "Can't init captcha: $@", "error" ) if $@;
+    }
 
     # Detect first access and empty forms
     my $defUser        = defined $self->param('user');

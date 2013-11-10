@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_SAML;    #inherits
 use Lemonldap::NG::Common::Conf::SAML::Metadata;
 
-our $VERSION = '1.2.3';
+our $VERSION = '1.3.1';
 our @ISA     = qw(Lemonldap::NG::Portal::_SAML);
 
 ## @apmethod int authInit()
@@ -1148,20 +1148,36 @@ sub authenticate {
 sub getIDP {
     my $self = shift;
     my $idp;
+    my $idpName;
 
     my %cookies    = fetch CGI::Cookie;
     my $idp_cookie = $cookies{ $self->{samlIdPResolveCookie} };
     $idp_cookie &&= $idp_cookie->value;
 
-    # Case 1: Recover IDP from args
+    # Case 1: Recover IDP from idp URL Parameter
     unless ( $idp = $self->param("idp") ) {
 
-        # Case 2: Recover IDP from cookie
-        if ( $idp = $idp_cookie ) {
+        # Case 2: Recover IDP from idpName URL Parameter
+        if ( $idpName = $self->param("idpName") ) {
+            foreach ( keys %{ $self->{_idpList} } ) {
+                my $idpConfKey = $self->{_idpList}->{$_}->{confKey};
+                if ( $idpName eq $idpConfKey ) {
+                    $idp = $_;
+                    $self->lmLog(
+                        "IDP $idp found from idpName URL Parameter ($idpName)",
+                        'debug'
+                    );
+                    last;
+                }
+            }
+        }
+
+        # Case 3: Recover IDP from cookie
+        if ( !$idp and $idp = $idp_cookie ) {
             $self->lmLog( "IDP $idp found in IDP resolution cookie", 'debug' );
         }
 
-        # Case 3: check all IDP resolution rules
+        # Case 4: check all IDP resolution rules
         # The first match win
         else {
             foreach ( keys %{ $self->{_idpList} } ) {
@@ -1179,7 +1195,7 @@ sub getIDP {
             }
         }
 
-        # Case 4: use Common Domain Cookie
+        # Case 5: use Common Domain Cookie
         if (   !$idp
             and $self->{samlCommonDomainCookieActivation}
             and $self->{samlCommonDomainCookieReader} )

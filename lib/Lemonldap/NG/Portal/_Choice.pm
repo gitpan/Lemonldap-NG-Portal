@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::_Choice;
 
 use Lemonldap::NG::Portal::Simple;
 
-our $VERSION = '1.3.0';
+our $VERSION = '1.3.1';
 
 ## @cmethod Lemonldap::NG::Portal::_Choice new(Lemonldap::NG::Portal::Simple portal)
 # Constructor
@@ -30,6 +30,13 @@ sub new {
         $portal->lmLog( "No authentication choice done, or wrong choice",
             'debug' );
         $portal->{_authChoice} = "";
+    }
+
+    # Special workaround for Captcha
+    # Init Captcha to have it displayed even if no choice already done
+    if ( $portal->{captcha_login_enabled} ) {
+        eval { $portal->initCaptcha(); };
+        $portal->lmLog( "Can't init captcha: $@", "error" ) if $@;
     }
 
     # Special workaround for SAML
