@@ -50,7 +50,7 @@ sub setSessionInfo {
             }
             else {
                 $self->lmLog(
-                    'Ignoring attribute '
+                    'Ignoring attribute ' 
                       . $v
                       . ' which is not a valid OpenID SREG attribute',
                     'warn'

@@ -69,7 +69,7 @@ use Digest::MD5;
 #inherits Apache::Session
 #link Lemonldap::NG::Common::Apache::Session::SOAP protected globalStorage
 
-our $VERSION = '1.3.1';
+our $VERSION = '1.3.2';
 
 use base qw(Lemonldap::NG::Common::CGI Exporter);
 our @ISA;
@@ -674,6 +674,7 @@ sub setDefaultValues {
 
     # XSS
     $self->{checkXSS} = 1 unless defined $self->{checkXSS};
+    $self->{userControl} ||= '^[\w\.\-@]+$';
 }
 
 ## @method protected void setHiddenFormValue(string fieldname, string value, string prefix, boolean base64)
@@ -1233,10 +1234,20 @@ sub get_url {
 # @return user parameter if good, nothing else.
 sub get_user {
     my $self = shift;
-    return "" unless $self->{user};
-    return $self->{user}
-      unless ( $self->checkXSSAttack( 'user', $self->{user} ) );
-    return "";
+
+    return undef unless $self->{user};
+    unless ( $self->{user} =~ /$self->{userControl}/o ) {
+        $self->lmLog(
+            "Value "
+              . $self->{user}
+              . " does not match userControl regexp: "
+              . $self->{userControl},
+            'warn'
+        );
+        return undef;
+    }
+
+    return $self->{user};
 }
 
 ## @method string get_module(string type)
@@ -2445,6 +2456,11 @@ sub store {
     # Main session
     my $h = $self->getApacheSession( $self->{id} )
       or return PE_APACHESESSIONERROR;
+    # Compute unsecure cookie value if needed
+    if ( $self->{securedCookie} == 3 ) {
+        $self->{sessionInfo}->{_httpSession} =
+          $self->{cipher}->encryptHex( $self->{id}, "http" );
+    }
     foreach my $k ( keys %{ $self->{sessionInfo} } ) {
         next unless defined $self->{sessionInfo}->{$k};
         my $displayValue = $self->{sessionInfo}->{$k};
@@ -2497,11 +2513,7 @@ sub buildCookie {
         push @{ $self->{cookie} },
           $self->cookie(
             -name  => $self->{cookieName} . "http",
-            -value => (
-                  $self->{securedCookie} == 2
-                ? $self->{sessionInfo}->{_httpSession}
-                : $self->{cipher}->encryptHex( $self->{id}, "http" )
-            ),
+            -value => $self->{sessionInfo}->{_httpSession},
             -domain   => $self->{domain},
             -path     => "/",
             -secure   => 0,

@@ -15,7 +15,7 @@ use Unicode::String qw(utf8);
 use strict;
 
 our @EXPORT   = qw(ldap);
-our $VERSION  = '1.3.0';
+our $VERSION  = '1.3.2';
 our $ppLoaded = 0;
 
 BEGIN {
@@ -167,24 +167,7 @@ sub userBind {
             return ( $mesg->code == 0 ? PE_OK : PE_LDAPERROR );
         }
 
-        # Get expiration warning and graces
-        if ( $resp->grace_authentications_remaining ) {
-            $self->{portal}->info( "<h3>"
-                  . $resp->grace_authentications_remaining . " "
-                  . $self->{portal}->msg(PM_PP_GRACE)
-                  . "</h3>" );
-        }
-        if ( $resp->time_before_expiration ) {
-            $self->{portal}->info(
-                "<h3>"
-                  . sprintf(
-                    $self->{portal}->msg(PM_PP_EXP_WARNING),
-                    $self->{portal}->convertSec( $resp->time_before_expiration )
-                  )
-                  . "</h3>"
-            );
-        }
-
+        # Check for ppolicy error
         my $pp_error = $resp->pp_error;
         if ( defined $pp_error ) {
             $self->{portal}->_sub( 'userError',
@@ -202,6 +185,26 @@ sub userBind {
             ]->[$pp_error];
         }
         elsif ( $mesg->code == 0 ) {
+
+            # Get expiration warning and graces
+            if ( $resp->grace_authentications_remaining ) {
+                $self->{portal}->info( "<h3>"
+                      . $resp->grace_authentications_remaining . " "
+                      . $self->{portal}->msg(PM_PP_GRACE)
+                      . "</h3>" );
+            }
+            if ( $resp->time_before_expiration ) {
+                $self->{portal}->info(
+                    "<h3>"
+                      . sprintf(
+                        $self->{portal}->msg(PM_PP_EXP_WARNING),
+                        $self->{portal}
+                          ->convertSec( $resp->time_before_expiration )
+                      )
+                      . "</h3>"
+                );
+            }
+
             return PE_OK;
         }
     }

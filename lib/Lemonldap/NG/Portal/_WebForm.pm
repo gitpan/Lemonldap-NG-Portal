@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::_WebForm;
 use Lemonldap::NG::Portal::Simple qw(:all);
 use strict;
 
-our $VERSION = '1.3.1';
+our $VERSION = '1.3.2';
 
 ## @apmethod int authInit()
 # Does nothing.
@@ -96,10 +96,9 @@ sub extractFormInfo {
 
     # Other parameters
     $self->{timezone} = $self->param('timezone');
-    $self->{userControl} ||= '^[\w\.\-@]+$';
 
     # Check user
-    return PE_MALFORMEDUSER unless ( $self->{user} =~ /$self->{userControl}/o );
+    return PE_MALFORMEDUSER unless $self->get_user;
 
     PE_OK;
 }

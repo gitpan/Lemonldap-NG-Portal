@@ -12,7 +12,7 @@ use strict;
 
 our @EXPORT = qw(dbh);
 
-our $VERSION = '1.2.3';
+our $VERSION = '1.3.2';
 
 ## @method protected Lemonldap::NG::Portal::_DBI dbh(string dbiChain, string dbiUser, string dbiPassword)
 # Create connection to database
@@ -44,16 +44,16 @@ sub dbh {
 }
 
 ## @method protected Lemonldap::NG::Portal::_DBI hash_password(string password, string hash)
-# Return hashed password for SQL SELECT WHERE clause
+# Return hashed password for use in SQL statement
 # @param password clear password
 # @param hash hash mechanism
-# @return hashed password
+# @return SQL statement string
 sub hash_password {
     my $self     = shift;
     my $password = shift;
     my $hash     = shift;
 
-    if ( $hash =~ /^(md5|sha|sha1)$/i ) {
+    if ( $hash =~ /^(md5|sha|sha1|encrypt)$/i ) {
         $self->lmLog( "Using " . uc($hash) . " to hash password", 'debug' );
         return uc($hash) . "($password)";
     }
@@ -65,22 +65,44 @@ sub hash_password {
 
 }
 
-## @method protected Lemonldap::NG::Portal::_DBI check_password(string user, string password)
+## @method protected Lemonldap::NG::Portal::_DBI hash_password_for_select(string password, string hash)
+# Return hashed password for use in SQL SELECT statement
+# Call hash_password unless encrypt hash is choosen
+# @param password clear password
+# @param hash hash mechanism
+# @return SQL statement string
+sub hash_password_for_select {
+    my $self        = shift;
+    my $password    = shift;
+    my $hash        = shift;
+    my $passwordCol = $self->{dbiAuthPasswordCol};
+
+    if ( $hash =~ /^encrypt$/i ) {
+        return uc($hash) . "($password,$passwordCol)";
+    }
+    else {
+        return $self->hash_password( $password, $hash );
+    }
+}
+
+## @method protected Lemonldap::NG::Portal::_DBI check_password(ref dbh, string user, string password)
 # Verify user and password with SQL SELECT
+# @param dbh database handle
 # @param user user
 # @param password password
 # @return boolean result
 sub check_password {
     my $self        = shift;
     my $dbh         = shift;
-    my $user        = $self->{user};
-    my $password    = $self->{password};
+    my $user        = shift || $self->{user};
+    my $password    = shift || $self->{password};
     my $table       = $self->{dbiAuthTable};
     my $loginCol    = $self->{dbiAuthLoginCol};
     my $passwordCol = $self->{dbiAuthPasswordCol};
 
     # Password hash
-    my $passwordsql = $self->hash_password( "?", $self->{dbiAuthPasswordHash} );
+    my $passwordsql =
+      $self->hash_password_for_select( "?", $self->{dbiAuthPasswordHash} );
 
     my @rows = ();
     eval {

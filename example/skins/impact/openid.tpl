@@ -7,8 +7,10 @@
     </div>
 
     <div id="content-right">
+      <TMPL_IF NAME="AUTH_ERROR">
       <p class="text-error"><TMPL_VAR NAME="AUTH_ERROR"></p>
-		<TMPL_IF NAME="ID">
+      </TMPL_IF>
+      <TMPL_IF NAME="ID">
         <p><lang en="Your identity is" fr="Votre identit&eacute; est&nbsp;"/>:</p>
         <p><TMPL_VAR NAME="ID"></p>
       </TMPL_IF>

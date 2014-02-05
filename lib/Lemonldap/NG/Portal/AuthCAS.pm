@@ -71,7 +71,7 @@ sub extractFormInfo {
 
         foreach ( keys %{ $self->{portalHiddenFormValues} } ) {
             $local_url .=
-                ( $local_url =~ /\?/ ? '&' : '?' )
+                ( $local_url =~ /\?/ ? '&' : '?' ) 
               . $_ . '='
               . uri_escape( $self->{portalHiddenFormValues}->{$_} );
         }

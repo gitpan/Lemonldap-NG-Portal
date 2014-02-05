@@ -2,12 +2,13 @@
 
   <div id="content">
     <div id="content-all">
-
+      <TMPL_IF NAME="AUTH_ERROR">
       <div class="title">
         <img src="<TMPL_VAR NAME="SKIN_PATH">/<TMPL_VAR NAME="SKIN">/images/logo-ok.png" />
         <TMPL_VAR NAME="AUTH_ERROR">
       </div>
       <hr class="solid" />
+      </TMPL_IF>
       <p>
         <span class="text-error"><lang en="Connected as" fr="Connect&eacute; en tant que " />: <u><TMPL_VAR NAME="AUTH_USER"></u></span>
       </p>

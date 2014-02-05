@@ -26,10 +26,10 @@
  </TMPL_IF>
  <TMPL_IF NAME="browserIdLoadLoginScript">
   <script type="text/javascript">//<![CDATA[
-     var browserIdSiteName='<TMPL_VAR NAME="browserIdSiteName">';
-     var browserIdSiteLogo='<TMPL_VAR NAME="browserIdSiteLogo">';
-     var browserIdBackgroundColor='<TMPL_VAR NAME="browserIdBackgroundColor">';
-     var browserIdAutoLogin='<TMPL_VAR NAME="browserIdAutoLogin">';
+     var browserIdSiteName="<TMPL_VAR NAME="browserIdSiteName">";
+     var browserIdSiteLogo="<TMPL_VAR NAME="browserIdSiteLogo">";
+     var browserIdBackgroundColor="<TMPL_VAR NAME="browserIdBackgroundColor">";
+     var browserIdAutoLogin="<TMPL_VAR NAME="browserIdAutoLogin">";
   //]]></script>
   <script type="text/javascript" src="<TMPL_VAR NAME="SKIN_PATH">/common/browserid.js"></script>
   <script type="text/javascript" src="<TMPL_VAR NAME="SKIN_PATH">/common/browseridlogin.js"></script>
@@ -39,13 +39,13 @@
   <script type="text/javascript" src="<TMPL_VAR NAME="SKIN_PATH">/common/browseridlogout.js"></script>
  </TMPL_IF>
  <script type="text/javascript">//<![CDATA[
-    var displaytab='<TMPL_VAR NAME="DISPLAY_TAB">';
-    var choicetab='<TMPL_VAR NAME="CHOICE_VALUE">';
-    var autocomplete='<TMPL_VAR NAME="AUTOCOMPLETE">';
-    var login='<TMPL_VAR NAME="LOGIN">';
-    var newwindow='<TMPL_VAR NAME="NEWWINDOW">';
-    var antiframe='<TMPL_VAR NAME="ANTIFRAME">';
-    var appslistorder='<TMPL_VAR NAME="APPSLIST_ORDER">';
+    var displaytab="<TMPL_VAR NAME="DISPLAY_TAB">";
+    var choicetab="<TMPL_VAR NAME="CHOICE_VALUE">";
+    var autocomplete="<TMPL_VAR NAME="AUTOCOMPLETE">";
+    var login="<TMPL_VAR NAME="LOGIN">";
+    var newwindow="<TMPL_VAR NAME="NEWWINDOW">";
+    var antiframe="<TMPL_VAR NAME="ANTIFRAME">";
+    var appslistorder="<TMPL_VAR NAME="APPSLIST_ORDER">";
  //]]></script>
  <script type="text/javascript" src="<TMPL_VAR NAME="SKIN_PATH">/common/portal.js"></script>
  <TMPL_INCLUDE NAME="customhead.tpl">

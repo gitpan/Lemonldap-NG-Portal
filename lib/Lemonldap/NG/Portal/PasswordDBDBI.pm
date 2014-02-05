@@ -12,7 +12,7 @@ use base qw(Lemonldap::NG::Portal::_DBI );
 
 #inherits Lemonldap::NG::Portal::_SMTP
 
-our $VERSION = '1.2.2';
+our $VERSION = '1.3.2';
 
 ## @apmethod int passwordDBInit()
 # Load SMTP functions and call DBI authInit()
@@ -64,7 +64,7 @@ sub modifyPassword {
     # Check old password
     if ( $self->{oldpassword} ) {
 
-        my $result = $self->check_password( $user, $self->{oldpassword} );
+        my $result = $self->check_password( $dbh, $user, $self->{oldpassword} );
 
         unless ($result) {
             return PE_BADOLDPASSWORD;

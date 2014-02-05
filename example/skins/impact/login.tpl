@@ -21,7 +21,9 @@
 
       <h1><lang en="Open your SSO session" fr="Ouvrir une session SSO" /></h1>
       <hr class="solid" />
+      <TMPL_IF NAME="AUTH_ERROR">
       <p><span class="text-error"><TMPL_VAR NAME="AUTH_ERROR"></span></p>
+      </TMPL_IF>
 
       <!-- tabs -->
       <div id="authMenu">
@@ -119,7 +121,9 @@
     <div id="content-right">
       <h1><lang en="Open your SSO session" fr="Ouvrir une session SSO" /></h1>
       <hr class="solid" />
+      <TMPL_IF NAME="AUTH_ERROR">
       <p><span class="text-error"><TMPL_VAR NAME="AUTH_ERROR"></span></p>
+      </TMPL_IF>
       <form action="#" method="post" class="login">
         <TMPL_VAR NAME="HIDDEN_INPUTS">
         <input type="hidden" name="url" value="<TMPL_VAR NAME="AUTH_URL">" />
@@ -147,7 +151,9 @@
     <div id="content-right">
       <h1><lang en="Open your SSO session" fr="Ouvrir une session SSO" /></h1>
       <hr class="solid" />
+      <TMPL_IF NAME="AUTH_ERROR">
       <p><span class="text-error"><TMPL_VAR NAME="AUTH_ERROR"></span></p>
+      </TMPL_IF>
       <form action="#" method="post" class="login">
         <TMPL_VAR NAME="HIDDEN_INPUTS">
         <input type="hidden" name="url" value="<TMPL_VAR NAME="AUTH_URL">" />
@@ -175,7 +181,9 @@
     <div id="content-right">
       <h1><lang en="Open your SSO session" fr="Ouvrir une session SSO" /></h1>
       <hr class="solid" />
+      <TMPL_IF NAME="AUTH_ERROR">
       <p><span class="text-error"><TMPL_VAR NAME="AUTH_ERROR"></span></p>
+      </TMPL_IF>
       <form action="#" method="post" class="login">
         <TMPL_VAR NAME="HIDDEN_INPUTS">
         <input type="hidden" name="url" value="<TMPL_VAR NAME="AUTH_URL">" />
@@ -203,7 +211,9 @@
     <div id="content-right">
       <h1><lang en="Open your SSO session" fr="Ouvrir une session SSO" /></h1>
       <hr class="solid" />
+      <TMPL_IF NAME="AUTH_ERROR">
       <p><span class="text-error"><TMPL_VAR NAME="AUTH_ERROR"></span></p>
+      </TMPL_IF>
       <form action="#" method="post" class="login <TMPL_VAR NAME="module">">
         <TMPL_VAR NAME="HIDDEN_INPUTS">
         <input type="hidden" name="url" value="<TMPL_VAR NAME="AUTH_URL">" />
@@ -251,7 +261,9 @@
         <lang en="Password change" fr="Changement de mot de passe" />
       </div>
       <hr class="solid" />
+      <TMPL_IF NAME="AUTH_ERROR">
       <p class="text-error"><TMPL_VAR NAME="AUTH_ERROR"></p>
+      </TMPL_IF>
       <TMPL_INCLUDE NAME="password.tpl">
       </div>
 
@@ -264,7 +276,9 @@
         <lang en="SSO session inactive" fr="Session SSO inactive" />
       </div>
       <hr class="solid" />
+      <TMPL_IF NAME="AUTH_ERROR">
       <p class="text-error"><TMPL_VAR NAME="AUTH_ERROR"></p>
+      </TMPL_IF>
       <TMPL_IF NAME="MSG">
       <div id="content-all-info">
         <TMPL_VAR NAME="MSG">
@@ -283,7 +297,9 @@
         <lang en="Close your SSO session" fr="Fermer votre Session SSO" />
       </div>
       <hr class="solid" />
+      <TMPL_IF NAME="AUTH_ERROR">
       <p class="text-error"><TMPL_VAR NAME="AUTH_ERROR"></p>
+      </TMPL_IF>
       <p>
         <img src="<TMPL_VAR NAME="SKIN_PATH">/<TMPL_VAR NAME="SKIN">/images/arrow.png" /><a href="<TMPL_VAR NAME="LOGOUT_URL">" class="negative"><lang en="Logout" fr="Se d&eacute;connecter"/></a>
       </p>

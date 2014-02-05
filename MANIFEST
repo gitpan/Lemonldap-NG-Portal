@@ -50,7 +50,9 @@ example/skins/common/Facebook.png
 example/skins/common/favicon.ico
 example/skins/common/Google.png
 example/skins/common/inputicons.css
+example/skins/common/jquery-1.10.2.js
 example/skins/common/jquery-1.10.2.min.js
+example/skins/common/jquery-ui-1.10.3.custom.js
 example/skins/common/jquery-ui-1.10.3.custom.min.js
 example/skins/common/jquery.base64.js
 example/skins/common/jquery.cookie.js
@@ -71,7 +73,6 @@ example/skins/common/SSL.png
 example/skins/common/stop.png
 example/skins/common/Twitter.png
 example/skins/common/user_suit.png
-example/skins/common/valid-xhtml10-blue.png
 example/skins/common/vcard_edit.png
 example/skins/common/vcss-blue.gif
 example/skins/common/warning.png
@@ -258,4 +259,3 @@ t/67-Lemonldap-NG-Portal-AuthBrowserID.t
 t/99-pod.t
 xt/PE_Constants.t
 xt/test-weaken-portal.t
-META.json                                Module JSON meta-data (added by MakeMaker)

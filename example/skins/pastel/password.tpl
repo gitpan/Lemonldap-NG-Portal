@@ -17,7 +17,7 @@
 
       <TMPL_IF NAME="LOGIN">
         <tr><th><lang en="Login" fr="Identifiant"/></th>
-        <td><input name="user" type="text" value="<TMPL_VAR NAME=LOGIN>" tabindex="1" /></td></tr>
+        <td><input name="user" type="hidden" value="<TMPL_VAR NAME=LOGIN>" tabindex="1" /><TMPL_VAR NAME=LOGIN></td></tr>
       </TMPL_IF>
 
       <TMPL_IF NAME="REQUIRE_OLDPASSWORD">

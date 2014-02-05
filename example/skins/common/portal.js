@@ -50,6 +50,7 @@ $(document).ready(function(){
 	/* Menu tabs */
 	var menuTabs = $("#menu").tabs({active:0});
 	var menuIndex = $('#menu a[href="#'+displaytab+'"]').parent().index(); 
+	if (menuIndex<0){menuIndex=0;}
 	menuTabs.tabs("option","active",menuIndex);
 
 	/* Authentication choice tabs */

@@ -200,7 +200,7 @@ sub extractFormInfo {
                 my $val = $self->param($_);
                 $val = 'check_authentication' if $_ eq 'openid.mode';
                 sprintf '%s=%s', uri_escape_utf8($_), uri_escape_utf8($val);
-            } $self->param()
+              } $self->param()
         );
 
         # Launch request

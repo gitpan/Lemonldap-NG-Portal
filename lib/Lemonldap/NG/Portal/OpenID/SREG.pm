@@ -193,7 +193,7 @@ sub sregHook {
         foreach my $k (@opt) {
             utf8::decode( $msg{opt}->{$k} );
             $self->{_openIdTrustExtMsg} .=
-                "<tr class=\"optional\">\n"
+                "<tr class=\"optional\">\n" 
               . "<td>\n"
               . "<input type=\"checkbox\" value=\"OK\""
               . ( $ag{$k} ? 'checked="checked"' : '' )
