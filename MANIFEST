@@ -51,9 +51,7 @@ example/skins/common/favicon.ico
 example/skins/common/Google.png
 example/skins/common/inputicons.css
 example/skins/common/jquery-1.10.2.js
-example/skins/common/jquery-1.10.2.min.js
 example/skins/common/jquery-ui-1.10.3.custom.js
-example/skins/common/jquery-ui-1.10.3.custom.min.js
 example/skins/common/jquery.base64.js
 example/skins/common/jquery.cookie.js
 example/skins/common/key.png
