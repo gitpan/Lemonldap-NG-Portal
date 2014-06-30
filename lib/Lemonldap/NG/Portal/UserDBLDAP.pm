@@ -9,7 +9,7 @@ use strict;
 use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_LDAP 'ldap';    #link protected ldap
 
-our $VERSION = '1.2.2';
+our $VERSION = '1.4.0';
 
 ## @method int userDBInit()
 # Transform ldapGroupAttributeNameSearch in ARRAY ref
@@ -68,8 +68,10 @@ sub search {
     unless ( $self->ldap ) {
         return PE_LDAPCONNECTFAILED;
     }
-    my @attrs =
-      ref( $self->{exportedVars} ) ? values( %{ $self->{exportedVars} } ) : ();
+    my @attrs = (
+        values %{ $self->{exportedVars} },
+        values %{ $self->{ldapExportedVars} }
+    );
     my $mesg = $self->ldap->search(
         base   => $self->{ldapBase},
         scope  => 'sub',
@@ -85,16 +87,22 @@ sub search {
     );
     if ( $mesg->code() != 0 ) {
         $self->lmLog( 'LDAP Search error: ' . $mesg->error, 'error' );
+        $self->ldap->unbind;
+        $self->{flags}->{ldapActive} = 0;
         return PE_LDAPERROR;
     }
     if ( $mesg->count() > 1 ) {
         $self->lmLog( 'More than one entry returned by LDAP directory',
             'error' );
+        $self->ldap->unbind;
+        $self->{flags}->{ldapActive} = 0;
         return PE_BADCREDENTIALS;
     }
     unless ( $self->{entry} = $mesg->entry(0) ) {
         my $user = $self->{mail} || $self->{user};
         $self->_sub( 'userError', "$user was not found in LDAP directory" );
+        $self->ldap->unbind;
+        $self->{flags}->{ldapActive} = 0;
         return PE_BADCREDENTIALS;
     }
     $self->{dn} = $self->{entry}->dn();
@@ -109,23 +117,14 @@ sub search {
 sub setSessionInfo {
     my $self = shift;
     $self->{sessionInfo}->{dn} = $self->{dn};
-    unless ( $self->{exportedVars} ) {
-        foreach (qw(uid cn mail)) {
-            $self->{sessionInfo}->{$_} =
-              $self->{ldap}->getLdapValue( $self->{entry}, $_ ) || "";
-        }
+
+    my %vars = ( %{ $self->{exportedVars} }, %{ $self->{ldapExportedVars} } );
+    while ( my ( $k, $v ) = each %vars ) {
+        $self->{sessionInfo}->{$k} =
+          $self->{ldap}->getLdapValue( $self->{entry}, $v )
+          || "";
     }
-    elsif ( ref( $self->{exportedVars} ) eq 'HASH' ) {
-        foreach ( keys %{ $self->{exportedVars} } ) {
-            $self->{sessionInfo}->{$_} =
-              $self->{ldap}
-              ->getLdapValue( $self->{entry}, $self->{exportedVars}->{$_} )
-              || "";
-        }
-    }
-    else {
-        $self->abort('Only hash reference are supported now in exportedVars');
-    }
+
     PE_OK;
 }
 
@@ -194,6 +193,20 @@ sub setUserDBValue {
     }
 
     return 1;
+}
+
+## @apmethod int userDBFinish()
+# Unbind.
+# @return Lemonldap::NG::Portal constant
+sub userDBFinish {
+    my $self = shift;
+
+    if ( ref( $self->{ldap} ) && $self->{flags}->{ldapActive} ) {
+        $self->ldap->unbind();
+        $self->{flags}->{ldapActive} = 0;
+    }
+
+    PE_OK;
 }
 
 1;

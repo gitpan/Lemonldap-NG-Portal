@@ -15,7 +15,7 @@ use Lemonldap::NG::Portal::_Browser;
 use URI::Escape;
 
 our @ISA     = (qw(Lemonldap::NG::Portal::_Browser));
-our $VERSION = '1.3.0';
+our $VERSION = '1.4.0';
 our $initDone;
 
 BEGIN {
@@ -92,10 +92,11 @@ sub extractFormInfo {
             my @fields = ( 'id', 'username' );
 
             # Look at wanted fields
+            my %vars =
+              ( %{ $self->{exportedVars} },
+                %{ $self->{facebookExportedVars} } );
             if ( $self->get_module('user') =~ /^Facebook/ ) {
-                push @fields,
-                  map { /^(\w+)$/ ? ($1) : () }
-                  values %{ $self->{exportedVars} };
+                push @fields, map { /^(\w+)$/ ? ($1) : () } values %vars;
             }
             my $datas;
 

@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::_i18n;
 # Developpers warning : this file must stay UTF-8 encoded
 
 use AutoLoader qw(AUTOLOAD);
-our $VERSION = '1.3.0';
+our $VERSION = '1.4.0';
 use utf8;
 
 ## @fn string msg(int msg, array ref lang)
@@ -124,6 +124,9 @@ __END__
 # * PE_FORBIDDENIP                       75
 # * PE_CAPTCHAERROR                      76
 # * PE_CAPTCHAEMPTY                      77
+# * PE_REGISTERFIRSTACCESS               78
+# * PE_REGISTERFORMEMPTY                 79
+# * PE_REGISTERALREADYEXISTS             80
 
 # Not used in errors:
 # * PE_DONE                -1
@@ -212,7 +215,10 @@ sub error_fr {
         "L'ancien mot de passe est obligatoire",
         'Vous venez d\'une adresse IP qui n\'est pas accréditée',
         'Erreur dans la saisie du captcha',
-        'Vous devez saisir le captcha'
+        'Vous devez saisir le captcha',
+        'Merci de saisir vos informations',
+        'Une information est manquante',
+        'Cette adresse est déjà utilisée',
     ];
 }
 
@@ -298,7 +304,10 @@ sub error_en {
         'Old password is required',
         'You came from an unaccredited IP address',
         'You failed at typing the captcha',
-        'You have to type the captcha'
+        'You have to type the captcha',
+        'Please enter your information',
+        'An information is missing',
+        'This address is already used',
     ];
 }
 
@@ -385,7 +394,10 @@ sub error_ro {
         'Old password is required',
         'You came from an unaccredited IP address',
         'You failed at typing the captcha',
-        'trebuie să introduceţi CAPTCHA'
+        'trebuie să introduceţi CAPTCHA',
+        'Please enter your information',
+        'An information is missing',
+        'This address is already used',
     ];
 }
 

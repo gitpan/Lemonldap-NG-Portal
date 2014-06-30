@@ -9,7 +9,7 @@ use strict;
 use Lemonldap::NG::Portal::Simple;
 use utf8;
 
-our $VERSION = '1.3.0';
+our $VERSION = '1.4.0';
 
 ## @method array display()
 # Call portal process and set template parameters
@@ -112,6 +112,7 @@ sub display {
                 APPSLIST_DESC => $self->{menuAppslistDesc},  # For old templates
                 SCRIPT_NAME   => $ENV{SCRIPT_NAME},
                 APPSLIST_ORDER => $self->{sessionInfo}->{'appsListOrder'},
+                PING           => $self->{portalPingInterval},
             );
 
         }
@@ -201,7 +202,9 @@ sub display {
             CHECK_LOGINS          => $self->{portalCheckLogins},
             ASK_LOGINS            => $self->{checkLogins},
             DISPLAY_RESETPASSWORD => $self->{portalDisplayResetPassword},
+            DISPLAY_REGISTER      => $self->{portalDisplayRegister},
             MAIL_URL              => $self->{mailUrl},
+            REGISTER_URL          => $self->{registerUrl},
             HIDDEN_INPUTS         => $self->buildHiddenForm(),
             LOGIN_INFO            => $self->loginInfo(),
         );

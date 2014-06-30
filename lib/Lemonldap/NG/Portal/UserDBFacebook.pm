@@ -11,7 +11,7 @@ package Lemonldap::NG::Portal::UserDBFacebook;
 use strict;
 use Lemonldap::NG::Portal::Simple;
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.4.0';
 
 ## @apmethod int userDBInit()
 # Check if authentication module is Facebook
@@ -42,8 +42,10 @@ sub getUser {
 # @return Lemonldap::NG::Portal error code
 sub setSessionInfo {
     my $self = shift;
-    use Data::Dumper;
-    while ( my ( $k, $v ) = each %{ $self->{exportedVars} } ) {
+
+    my %vars =
+      ( %{ $self->{exportedVars} }, %{ $self->{facebookExportedVars} } );
+    while ( my ( $k, $v ) = each %vars ) {
         my $attr = $k;
         my $required = ( $attr =~ s/^!// ) ? 1 : 0;
         $self->{sessionInfo}->{$attr} = $self->{_facebookDatas}->{$v};

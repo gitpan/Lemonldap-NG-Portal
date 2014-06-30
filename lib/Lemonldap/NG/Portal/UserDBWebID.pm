@@ -34,8 +34,7 @@ sub getUser {
 }
 
 ## @apmethod int setSessionInfo()
-# Since the job is done by AuthGoogle, here just check that required
-# attributes are not null
+# Get attributes from FOAF
 # @return Lemonldap::NG::Portal error code
 sub setSessionInfo {
     my $self = shift;
@@ -45,7 +44,8 @@ sub setSessionInfo {
         return PE_ERROR;
     }
 
-    while ( my ( $k, $v ) = each %{ $self->{exportedVars} } ) {
+    my %vars = ( %{ $self->{exportedVars} }, %{ $self->{webIDExportedVars} } );
+    while ( my ( $k, $v ) = each %vars ) {
         my $attr = $k;
         my $req;
         $attr =~ s/^!// and $req = 1;

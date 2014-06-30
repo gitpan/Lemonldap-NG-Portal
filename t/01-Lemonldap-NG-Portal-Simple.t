@@ -36,11 +36,18 @@ $ENV{REMOTE_ADDR}     = '127.0.0.1';
 ok(
     $p = Lemonldap::NG::Portal::Simple->new(
         {
-            globalStorage  => 'Apache::Session::File',
-            domain         => 'example.com',
-            authentication => 'LDAP test=1',
-            user           => '',
-            password       => '',
+            globalStorage        => 'Apache::Session::File',
+            domain               => 'example.com',
+            authentication       => 'LDAP test=1',
+            userDB               => 'LDAP',
+            passwordDB           => 'LDAP',
+            registerDB           => 'LDAP',
+            cookieName           => 'lemonldap',
+            whatToTrace          => '_user',
+            multiValuesSeparator => '; ',
+            securedCookie        => 0,
+            user                 => '',
+            password             => '',
         }
     ),
     'Portal object'
@@ -60,8 +67,16 @@ $ENV{REQUEST_URI}  = '/?user=test&password=';
 $ENV{QUERY_STRING} = 'user=test&password=';
 $p                 = Lemonldap::NG::Portal::Simple->new(
     {
-        globalStorage => 'Apache::Session::File',
-        domain        => 'example.com',
+        globalStorage        => 'Apache::Session::File',
+        domain               => 'example.com',
+        authentication       => 'LDAP test=1',
+        userDB               => 'Null',
+        passwordDB           => 'Null',
+        registerDB           => 'Null',
+        cookieName           => 'lemonldap',
+        whatToTrace          => 'dummy',
+        multiValuesSeparator => '; ',
+        securedCookie        => 0,
     }
 );
 

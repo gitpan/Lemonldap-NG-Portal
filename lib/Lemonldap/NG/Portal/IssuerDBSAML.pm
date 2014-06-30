@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_SAML;
 our @ISA = qw(Lemonldap::NG::Portal::_SAML);
 
-our $VERSION = '1.2.3';
+our $VERSION = '1.4.0';
 
 ## @method void issuerDBInit()
 # Load and check SAML configuration
@@ -86,9 +86,12 @@ sub issuerForUnAuthUser {
 
     # Get HTTP request informations to know
     # if we are receving SAML request or response
-    my $url            = $self->url( -absolute => 1 );
-    my $request_method = $self->request_method();
-    my $content_type   = $self->content_type();
+    my $url                     = $self->url( -absolute => 1 );
+    my $request_method          = $self->request_method();
+    my $content_type            = $self->content_type();
+    my $idp_initiated           = $self->param('IDPInitiated');
+    my $idp_initiated_sp        = $self->param('sp');
+    my $idp_initiated_spConfKey = $self->param('spConfKey');
 
     # 1.1. SSO
     if ( $url =~
@@ -97,6 +100,14 @@ sub issuerForUnAuthUser {
     {
 
         $self->lmLog( "URL $url detected as an SSO request URL", 'debug' );
+
+        # Get hidden params for IDP initiated if needed
+        $idp_initiated = $self->getHiddenFormValue('IDPInitiated')
+          unless defined $idp_initiated;
+        $idp_initiated_sp = $self->getHiddenFormValue('sp')
+          unless defined $idp_initiated_sp;
+        $idp_initiated_spConfKey = $self->getHiddenFormValue('spConfKey')
+          unless defined $idp_initiated_spConfKey;
 
         # Check message
         my ( $request, $response, $method, $relaystate, $artifact ) =
@@ -221,10 +232,29 @@ sub issuerForUnAuthUser {
 
         else {
 
-            # No request or response
-            # This should not happen
-            $self->lmLog( "No request or response found", 'debug' );
+            if ($idp_initiated) {
+
+                # Keep IDP initiated parameters
+                $self->setHiddenFormValue( 'IDPInitiated', $idp_initiated )
+                  if defined $idp_initiated;
+                $self->setHiddenFormValue( 'sp', $idp_initiated_sp )
+                  if defined $idp_initiated_sp;
+                $self->setHiddenFormValue( 'spConfKey',
+                    $idp_initiated_spConfKey )
+                  if defined $idp_initiated_spConfKey;
+
+                $self->lmLog( "Store URL parameters for IDP initiated request",
+                    'debug' );
+
+            }
+            else {
+
+                # No request or response
+                # This should not happen
+                $self->lmLog( "No request or response found", 'debug' );
+            }
             return PE_OK;
+
         }
 
     }
@@ -337,14 +367,14 @@ sub issuerForUnAuthUser {
             # Open local session
             my $local_session = $self->getApacheSession( $local_session_id, 1 );
 
-            unless ($local_session) {
+            unless ( $local_session->data ) {
                 $self->lmLog( "No local session found", 'error' );
                 return $self->sendSLOErrorResponse( $logout, $method );
             }
 
             # Load Session and Identity if they exist
-            my $session  = $local_session->{_lassoSessionDump};
-            my $identity = $local_session->{_lassoIdentityDump};
+            my $session  = $local_session->data->{_lassoSessionDump};
+            my $identity = $local_session->data->{_lassoIdentityDump};
 
             if ($session) {
                 unless ( $self->setSessionFromDump( $logout, $session ) ) {
@@ -489,8 +519,7 @@ sub issuerForUnAuthUser {
             my $sloStatusSessionInfos = $self->getSamlSession($relaystate);
 
             if ($sloStatusSessionInfos) {
-                $sloStatusSessionInfos->{$spConfKey} = 1;
-                untie %$sloStatusSessionInfos;
+                $sloStatusSessionInfos->update( { $spConfKey => 1 } );
                 $self->lmLog(
                     "Store SLO status for $spConfKey in session $relaystate",
                     'debug' );
@@ -550,10 +579,10 @@ sub issuerForUnAuthUser {
         }
 
         # Load Session and Identity if they exist
-        my $session    = $relayInfos->{_lassoSessionDump};
-        my $identity   = $relayInfos->{_lassoIdentityDump};
-        my $providerID = $relayInfos->{_providerID};
-        my $relayState = $relayInfos->{_relayState};
+        my $session    = $relayInfos->data->{_lassoSessionDump};
+        my $identity   = $relayInfos->data->{_lassoIdentityDump};
+        my $providerID = $relayInfos->data->{_providerID};
+        my $relayState = $relayInfos->data->{_relayState};
         my $spConfKey  = $self->{_spList}->{$providerID}->{confKey};
 
         if ($session) {
@@ -586,8 +615,7 @@ sub issuerForUnAuthUser {
         my $sloStatusSessionInfos = $self->getSamlSession($relayState);
 
         if ($sloStatusSessionInfos) {
-            $sloStatusSessionInfos->{$spConfKey} = 1;
-            untie %$sloStatusSessionInfos;
+            $sloStatusSessionInfos->update( { $spConfKey => 1 } );
             $self->lmLog(
                 "Store SLO status for $spConfKey in session $relayState",
                 'debug' );
@@ -600,7 +628,7 @@ sub issuerForUnAuthUser {
         }
 
         # Delete relay session
-        eval { tied(%$relayInfos)->delete(); };
+        $relayInfos->remove();
 
         # SLO response is OK
         $self->lmLog( "Display OK status for SLO on $spConfKey", 'debug' );
@@ -632,12 +660,12 @@ sub issuerForUnAuthUser {
         $self->lmLog( "Found relay session $relayID", 'debug' );
 
         # Get data to build POST form
-        $self->{postUrl}                     = $relayInfos->{url};
-        $self->{postFields}->{'SAMLRequest'} = $relayInfos->{body};
-        $self->{postFields}->{'RelayState'}  = $relayInfos->{relayState};
+        $self->{postUrl}                     = $relayInfos->data->{url};
+        $self->{postFields}->{'SAMLRequest'} = $relayInfos->data->{body};
+        $self->{postFields}->{'RelayState'}  = $relayInfos->data->{relayState};
 
         # Delete relay session
-        eval { tied(%$relayInfos)->delete(); };
+        $relayInfos->remove();
 
         return $self->_subProcess(qw(autoPost));
     }
@@ -667,9 +695,9 @@ sub issuerForUnAuthUser {
         $self->lmLog( "Found relay session $relayID", 'debug' );
 
         # Get data from relay session
-        my $logout_dump  = $relayInfos->{_logout};
-        my $session_dump = $relayInfos->{_session};
-        my $method       = $relayInfos->{_method};
+        my $logout_dump  = $relayInfos->data->{_logout};
+        my $session_dump = $relayInfos->data->{_session};
+        my $method       = $relayInfos->data->{_method};
 
         unless ($logout_dump) {
             $self->lmLog( "Could not get logout dump", 'error' );
@@ -710,7 +738,7 @@ sub issuerForUnAuthUser {
 
             # Try to get SLO status from SLO session
             my $spConfKey = $self->{_spList}->{$sp}->{confKey};
-            my $status    = $relayInfos->{$spConfKey};
+            my $status    = $relayInfos->data->{$spConfKey};
 
             # Remove assertion if status is OK
             if ($status) {
@@ -737,7 +765,7 @@ sub issuerForUnAuthUser {
         }
 
         # Delete relay session
-        eval { tied(%$relayInfos)->delete(); };
+        $relayInfos->remove();
 
         # Send SLO response
         if ( my $tmp =
@@ -850,9 +878,12 @@ sub issuerForUnAuthUser {
 
         # Get sessionInfo for the given NameID
         my $sessionInfo;
+        my $moduleOptions = $self->{samlStorageOptions} || {};
+        $moduleOptions->{backend} = $self->{samlStorage};
+        my $module = "Lemonldap::NG::Common::Apache::Session";
+
         my $saml_sessions =
-          $self->{samlStorage}
-          ->searchOn( $self->{samlStorageOptions}, "_nameID", $name_id->dump );
+          $module->searchOn( $moduleOptions, "_nameID", $name_id->dump );
 
         if ( my @saml_sessions_keys = keys %$saml_sessions ) {
 
@@ -872,14 +903,14 @@ sub issuerForUnAuthUser {
             my $samlSessionInfo = $self->getSamlSession($saml_session);
 
             # Get real session
-            my $real_session = $samlSessionInfo->{_saml_id};
+            my $real_session = $samlSessionInfo->data->{_saml_id};
 
             $self->lmLog( "Retrieve real session $real_session for user $user",
                 'debug' );
 
             $sessionInfo = $self->getApacheSession( $real_session, 1 );
 
-            unless ($sessionInfo) {
+            unless ( $sessionInfo->data ) {
                 $self->lmLog( "Cannot get session $real_session", 'error' );
                 $self->returnSOAPMessage();
             }
@@ -946,10 +977,10 @@ sub issuerForUnAuthUser {
                   if defined $rvalue;
 
                 # Get session value
-                if ( $sessionInfo->{$sp_attr} ) {
+                if ( $sessionInfo->data->{$sp_attr} ) {
 
                     my @values = split $self->{multiValuesSeparator},
-                      $sessionInfo->{$sp_attr};
+                      $sessionInfo->data->{$sp_attr};
                     my @saml2values;
 
                     # SAML2 attribute
@@ -1124,9 +1155,12 @@ sub issuerForAuthUser {
 
     # Get HTTP request informations to know
     # if we are receving SAML request or response
-    my $url            = $self->url( -absolute => 1 );
-    my $request_method = $self->request_method();
-    my $content_type   = $self->content_type();
+    my $url                     = $self->url( -absolute => 1 );
+    my $request_method          = $self->request_method();
+    my $content_type            = $self->content_type();
+    my $idp_initiated           = $self->param('IDPInitiated');
+    my $idp_initiated_sp        = $self->param('sp');
+    my $idp_initiated_spConfKey = $self->param('spConfKey');
 
     # 1.1. SSO (SSO URL or Proxy Mode)
     if ( $url =~
@@ -1135,6 +1169,14 @@ sub issuerForAuthUser {
     {
 
         $self->lmLog( "URL $url detected as an SSO request URL", 'debug' );
+
+        # Get hidden params for IDP initiated if needed
+        $idp_initiated = $self->getHiddenFormValue('IDPInitiated')
+          unless defined $idp_initiated;
+        $idp_initiated_sp = $self->getHiddenFormValue('sp')
+          unless defined $idp_initiated_sp;
+        $idp_initiated_spConfKey = $self->getHiddenFormValue('spConfKey')
+          unless defined $idp_initiated_spConfKey;
 
         # Check message
         my ( $request, $response, $method, $relaystate, $artifact );
@@ -1156,8 +1198,8 @@ sub issuerForAuthUser {
         # Ignore signature verification
         $self->disableSignatureVerification($login);
 
-        # Process the request
-        if ($request) {
+        # Process the request or use IDP initiated mode
+        if ( $request or $idp_initiated ) {
 
             # Load Session and Identity if they exist
             my $session  = $self->{sessionInfo}->{_lassoSessionDump};
@@ -1179,8 +1221,67 @@ sub issuerForAuthUser {
                 $self->lmLog( "Lasso Identity loaded", 'debug' );
             }
 
-            # Process authentication request
             my $result;
+
+            # Create fake request if IDP initiated mode
+            if ($idp_initiated) {
+
+                # Need sp or spConfKey parameter
+                unless ( $idp_initiated_sp or $idp_initiated_spConfKey ) {
+                    $self->lmLog(
+"sp or spConfKey parameter needed to make IDP initiated SSO",
+                        'error'
+                    );
+                    return PE_SAML_SSO_ERROR;
+                }
+
+                unless ($idp_initiated_sp) {
+
+                    # Get SP from spConfKey
+                    foreach ( keys %{ $self->{_spList} } ) {
+                        if ( $self->{_spList}->{$_}->{confKey} eq
+                            $idp_initiated_spConfKey )
+                        {
+                            $idp_initiated_sp = $_;
+                            last;
+                        }
+                    }
+                }
+                else {
+                    unless ( defined $self->{_spList}->{$idp_initiated_sp} ) {
+                        $self->lmLog( "SP $idp_initiated_sp not known",
+                            'error' );
+                        return PE_SAML_UNKNOWN_ENTITY;
+                    }
+                    $idp_initiated_spConfKey =
+                      $self->{_spList}->{$idp_initiated_sp}->{confKey};
+                }
+
+                # Check if IDP Initiated SSO is allowed
+                unless (
+                    $self->{samlSPMetaDataOptions}->{$idp_initiated_spConfKey}
+                    ->{samlSPMetaDataOptionsEnableIDPInitiatedURL} )
+                {
+                    $self->lmLog(
+"IDP Initiated SSO not allowed for SP $idp_initiated_spConfKey",
+                        'error'
+                    );
+                    return PE_SAML_SSO_ERROR;
+                }
+
+                $result =
+                  $self->initIdpInitiatedAuthnRequest( $login,
+                    $idp_initiated_sp );
+                unless ($result) {
+                    $self->lmLog(
+"SSO: Fail to init IDP Initiated authentication request",
+                        'error'
+                    );
+                    return PE_SAML_SSO_ERROR;
+                }
+            }
+
+            # Process authentication request
             if ($artifact) {
                 $result = $self->processArtResponseMsg( $login, $request );
             }
@@ -1195,7 +1296,7 @@ sub issuerForAuthUser {
             }
 
             # Get SP entityID
-            my $sp = $login->remote_providerID();
+            my $sp = $request ? $login->remote_providerID() : $idp_initiated_sp;
 
             $self->lmLog( "Found entityID $sp in SAML message", 'debug' );
 
@@ -1262,15 +1363,21 @@ sub issuerForAuthUser {
                 'debug' );
 
             # Get ForceAuthn sessions for this session_id
+            my $moduleOptions = $self->{samlStorageOptions} || {};
+            $moduleOptions->{backend} = $self->{samlStorage};
+            my $module = "Lemonldap::NG::Common::Apache::Session";
+
             my $forceAuthn_sessions =
-              $self->{samlStorage}
-              ->searchOn( $self->{samlStorageOptions}, "_saml_id",
-                $session_id );
+              $module->searchOn( $moduleOptions, "_saml_id", $session_id );
 
             my $forceAuthn_session;
             my $forceAuthnSessionInfo;
 
-            if ( my @forceAuthn_sessions_keys = keys %$forceAuthn_sessions ) {
+            if (
+                my @forceAuthn_sessions_keys =
+                keys %$forceAuthn_sessions
+              )
+            {
 
                 # Warning if more than one session found
                 if ( $#forceAuthn_sessions_keys > 0 ) {
@@ -1293,7 +1400,7 @@ sub issuerForAuthUser {
                   $self->getSamlSession($forceAuthn_session);
 
                 # Check forceAuthn flag for current SP
-                if ( $forceAuthnSessionInfo->{$spConfKey} ) {
+                if ( $forceAuthnSessionInfo->data->{$spConfKey} ) {
 
                     $self->lmLog(
 "User was already forced to reauthenticate for SP $spConfKey",
@@ -1301,8 +1408,6 @@ sub issuerForAuthUser {
                     );
                     $force_authn = 1;
                 }
-
-                untie %$forceAuthnSessionInfo;
             }
             else {
                 $self->lmLog(
@@ -1316,19 +1421,19 @@ sub issuerForAuthUser {
                 # Store flag for further requests
                 $forceAuthnSessionInfo =
                   $self->getSamlSession($forceAuthn_session);
-                $forceAuthnSessionInfo->{$spConfKey} = 1;
+                $forceAuthnSessionInfo->update( { $spConfKey => 1 } );
 
                 unless ($forceAuthn_session) {
-                    $forceAuthnSessionInfo->{'_type'}    = "forceAuthn";
-                    $forceAuthnSessionInfo->{'_saml_id'} = $session_id;
-                    $forceAuthnSessionInfo->{'_utime'}   = $time;
-                    $forceAuthn_session = $forceAuthnSessionInfo->{_session_id};
+                    my $forceInfos;
+                    $forceInfos->{'_type'}    = "forceAuthn";
+                    $forceInfos->{'_saml_id'} = $session_id;
+                    $forceInfos->{'_utime'}   = $time;
+                    $forceAuthnSessionInfo->update($forceInfos);
+                    $forceAuthn_session = $forceAuthnSessionInfo->id;
                     $self->lmLog(
                         "Create ForceAuthn session $forceAuthn_session",
                         'debug' );
                 }
-
-                untie %$forceAuthnSessionInfo;
 
                 $self->lmLog(
 "Set ForceAuthn flag for SP $spConfKey in ForceAuthn session $forceAuthn_session",
@@ -1350,8 +1455,7 @@ sub issuerForAuthUser {
                 # Else remove flag
                 $forceAuthnSessionInfo =
                   $self->getSamlSession($forceAuthn_session);
-                $forceAuthnSessionInfo->{$spConfKey} = 0;
-                untie %$forceAuthnSessionInfo;
+                $forceAuthnSessionInfo->update( { $spConfKey => 0 } );
 
                 $self->lmLog(
 "Unset ForceAuthn flag for SP $spConfKey in ForceAuthn session $forceAuthn_session",
@@ -1417,6 +1521,15 @@ sub issuerForAuthUser {
             my $nameIDSessionKey =
               $self->{ $nameIDFormatConfiguration->{$nameIDFormat} };
 
+            # Override default NameID Mapping
+            if ( $self->{samlSPMetaDataOptions}->{$spConfKey}
+                ->{samlSPMetaDataOptionsNameIDSessionKey} )
+            {
+                $nameIDSessionKey =
+                  $self->{samlSPMetaDataOptions}->{$spConfKey}
+                  ->{samlSPMetaDataOptionsNameIDSessionKey};
+            }
+
             my $nameIDContent;
             if ( defined $self->{sessionInfo}->{$nameIDSessionKey} ) {
                 $nameIDContent =
@@ -1445,7 +1558,8 @@ sub issuerForAuthUser {
             else {
                 my $nameIdentifier = Lasso::Saml2NameID->new();
                 $nameIdentifier->Format($nameIDFormat);
-                $nameIdentifier->content($nameIDContent) if $nameIDContent;
+                $nameIdentifier->content($nameIDContent)
+                  if $nameIDContent;
                 $login->nameIdentifier($nameIdentifier);
             }
 
@@ -1720,16 +1834,17 @@ sub issuerForAuthUser {
 
             return PE_SAML_SESSION_ERROR unless $samlSessionInfo;
 
-            $samlSessionInfo->{type}     = 'saml';           # Session type
-            $samlSessionInfo->{_utime}   = $time;            # Creation time
-            $samlSessionInfo->{_saml_id} = $session_id;      # SSO session id
-            $samlSessionInfo->{_nameID}  = $nameid->dump;    # SAML NameID
-            $samlSessionInfo->{_sessionIndex} =
-              $sessionIndex;                                 # SAML SessionIndex
+            my $infos;
 
-            my $saml_session_id = $samlSessionInfo->{_session_id};
+            $infos->{type}          = 'saml';           # Session type
+            $infos->{_utime}        = $time;            # Creation time
+            $infos->{_saml_id}      = $session_id;      # SSO session id
+            $infos->{_nameID}       = $nameid->dump;    # SAML NameID
+            $infos->{_sessionIndex} = $sessionIndex;    # SAML SessionIndex
 
-            untie %$samlSessionInfo;
+            $samlSessionInfo->update($infos);
+
+            my $saml_session_id = $samlSessionInfo->id;
 
             $self->lmLog(
                 "Link session $session_id to SAML session $saml_session_id",
@@ -1944,14 +2059,16 @@ sub issuerForAuthUser {
 
             # Create SLO status session and get ID
             my $sloStatusSessionInfo = $self->getSamlSession();
-            $sloStatusSessionInfo->{type}    = 'sloStatus';
-            $sloStatusSessionInfo->{_utime}  = time;
-            $sloStatusSessionInfo->{_logout} = $logout->dump;
-            $sloStatusSessionInfo->{_session} =
+
+            my $sloInfos;
+            $sloInfos->{type}    = 'sloStatus';
+            $sloInfos->{_utime}  = time;
+            $sloInfos->{_logout} = $logout->dump;
+            $sloInfos->{_session} =
               $logout->get_session() ? $logout->get_session()->dump : "";
-            $sloStatusSessionInfo->{_method} = $method;
-            my $relayID = $sloStatusSessionInfo->{_session_id};
-            untie %$sloStatusSessionInfo;
+            $sloInfos->{_method} = $method;
+            $sloStatusSessionInfo->update($sloInfos);
+            my $relayID = $sloStatusSessionInfo->id;
 
             # Prepare logout on all others SP
             my $provider_nb =

@@ -10,7 +10,7 @@ use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_CAS;
 use base qw(Lemonldap::NG::Portal::_CAS Lemonldap::NG::Portal::_LibAccess);
 
-our $VERSION = '1.2.0';
+our $VERSION = '1.4.0';
 
 ## @method void issuerDBInit()
 # Nothing to do
@@ -129,7 +129,7 @@ sub issuerForUnAuthUser {
 
         my $casServiceSession = $self->getCasSession($ticket);
 
-        unless ($casServiceSession) {
+        unless ( $casServiceSession->data ) {
             $self->lmLog( "Service ticket session $ticket not found", 'error' );
             $self->returnCasValidateError();
         }
@@ -137,13 +137,12 @@ sub issuerForUnAuthUser {
         $self->lmLog( "Service ticket session $ticket found", 'debug' );
 
         # Check service
-        unless ( $service eq $casServiceSession->{service} ) {
+        unless ( $service eq $casServiceSession->data->{service} ) {
             $self->lmLog(
                 "Submitted service $service does not match initial service "
-                  . $casServiceSession->{service},
+                  . $casServiceSession->data->{service},
                 'error'
             );
-            untie %$casServiceSession;
             $self->returnCasValidateError();
         }
 
@@ -156,38 +155,34 @@ sub issuerForUnAuthUser {
             # We should check the ST was delivered with primary credentials
             $self->lmLog( "Renew flag detected ", 'debug' );
 
-            unless ( $casServiceSession->{renew} ) {
+            unless ( $casServiceSession->data->{renew} ) {
                 $self->lmLog(
 "Authentication renew requested, but not done in former authentication process",
                     'error'
                 );
-                untie %$casServiceSession;
                 $self->returnCasValidateError();
             }
         }
 
         # Open local session
         my $localSession =
-          $self->getApacheSession( $casServiceSession->{_cas_id}, 1 );
+          $self->getApacheSession( $casServiceSession->data->{_cas_id}, 1 );
 
-        unless ($localSession) {
+        unless ( $localSession->data ) {
             $self->lmLog(
-                "Local session " . $casServiceSession->{_cas_id} . " notfound",
+                "Local session "
+                  . $casServiceSession->data->{_cas_id}
+                  . " notfound",
                 'error'
             );
-            untie %$casServiceSession;
             $self->returnCasValidateError();
         }
 
         # Get username
         my $username =
-          $localSession->{ $self->{casAttr} || $self->{whatToTrace} };
+          $localSession->data->{ $self->{casAttr} || $self->{whatToTrace} };
 
         $self->lmLog( "Get username $username", 'debug' );
-
-        # Close sessions
-        untie %$casServiceSession;
-        untie %$localSession;
 
         # Return success message
         $self->returnCasValidateSuccess($username);
@@ -251,7 +246,7 @@ sub issuerForUnAuthUser {
 
         my $casServiceSession = $self->getCasSession($ticket);
 
-        unless ($casServiceSession) {
+        unless ( $casServiceSession->data ) {
             $self->lmLog( "$urlType ticket session $ticket not found",
                 'error' );
             $self->returnCasServiceValidateError( 'INVALID_TICKET',
@@ -261,10 +256,10 @@ sub issuerForUnAuthUser {
         $self->lmLog( "$urlType ticket session $ticket found", 'debug' );
 
         # Check service
-        unless ( $service eq $casServiceSession->{service} ) {
+        unless ( $service eq $casServiceSession->data->{service} ) {
             $self->lmLog(
                 "Submitted service $service does not match initial service "
-                  . $casServiceSession->{service},
+                  . $casServiceSession->data->{service},
                 'error'
             );
 
@@ -284,19 +279,18 @@ sub issuerForUnAuthUser {
             # We should check the ST was delivered with primary credentials
             $self->lmLog( "Renew flag detected ", 'debug' );
 
-            unless ( $casServiceSession->{renew} ) {
+            unless ( $casServiceSession->data->{renew} ) {
                 $self->lmLog(
 "Authentication renew requested, but not done in former authentication process",
                     'error'
                 );
-                untie %$casServiceSession;
                 $self->returnCasValidateError();
             }
 
         }
 
         # Proxies (for PROXY VALIDATE only)
-        my $proxies = $casServiceSession->{proxies};
+        my $proxies = $casServiceSession->data->{proxies};
 
         # Proxy granting ticket
         if ($pgtUrl) {
@@ -310,27 +304,26 @@ sub issuerForUnAuthUser {
 
             if ($casProxyGrantingSession) {
 
+                my $PGinfos;
+
                 # PGT session
-                $casProxyGrantingSession->{type}    = 'casProxyGranting';
-                $casProxyGrantingSession->{service} = $service;
-                $casProxyGrantingSession->{_cas_id} =
-                  $casServiceSession->{_cas_id};
-                $casProxyGrantingSession->{_utime} =
-                  $casServiceSession->{_utime};
+                $PGinfos->{type}    = 'casProxyGranting';
+                $PGinfos->{service} = $service;
+                $PGinfos->{_cas_id} = $casServiceSession->data->{_cas_id};
+                $PGinfos->{_utime}  = $casServiceSession->data->{_utime};
 
                 # Trace proxies
-                $casProxyGrantingSession->{proxies} = (
+                $PGinfos->{proxies} = (
                       $proxies
                     ? $proxies . $self->{multiValuesSeparator} . $pgtUrl
                     : $pgtUrl
                 );
 
-                my $casProxyGrantingSessionID =
-                  $casProxyGrantingSession->{_session_id};
+                my $casProxyGrantingSessionID = $casProxyGrantingSession->id;
                 my $casProxyGrantingTicket =
                   "PGT-" . $casProxyGrantingSessionID;
 
-                untie %$casProxyGrantingSession;
+                $casProxyGrantingSession->update($PGinfos);
 
                 $self->lmLog(
 "CAS proxy granting session $casProxyGrantingSessionID created",
@@ -342,8 +335,7 @@ sub issuerForUnAuthUser {
 
                 if ($tmpCasSession) {
 
-                    $casProxyGrantingTicketIOU =
-                      "PGTIOU-" . $tmpCasSession->{_session_id};
+                    $casProxyGrantingTicketIOU = "PGTIOU-" . $tmpCasSession->id;
                     $self->deleteCasSession($tmpCasSession);
                     $self->lmLog(
 "Generate proxy granting ticket IOU $casProxyGrantingTicketIOU",
@@ -381,27 +373,24 @@ sub issuerForUnAuthUser {
 
         # Open local session
         my $localSession =
-          $self->getApacheSession( $casServiceSession->{_cas_id}, 1 );
+          $self->getApacheSession( $casServiceSession->data->{_cas_id}, 1 );
 
-        unless ($localSession) {
+        unless ( $localSession->data ) {
             $self->lmLog(
-                "Local session " . $casServiceSession->{_cas_id} . " notfound",
+                "Local session "
+                  . $casServiceSession->data->{_cas_id}
+                  . " notfound",
                 'error'
             );
-            untie %$casServiceSession;
             $self->returnCasServiceValidateError( 'INTERNAL_ERROR',
                 'No session associated to ticket' );
         }
 
         # Get username
         my $username =
-          $localSession->{ $self->{casAttr} || $self->{whatToTrace} };
+          $localSession->data->{ $self->{casAttr} || $self->{whatToTrace} };
 
         $self->lmLog( "Get username $username", 'debug' );
-
-        # Close sessions
-        untie %$casServiceSession;
-        untie %$localSession;
 
         # Return success message
         $self->returnCasServiceValidateSuccess( $username,
@@ -443,7 +432,7 @@ sub issuerForUnAuthUser {
 
         my $casProxyGrantingSession = $self->getCasSession($pgt);
 
-        unless ($casProxyGrantingSession) {
+        unless ( $casProxyGrantingSession->data ) {
             $self->lmLog( "Proxy granting ticket session $pgt not found",
                 'error' );
             $self->returnCasProxyError( 'BAD_PGT', 'Ticket not found' );
@@ -457,24 +446,23 @@ sub issuerForUnAuthUser {
 
         my $casProxySession = $self->getCasSession();
 
-        unless ($casProxySession) {
+        unless ( $casProxySession->data ) {
             $self->lmLog( "Unable to create CAS proxy session", 'error' );
             $self->returnCasProxyError( 'INTERNAL_ERROR',
                 'Error in proxy session management' );
         }
 
-        $casProxySession->{type}    = 'casProxy';
-        $casProxySession->{service} = $targetService;
-        $casProxySession->{_cas_id} = $casProxyGrantingSession->{_cas_id};
-        $casProxySession->{_utime}  = $casProxyGrantingSession->{_utime};
-        $casProxySession->{proxies} = $casProxyGrantingSession->{proxies};
+        my $Pinfos;
+        $Pinfos->{type}    = 'casProxy';
+        $Pinfos->{service} = $targetService;
+        $Pinfos->{_cas_id} = $casProxyGrantingSession->data->{_cas_id};
+        $Pinfos->{_utime}  = $casProxyGrantingSession->data->{_utime};
+        $Pinfos->{proxies} = $casProxyGrantingSession->data->{proxies};
 
-        my $casProxySessionID = $casProxySession->{_session_id};
+        $casProxySession->update($Pinfos);
+
+        my $casProxySessionID = $casProxySession->id;
         my $casProxyTicket    = "PT-" . $casProxySessionID;
-
-        # Close sessions
-        untie %$casProxySession;
-        untie %$casProxyGrantingSession;
 
         $self->lmLog( "CAS proxy session $casProxySessionID created", 'debug' );
 
@@ -608,21 +596,22 @@ sub issuerForAuthUser {
 
             my $casServiceSession = $self->getCasSession();
 
-            unless ($casServiceSession) {
+            unless ( $casServiceSession->data ) {
                 $self->lmLog( "Unable to create CAS session", 'error' );
                 return PE_ERROR;
             }
 
-            $casServiceSession->{type}    = 'casService';
-            $casServiceSession->{service} = $service;
-            $casServiceSession->{renew}   = $casRenewFlag;
-            $casServiceSession->{_cas_id} = $session_id;
-            $casServiceSession->{_utime}  = $time;
+            my $Sinfos;
+            $Sinfos->{type}    = 'casService';
+            $Sinfos->{service} = $service;
+            $Sinfos->{renew}   = $casRenewFlag;
+            $Sinfos->{_cas_id} = $session_id;
+            $Sinfos->{_utime}  = $time;
 
-            my $casServiceSessionID = $casServiceSession->{_session_id};
+            $casServiceSession->update($Sinfos);
+
+            my $casServiceSessionID = $casServiceSession->id;
             $casServiceTicket = "ST-" . $casServiceSessionID;
-
-            untie %$casServiceSession;
 
             $self->lmLog( "CAS service session $casServiceSessionID created",
                 'debug' );

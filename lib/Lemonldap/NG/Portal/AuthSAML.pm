@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_SAML;    #inherits
 use Lemonldap::NG::Common::Conf::SAML::Metadata;
 
-our $VERSION = '1.3.1';
+our $VERSION = '1.4.0';
 our @ISA     = qw(Lemonldap::NG::Portal::_SAML);
 
 ## @apmethod int authInit()
@@ -293,9 +293,13 @@ sub extractFormInfo {
             $self->{_samlToken} = $saml_token;
 
             # Restore initial SAML request in case of proxying
+            my $moduleOptions = $self->{samlStorageOptions} || {};
+            $moduleOptions->{backend} = $self->{samlStorage};
+            my $module = "Lemonldap::NG::Common::Apache::Session";
+
             my $saml_sessions =
-              $self->{samlStorage}->searchOn( $self->{samlStorageOptions},
-                "ProxyID", $assertion_responded );
+              $module->searchOn( $moduleOptions, "ProxyID",
+                $assertion_responded );
 
             if ( my @saml_sessions_keys = keys %$saml_sessions ) {
 
@@ -318,10 +322,11 @@ sub extractFormInfo {
 
                 my $samlSessionInfo = $self->getSamlSession($saml_session);
 
-                $self->{_proxiedRequest}    = $samlSessionInfo->{Request};
-                $self->{_proxiedMethod}     = $samlSessionInfo->{Method};
-                $self->{_proxiedRelayState} = $samlSessionInfo->{RelayState};
-                $self->{_proxiedArtifact}   = $samlSessionInfo->{Artifact};
+                $self->{_proxiedRequest} = $samlSessionInfo->data->{Request};
+                $self->{_proxiedMethod}  = $samlSessionInfo->data->{Method};
+                $self->{_proxiedRelayState} =
+                  $samlSessionInfo->data->{RelayState};
+                $self->{_proxiedArtifact} = $samlSessionInfo->data->{Artifact};
 
                # Save values in hidden fields in case of other user interactions
                 $self->setHiddenFormValue( 'SAMLRequest',
@@ -333,7 +338,7 @@ sub extractFormInfo {
                     $self->{_proxiedArtifact} );
 
                 # Delete session
-                eval { tied(%$samlSessionInfo)->delete(); };
+                $samlSessionInfo->remove();
             }
 
             return PE_OK;
@@ -529,9 +534,12 @@ sub extractFormInfo {
             $self->lmLog( "Logout request NameID content: $user", 'debug' );
 
             # Get SAML sessions with the same NameID
+            my $moduleOptions = $self->{samlStorageOptions} || {};
+            $moduleOptions->{backend} = $self->{samlStorage};
+            my $module = "Lemonldap::NG::Common::Apache::Session";
+
             my $local_sessions =
-              $self->{samlStorage}->searchOn( $self->{samlStorageOptions},
-                "_nameID", $name_id->dump );
+              $module->searchOn( $moduleOptions, "_nameID", $name_id->dump );
 
             if ( my @local_sessions_keys = keys %$local_sessions ) {
 
@@ -550,7 +558,8 @@ sub extractFormInfo {
               # If session index is defined and not equal to SAML session index,
               # jump to next session
                     if ( defined $session_index
-                        and $session_index ne $sessionInfo->{_sessionIndex} )
+                        and $session_index ne
+                        $sessionInfo->data->{_sessionIndex} )
                     {
                         $self->lmLog(
 "Session $local_session has not the good session index, skipping",
@@ -563,28 +572,27 @@ sub extractFormInfo {
                     else {
 
                         # Open real session
-                        my $real_session = $sessionInfo->{_saml_id};
+                        my $real_session = $sessionInfo->data->{_saml_id};
 
-                        my $realSessionInfo =
-                          $self->getApacheSession( $sessionInfo->{_saml_id},
-                            1 );
+                        my $ssoSession =
+                          $self->getApacheSession( $real_session, 1 );
 
                   # Get Lasso::Session dump
                   # This value is erased if a next session match the SLO request
-                        if (   $realSessionInfo
-                            && $realSessionInfo->{_lassoSessionDump} )
+                        if (   $ssoSession->data
+                            && $ssoSession->data->{_lassoSessionDump} )
                         {
                             $self->lmLog(
 "Get Lasso::Session dump from session $real_session",
                                 'debug'
                             );
                             $session_dump =
-                              $realSessionInfo->{_lassoSessionDump};
+                              $ssoSession->data->{_lassoSessionDump};
                         }
 
                         # Delete real session
                         my $del_real_result =
-                          $self->_deleteSession($realSessionInfo);
+                          $self->_deleteSession($ssoSession);
 
                         $self->lmLog(
 "Delete real session $real_session result: $del_real_result",
@@ -594,8 +602,7 @@ sub extractFormInfo {
                         $logout_error = 1 unless $del_real_result;
 
                         # Delete SAML session
-                        my $del_saml_result =
-                          $self->_deleteSession($sessionInfo);
+                        my $del_saml_result = $sessionInfo->remove();
 
                         $self->lmLog(
 "Delete SAML session $local_session result: $del_saml_result",
@@ -961,15 +968,17 @@ sub extractFormInfo {
 
         return PE_SAML_SESSION_ERROR unless $samlSessionInfo;
 
-        $samlSessionInfo->{type}       = 'proxy';
-        $samlSessionInfo->{_utime}     = time;
-        $samlSessionInfo->{Request}    = $self->{_proxiedRequest};
-        $samlSessionInfo->{Method}     = $self->{_proxiedMethod};
-        $samlSessionInfo->{RelayState} = $self->{_proxiedRelayState};
-        $samlSessionInfo->{Artifact}   = $self->{_proxiedArtifact};
-        $samlSessionInfo->{ProxyID}    = $samlID;
+        my $infos;
 
-        untie %$samlSessionInfo;
+        $infos->{type}       = 'proxy';
+        $infos->{_utime}     = time;
+        $infos->{Request}    = $self->{_proxiedRequest};
+        $infos->{Method}     = $self->{_proxiedMethod};
+        $infos->{RelayState} = $self->{_proxiedRelayState};
+        $infos->{Artifact}   = $self->{_proxiedArtifact};
+        $infos->{ProxyID}    = $samlID;
+
+        $samlSessionInfo->update($infos);
 
         $self->lmLog( "Keep initial SAML request data in memory for ID $samlID",
             'debug' );
@@ -1451,15 +1460,16 @@ sub authFinish {
 
     return PE_SAML_SESSION_ERROR unless $samlSessionInfo;
 
-    $samlSessionInfo->{type}          = 'saml';            # Session type
-    $samlSessionInfo->{_utime}        = $utime;            # Creation time
-    $samlSessionInfo->{_saml_id}      = $id;               # SSO session id
-    $samlSessionInfo->{_nameID}       = $nameid->dump;     # SAML NameID
-    $samlSessionInfo->{_sessionIndex} = $session_index;    # SAML SessionIndex
+    my $infos;
+    $infos->{type}          = 'saml';            # Session type
+    $infos->{_utime}        = $utime;            # Creation time
+    $infos->{_saml_id}      = $id;               # SSO session id
+    $infos->{_nameID}       = $nameid->dump;     # SAML NameID
+    $infos->{_sessionIndex} = $session_index;    # SAML SessionIndex
 
-    my $session_id = $samlSessionInfo->{_session_id};
+    $samlSessionInfo->update($infos);
 
-    untie %$samlSessionInfo;
+    my $session_id = $samlSessionInfo->id;
 
     $self->lmLog( "Link session $id to SAML session $session_id", 'debug' );
 

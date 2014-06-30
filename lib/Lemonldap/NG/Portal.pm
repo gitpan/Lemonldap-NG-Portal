@@ -5,7 +5,7 @@
 # Alias for Lemonldap::NG::SharedConf
 package Lemonldap::NG::Portal;
 
-our $VERSION = '1.3.3';
+our $VERSION = '1.4.0';
 use Lemonldap::NG::Portal::SharedConf;
 use base 'Lemonldap::NG::Portal::SharedConf';
 

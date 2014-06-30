@@ -11,8 +11,9 @@
 package Lemonldap::NG::Portal::_Multi;
 
 use Lemonldap::NG::Portal::Simple;
+use Scalar::Util 'weaken';
 
-our $VERSION = '1.2.4';
+our $VERSION = '1.4.0';
 
 ## @cmethod Lemonldap::NG::Portal::_Multi new(Lemonldap::NG::Portal::Simple portal)
 # Constructor
@@ -21,6 +22,7 @@ our $VERSION = '1.2.4';
 sub new {
     my ( $class, $portal ) = splice @_;
     my $self = bless { p => $portal, res => PE_NOSCHEME }, $class;
+    weaken $self->{p};
 
     # Browse authentication and userDB configuration
     my @stack = ( $portal->{authentication}, $portal->{userDB} );

@@ -10,13 +10,13 @@ use Lemonldap::NG::Portal::_LDAP 'ldap';    #link protected ldap
 use Lemonldap::NG::Portal::_WebForm;
 use Lemonldap::NG::Portal::UserDBLDAP;      #inherits
 
-our $VERSION = '1.2.0';
+our $VERSION = '1.4.0';
 use base qw(Lemonldap::NG::Portal::_WebForm);
 
 *_formateFilter = *Lemonldap::NG::Portal::UserDBLDAP::formateFilter;
 *_search        = *Lemonldap::NG::Portal::UserDBLDAP::search;
 
-## @apmethod int authInit()
+## @apmethod int authInit()
 # Set _authnLevel
 # @return Lemonldap::NG::Portal constant
 sub authInit {
@@ -51,6 +51,12 @@ sub authenticate {
     $self->{oldpassword} = $self->{password}
       if ( $res == PE_PP_CHANGE_AFTER_RESET );
 
+    # Unbind if there was an error
+    unless ( $res == PE_OK ) {
+        $self->ldap->unbind;
+        $self->{flags}->{ldapActive} = 0;
+    }
+
     return $res;
 }
 
@@ -60,7 +66,10 @@ sub authenticate {
 sub authFinish {
     my $self = shift;
 
-    $self->ldap->unbind();
+    if ( ref( $self->{ldap} ) && $self->{flags}->{ldapActive} ) {
+        $self->ldap->unbind();
+        $self->{flags}->{ldapActive} = 0;
+    }
 
     PE_OK;
 }

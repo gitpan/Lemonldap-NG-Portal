@@ -13,7 +13,7 @@ use Lemonldap::NG::Portal::_Browser;
 use Cache::FileCache;
 
 our @ISA     = (qw(Lemonldap::NG::Portal::_Browser));
-our $VERSION = '1.3.0';
+our $VERSION = '1.4.0';
 our $initDone;
 
 BEGIN {
@@ -149,7 +149,9 @@ sub extractFormInfo {
         # compatible fields
         if ( $self->get_module('user') eq 'OpenID' ) {
             my ( @r, @o );
-            while ( my ( $v, $k ) = each %{ $self->{exportedVars} } ) {
+            my %vars =
+              ( %{ $self->{exportedVars} }, %{ $self->{openIdExportedVars} } );
+            while ( my ( $v, $k ) = each %vars ) {
                 if ( $k =~ Lemonldap::NG::Common::Regexp::OPENIDSREGATTR() ) {
                     if   ( $v =~ s/^!// ) { push @r, $k }
                     else                  { push @o, $k }

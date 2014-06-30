@@ -23,7 +23,7 @@ SKIP: {
             userDB         => 'SAML',
             issuerDB       => 'Null',
             passwordDB     => 'Null',
-
+            registerDB     => 'Null',
         }
     );
 

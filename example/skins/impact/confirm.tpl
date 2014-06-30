@@ -10,24 +10,8 @@
 
       <TMPL_UNLESS NAME="LIST"><TMPL_IF NAME="ACTIVE_TIMER">
       <p id="timer" class="text-error"><lang en="Automaticaly accept in 5 seconds" fr="Acceptation automatique dans 5 secondes"/></p>
-      <script>
-        var i=5;
-        function go() {
-          $("#form").submit();
-        }
-        function timer() {
-          var h=$('#timer').html();
-          if(i>0){i--;}
-          h=h.replace(/\d+/,i);
-          $('#timer').html(h);
-          window.setTimeout('timer()',1000);
-        }
-        $(document).ready(function(){
-          window.setTimeout('go()',5000);
-          window.setTimeout('timer()',1000);
-        });
-        </script>
-        </TMPL_IF></TMPL_UNLESS>
+      <script type="text/javascript" src="<TMPL_VAR NAME="SKIN_PATH">/common/js/info.js"></script>
+      </TMPL_IF></TMPL_UNLESS>
 
       <form id="form" action="#" method="<TMPL_VAR NAME="FORM_METHOD">" class="login">
         <TMPL_VAR NAME="HIDDEN_INPUTS">

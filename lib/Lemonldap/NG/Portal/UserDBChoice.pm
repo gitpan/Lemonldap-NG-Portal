@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::Simple;
 
 #inherits Lemonldap::NG::Portal::_Choice
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.4.0';
 
 ## @apmethod int userDBInit()
 # Does nothing
@@ -43,6 +43,14 @@ sub setSessionInfo {
 sub setGroups {
     my $self = shift;
     return $self->_choice->try( 'setGroups', 1 );
+}
+
+## @apmethod int userDBFinish()
+# Does nothing
+# @return Lemonldap::NG::Portal constant
+sub userDBFinish {
+    my $self = shift;
+    return $self->_choice->try( 'userDBFinish', 1 );
 }
 
 1;

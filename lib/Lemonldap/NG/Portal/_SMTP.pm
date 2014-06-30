@@ -11,7 +11,7 @@ use MIME::Lite;
 use MIME::Base64;
 use Encode;
 
-our $VERSION = '1.2.3';
+our $VERSION = '1.4.0';
 
 ## @method string gen_password(string regexp)
 # Generate a complex password based on a regular expression
@@ -134,18 +134,46 @@ sub send_mail {
 sub getMailSession {
     my ( $self, $user ) = splice @_;
 
+    my $moduleOptions = $self->{globalStorageOptions} || {};
+    $moduleOptions->{backend} = $self->{globalStorage};
+    my $module = "Lemonldap::NG::Common::Apache::Session";
+
     # Search on mail sessions
-    my $sessions =
-      $self->{globalStorage}
-      ->searchOn( $self->{globalStorageOptions}, "user", $user );
+    my $sessions = $module->searchOn( $moduleOptions, "user", $user );
 
     # Browse found sessions to check if it's a mail session
     foreach my $id ( keys %$sessions ) {
-        my $h = $self->getApacheSession( $id, 1 ) or next;
-        return $id if ( $h->{_type} =~ /^mail$/ );
+        my $mailSession = $self->getApacheSession( $id, 1 );
+        next unless ( $mailSession->data );
+        return $id if ( $mailSession->data->{_type} =~ /^mail$/ );
     }
 
     # No mail session found, return empty string
+    return "";
+}
+
+## @method string getRegisterSession(string mail)
+# Check if a register session exists
+# @param mail the value of the mail key in session
+# @return the first session id found or nothing if no session
+sub getRegisterSession {
+    my ( $self, $mail ) = splice @_;
+
+    my $moduleOptions = $self->{globalStorageOptions} || {};
+    $moduleOptions->{backend} = $self->{globalStorage};
+    my $module = "Lemonldap::NG::Common::Apache::Session";
+
+    # Search on register sessions
+    my $sessions = $module->searchOn( $moduleOptions, "mail", $mail );
+
+    # Browse found sessions to check if it's a register session
+    foreach my $id ( keys %$sessions ) {
+        my $registerSession = $self->getApacheSession( $id, 1 );
+        next unless ( $registerSession->data );
+        return $id if ( $registerSession->data->{_type} =~ /^register$/ );
+    }
+
+    # No register session found, return empty string
     return "";
 }
 

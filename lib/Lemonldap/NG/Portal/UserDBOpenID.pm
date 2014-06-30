@@ -9,7 +9,7 @@ use strict;
 use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Common::Regexp;
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.4.0';
 
 ## @apmethod int userDBInit()
 # Check if authentication module is OpenID
@@ -41,35 +41,32 @@ sub getUser {
 # @return Lemonldap::NG::Portal error code
 sub setSessionInfo {
     my $self = shift;
-    if ( ref( $self->{exportedVars} ) eq 'HASH' ) {
-        while ( my ( $k, $v ) = each %{ $self->{exportedVars} } ) {
-            my $attr = $k;
-            my $required = ( $attr =~ s/^!// );
-            if ( $v =~ Lemonldap::NG::Common::Regexp::OPENIDSREGATTR() ) {
-                $self->{sessionInfo}->{$attr} = $self->param("openid.sreg.$v");
-            }
-            else {
-                $self->lmLog(
-                    'Ignoring attribute ' 
-                      . $v
-                      . ' which is not a valid OpenID SREG attribute',
-                    'warn'
-                );
-            }
 
-            if ( $required and not defined( $self->{sessionInfo}->{$attr} ) ) {
-                $self->lmLog(
-"Required parameter $attr is not provided by OpenID server, aborted",
-                    'warn'
-                );
-
-                $self->{mustRedirect} = 0;
-                return PE_MISSINGREQATTR;
-            }
+    my %vars = ( %{ $self->{exportedVars} }, %{ $self->{openIdExportedVars} } );
+    while ( my ( $k, $v ) = each %vars ) {
+        my $attr = $k;
+        my $required = ( $attr =~ s/^!// );
+        if ( $v =~ Lemonldap::NG::Common::Regexp::OPENIDSREGATTR() ) {
+            $self->{sessionInfo}->{$attr} = $self->param("openid.sreg.$v");
         }
-    }
-    else {
-        $self->abort('Only hash reference are supported now in exportedVars');
+        else {
+            $self->lmLog(
+                'Ignoring attribute '
+                  . $v
+                  . ' which is not a valid OpenID SREG attribute',
+                'warn'
+            );
+        }
+
+        if ( $required and not defined( $self->{sessionInfo}->{$attr} ) ) {
+            $self->lmLog(
+"Required parameter $attr is not provided by OpenID server, aborted",
+                'warn'
+            );
+
+            $self->{mustRedirect} = 0;
+            return PE_MISSINGREQATTR;
+        }
     }
     PE_OK;
 }

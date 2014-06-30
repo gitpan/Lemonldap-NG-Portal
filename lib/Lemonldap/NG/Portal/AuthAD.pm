@@ -7,21 +7,21 @@ package Lemonldap::NG::Portal::AuthAD;
 
 use strict;
 
-our $VERSION = '1.3.0';
+our $VERSION = '1.4.0';
 use Lemonldap::NG::Portal::Simple;
 use base qw(Lemonldap::NG::Portal::AuthLDAP);
 
 *_formateFilter = *Lemonldap::NG::Portal::UserDBAD::formateFilter;
 *getDisplayType = *Lemonldap::NG::Portal::AuthLDAP::getDisplayType;
 
-## @apmethod int authInit()
+## @apmethod int authInit()
 # Add specific attributes for search
 # @return Lemonldap::NG::Portal constant
 sub authInit {
     my $self = shift;
 
-    $self->{exportedVars}->{_AD_pwdLastSet}         = 'pwdLastSet';
-    $self->{exportedVars}->{_AD_userAccountControl} = 'userAccountControl';
+    $self->{ldapExportedVars}->{_AD_pwdLastSet}         = 'pwdLastSet';
+    $self->{ldapExportedVars}->{_AD_userAccountControl} = 'userAccountControl';
 
     return $self->SUPER::authInit();
 }

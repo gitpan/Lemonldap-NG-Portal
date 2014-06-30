@@ -15,7 +15,7 @@ use constant AXSPECURL      => 'http://openid.net/srv/ax/1.0';
 use constant GOOGLEENDPOINT => 'https://www.google.com/accounts/o8/id';
 
 our @ISA     = (qw(Lemonldap::NG::Portal::_Browser));
-our $VERSION = '1.3.0';
+our $VERSION = '1.4.0';
 our $googleEndPoint;
 
 BEGIN {
@@ -77,15 +77,15 @@ sub checkGoogleSession {
     } $self->param();
 
     # Look at persistent database
-    my $id = $self->_md5hash( $self->param('openid.claimed_id') );
-    my $h  = $self->getPersistentSession($id);
+    my $id       = $self->_md5hash( $self->param('openid.claimed_id') );
+    my $pSession = $self->getPersistentSession($id);
     my $gs;
 
     # No AX response, if datas are already shared, store them
     unless ( $self->{_AXNS} ) {
-        if ($h) {
-            $self->{user} = $h->{email};
-            while ( my ( $k, $v ) = each %$h ) {
+        if ( $pSession->data ) {
+            $self->{user} = $pSession->data->{email};
+            while ( my ( $k, $v ) = each %{ $pSession->data } ) {
                 $gs->{$k} = $v;
             }
         }
@@ -96,37 +96,19 @@ sub checkGoogleSession {
         # so if it's empty, request is retried
         $self->{user} = $self->param("openid.$self->{_AXNS}.value.email");
 
-        # If persistent session does not exist, create it
-        unless ($h) {
-            $h = {};
-            my %opts = %{ $self->{persistentStorageOptions} };
-            $opts{setId} = $id;
-            eval { tie %$h, $self->{persistentStorage}, undef, \%opts; };
-            if ($@) {
-                $self->abort(
-"Unable to create persistent session, required to use Google backend: $@"
-                );
-            }
-            else {
-                $self->lmLog(
-                    "Persistent session $h->{_session_id} created to store "
-                      . $self->{user}
-                      . ' Google shared datas',
-                    'debug'
-                );
-            }
-        }
-
         # Retrieve AX datas (and store them in persistent session)
+        my $infos;
         foreach my $k ( $self->param() ) {
             if ( $k =~ /^openid\.$self->{_AXNS}\.value\.(\w+)$/ ) {
-                $gs->{$1} = $h->{$1} = $self->param($k);
+                $gs->{$1} = $infos->{$1} = $self->param($k);
             }
         }
+        $pSession->update($infos);
     }
 
     # Now store datas in session
-    while ( my ( $k, $v ) = each %{ $self->{exportedVars} } ) {
+    my %vars = ( %{ $self->{exportedVars} }, %{ $self->{googleExportedVars} } );
+    while ( my ( $k, $v ) = each %vars ) {
         my $attr = $k;
         $attr =~ s/^!//;
 
@@ -142,7 +124,8 @@ sub checkGoogleSession {
                     $self->_sub( 'userInfo',
 "$v required attribute is missing in Google response, storing ''"
                     );
-                    $h->{$v} = $gs->{$v} = '';
+                    $gs->{$v} = '';
+                    $pSession->update( { $v => '' } );
                 }
 
                 # Case 2: value is not stored, probably configuration has
@@ -160,16 +143,11 @@ sub checkGoogleSession {
         # If an exported variable is not AX compliant, just warn
         else {
             $self->lmLog(
-                'Ignoring attribute '
-                  . $self->{exportedVars}->{$k}
-                  . ' which is not a valid Google OpenID AX attribute',
+"Ignoring attribute $v which is not a valid Google OpenID AX attribute",
                 'warn'
             );
         }
     }
-
-    # Save persistent session
-    untie %$h if ($h);
 
     # Boolean value: ~false if no $user value
     return $self->{user};
@@ -200,7 +178,7 @@ sub extractFormInfo {
                 my $val = $self->param($_);
                 $val = 'check_authentication' if $_ eq 'openid.mode';
                 sprintf '%s=%s', uri_escape_utf8($_), uri_escape_utf8($val);
-              } $self->param()
+            } $self->param()
         );
 
         # Launch request

@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::_LibAccess;
 require SOAP::Lite;
 use base qw(Lemonldap::NG::Portal::_LibAccess);
 
-our $VERSION = '1.2.3';
+our $VERSION = '1.4.0';
 
 ## @method void startSoapServices()
 # Check the URI requested (PATH_INFO environment variable) and launch the
@@ -135,21 +135,24 @@ _RETURN $getAttributesResponse Response
 sub getAttributes {
     my ( $self, $id ) = splice @_;
     die 'id is required' unless ($id);
-    my $h = $self->getApacheSession( $id, 1 );
+
+    my $session = $self->getApacheSession( $id, 1 );
+
     my @tmp = ();
-    unless ($h) {
+    unless ( $session->data ) {
         $self->_sub( 'userNotice',
             "SOAP attributes request: session $id not found" );
         push @tmp, SOAP::Data->name( error => 1 )->type('int');
     }
     else {
         $self->_sub( 'userInfo',
-            "SOAP attributes request for " . $h->{ $self->{whatToTrace} } );
+            "SOAP attributes request for "
+              . $session->data->{ $self->{whatToTrace} } );
         push @tmp, SOAP::Data->name( error => 0 )->type('int');
         push @tmp,
           SOAP::Data->name(
-            attributes => _buildSoapHash( $h, $self->exportedAttr ) );
-        untie %$h;
+            attributes => _buildSoapHash( $session->data, $self->exportedAttr )
+          );
     }
     my $res = SOAP::Data->name( session => \SOAP::Data->value(@tmp) );
     return $res;
@@ -163,14 +166,21 @@ sub getAttributes {
 sub setAttributes {
     my ( $self, $id, $args ) = splice @_;
     die 'id is required' unless ($id);
-    my $h = $self->getApacheSession($id);
-    unless ($h) {
+
+    my $session = $self->getApacheSession($id);
+
+    unless ( $session->data ) {
         $self->lmLog( "Session $id does not exists ($@)", 'warn' );
         return 0;
     }
+
     $self->lmLog( "SOAP request to update session $id", 'debug' );
-    $h->{$_} = $args->{$_} foreach ( keys %{$args} );
-    untie %$h;
+
+    my $infos = {};
+    $infos->{$_} = $args->{$_} foreach ( keys %{$args} );
+
+    $session->update($infos);
+
     return 1;
 }
 
@@ -200,18 +210,28 @@ sub lastCfg {
 # @return Session datas
 sub newSession {
     my ( $self, $args ) = splice @_;
-    my $h = $self->getApacheSession();
-    if ($@) {
+
+    my $session = $self->getApacheSession();
+
+    unless ( $session->data ) {
         $self->lmLog( "Unable to create session", 'error' );
         return 0;
     }
-    $h->{$_} = $args->{$_} foreach ( keys %{$args} );
-    $h->{_utime} = time();
-    $args->{$_} = $h->{$_} foreach ( keys %$h );
-    untie %$h;
-    $self->lmLog( "SOAP request to store $args->{_session_id} ($args->{uid})",
-        'debug' );
-    return SOAP::Data->name( attributes => _buildSoapHash($args) );
+
+    my $infos = {};
+    $infos->{$_} = $args->{$_} foreach ( keys %{$args} );
+    $infos->{_utime} = time();
+
+    $session->update($infos);
+
+    $self->lmLog(
+        "SOAP request to store "
+          . $session->id . " ("
+          . $session->data->{ $self->{whatToTrace} } . ")",
+        'debug'
+    );
+
+    return SOAP::Data->name( attributes => _buildSoapHash( $session->data ) );
 }
 
 ## @method SOAP::Data deleteSession()
@@ -219,10 +239,14 @@ sub newSession {
 sub deleteSession {
     my ( $self, $id ) = splice @_;
     die('id parameter is required') unless ($id);
-    my $h = $self->getApacheSession($id);
-    return 0 if ($@);
+
+    my $session = $self->getApacheSession($id);
+
+    return 0 unless ( $session->data );
+
     $self->lmLog( "SOAP request to delete session $id", 'debug' );
-    return $self->_deleteSession($h);
+
+    return $self->_deleteSession($session);
 }
 
 ##@method SOAP::Data get_key_from_all_sessions
@@ -230,16 +254,15 @@ sub deleteSession {
 sub get_key_from_all_sessions {
     my $self = shift;
     shift;
-    require Lemonldap::NG::Common::Apache::Session;
 
-    #die $self->{globalStorage};
-    my $tmp = $self->{globalStorage};
+    my $moduleOptions = $self->{globalStorageOptions} || {};
+    $moduleOptions->{backend} = $self->{globalStorage};
+    my $module = "Lemonldap::NG::Common::Apache::Session";
+
+    require $module;
+
     no strict 'refs';
-    return $self->{globalStorage}
-      ->get_key_from_all_sessions( $self->{globalStorageOptions}, @_ );
-
-    #return &{"$tmp\::get_key_from_all_sessions"}( $self->{globalStorage},
-    #    $self->{globalStorageOptions}, @_ );
+    return $module->get_key_from_all_sessions( $moduleOptions, @_ );
 }
 
 =begin WSDL
@@ -264,14 +287,16 @@ sub isAuthorizedURI {
     die 'uri is required' unless ($uri);
 
     # Get user session.
-    my $h = $self->getApacheSession( $id, 1 );
-    unless ($h) {
-        $self->lmLog( "Session $id does not exists ($@)", 'warn' );
+    my $session = $self->getApacheSession( $id, 1 );
+
+    unless ( $session->data ) {
+        $self->lmLog( "Session $id does not exists", 'warn' );
         return 0;
     }
-    $self->{sessionInfo} = $h;
+
+    $self->{sessionInfo} = $session->data;
     my $r = $self->_grant($uri);
-    untie %$h;
+
     return $r;
 }
 
@@ -294,19 +319,17 @@ sub getMenuApplications {
     $self->lmLog( "SOAP getMenuApplications request for id $id", 'debug' );
 
     # Get user session.
-    my $h = $self->getApacheSession( $id, 1 );
-    unless ($h) {
-        $self->lmLog( "Session $id does not exists ($@)", 'warn' );
+    my $session = $self->getApacheSession( $id, 1 );
+
+    unless ( $session->data ) {
+        $self->lmLog( "Session $id does not exists", 'warn' );
         return 0;
     }
 
-    $self->{sessionInfo} = $h;
+    $self->{sessionInfo} = $session->data;
 
     # Build application list
     my $appslist = $self->appslist();
-
-    # Close session
-    untie %$h;
 
     # Return result
     return _buildSoapHash( { menu => $appslist } );

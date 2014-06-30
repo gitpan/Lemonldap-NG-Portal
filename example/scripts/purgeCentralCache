@@ -11,6 +11,7 @@
 use Lemonldap::NG::Common::Conf;
 use Lemonldap::NG::Common::Conf::Constants;
 use Lemonldap::NG::Common::Apache::Session;
+use Lemonldap::NG::Common::Session;
 use strict;
 use Getopt::Std;
 
@@ -44,9 +45,6 @@ print "Configuration loaded\n" if $debug;
 #=============================================================================
 # Timeout
 #=============================================================================
-$conf->{timeout}         ||= 7200;
-$conf->{timeoutActivity} ||= 0;
-
 print "Timeout value: " . $conf->{timeout} . "\n" if $debug;
 
 #=============================================================================
@@ -85,6 +83,40 @@ if ( defined $conf->{samlStorage}
     push @backends, $conf->{samlStorageOptions};
 
     print "SAML backend $module will be used\n" if $debug;
+}
+
+# CAS
+if ( defined $conf->{casStorage}
+    or keys %{ $conf->{casStorageOptions} } )
+{
+
+    # Load module
+    $module = $conf->{casStorage} || $conf->{globalStorage};
+    eval "use $module";
+    die $@ if ($@);
+    $conf->{casStorageOptions}->{backend} = $module;
+
+    # Add module in managed backends
+    push @backends, $conf->{casStorageOptions};
+
+    print "CAS backend $module will be used\n" if $debug;
+}
+
+# Captcha
+if ( defined $conf->{captchaStorage}
+    or keys %{ $conf->{captchaStorageOptions} } )
+{
+
+    # Load module
+    $module = $conf->{captchaStorage} || $conf->{globalStorage};
+    eval "use $module";
+    die $@ if ($@);
+    $conf->{captchaStorageOptions}->{backend} = $module;
+
+    # Add module in managed backends
+    push @backends, $conf->{captchaStorageOptions};
+
+    print "Captcha backend $module will be used\n" if $debug;
 }
 
 #=============================================================================
@@ -136,18 +168,25 @@ for my $options (@backends) {
     # Delete sessions
     my @errors;
     for my $id (@t) {
-        my %h;
-        eval { tie %h, "Lemonldap::NG::Common::Apache::Session", $id, $options };
-        if ($@) {
-            print "Error while opening session $id: $@\n" if $debug;
+
+        my $session = Lemonldap::NG::Common::Session->new(
+            storageModule        => $options->{backend},
+            storageModuleOptions => $options,
+            cacheModule          => $conf->{localSessionStorage},
+            cacheModuleOptions   => $conf->{localSessionStorageOptions},
+            id                   => $id,
+        );
+
+        unless ( $session->data ) {
+            print "Error while opening session $id\n" if $debug;
             print STDERR "Error on session $id\n";
             $nb_error++;
             push @errors, $id;
             next;
         }
-        eval { tied(%h)->delete; };
-        if ($@) {
-            print "Error while deleting session $id: $@\n" if $debug;
+
+        unless ( $session->remove ) {
+            print "Error while deleting session $id\n" if $debug;
             print STDERR "Error on session $id\n";
             $nb_error++;
             push @errors, $id;

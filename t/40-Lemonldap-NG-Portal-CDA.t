@@ -26,9 +26,13 @@ $ENV{QUERY_STRING}    = '';
 ok(
     $p = My::Portal->new(
         {
-            globalStorage => 'Apache::Session::File',
-            domain        => 'example.com',
-            cookieName    => 'lemonldap',
+            globalStorage  => 'Apache::Session::File',
+            domain         => 'example.com',
+            cookieName     => 'lemonldap',
+            authentication => 'Null',
+            userDB         => 'Null',
+            passwordDB     => 'Null',
+            registerDB     => 'Null',
         }
     ),
     'Portal object'

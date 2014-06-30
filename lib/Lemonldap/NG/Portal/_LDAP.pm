@@ -15,7 +15,7 @@ use Unicode::String qw(utf8);
 use strict;
 
 our @EXPORT   = qw(ldap);
-our $VERSION  = '1.3.2';
+our $VERSION  = '1.4.0';
 our $ppLoaded = 0;
 
 BEGIN {
@@ -255,7 +255,7 @@ sub userModifyPassword {
 
         # Encode password for AD
         $newpassword = utf8( chr(34) . $newpassword . chr(34) )->utf16le();
-        if ($oldpassword) {
+        if ( $oldpassword and $asUser ) {
             $oldpassword = utf8( chr(34) . $oldpassword . chr(34) )->utf16le();
         }
         $self->{portal}->lmLog( "Active Directory mode enabled", 'debug' );
@@ -301,14 +301,14 @@ sub userModifyPassword {
 
             # AD specific
             # Change password as user with a delete/add modification
-            if ( $ad and $oldpassword ) {
-
+            if ( $ad and $oldpassword and $asUser ) {
                 $mesg = $self->modify(
                     $dn,
-                    delete => { $passwordAttribute => $oldpassword },
-                    add    => { $passwordAttribute => $newpassword }
+                    changes => [
+                        delete => [ $passwordAttribute => $oldpassword ],
+                        add    => [ $passwordAttribute => $newpassword ]
+                    ]
                 );
-
             }
 
             else {
@@ -339,6 +339,8 @@ sub userModifyPassword {
           if ( $mesg->code == 50 || $mesg->code == 8 );
         return PE_PP_INSUFFICIENT_PASSWORD_QUALITY
           if ( $mesg->code == 53 && $ad );
+        return PE_PP_PASSWORD_MOD_NOT_ALLOWED
+          if ( $mesg->code == 19 && $ad );
         return PE_LDAPERROR unless ( $mesg->code == 0 );
         $self->{portal}
           ->_sub( 'userNotice', "Password changed $self->{portal}->{user}" );
@@ -449,25 +451,24 @@ sub userModifyPassword {
 # @return Lemonldap::NG::Portal::_LDAP object
 sub ldap {
     my $self = shift;
-    unless ( $self->{_multi} ) {
-        return $self->{ldap} if ( ref( $self->{ldap} ) );
-    }
-    else {
-        $self->lmLog( "LDAP Cache disabled in multi mode", 'debug' );
-    }
+    return $self->{ldap}
+      if ( ref( $self->{ldap} ) and $self->{flags}->{ldapActive} );
     if ( $self->{ldap} = Lemonldap::NG::Portal::_LDAP->new($self)
         and my $mesg = $self->{ldap}->bind )
     {
         if ( $mesg->code != 0 ) {
             $self->lmLog( "LDAP error: " . $mesg->error, 'error' );
+            $self->{ldap}->unbind;
         }
         else {
             if ( $self->{ldapPpolicyControl}
                 and not $self->{ldap}->loadPP() )
             {
                 $self->lmLog( "LDAP password policy error", 'error' );
+                $self->{ldap}->unbind;
             }
             else {
+                $self->{flags}->{ldapActive} = 1;
                 return $self->{ldap};
             }
         }

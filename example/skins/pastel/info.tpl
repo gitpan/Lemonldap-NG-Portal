@@ -26,38 +26,7 @@
       </div>
     </td></tr></tbody></table>
   </form>
-  <script>
-    var i=10;
-    var _go=1;
-    function stop() {
-      _go=0;
-      $('#timer').html("...");
-    }
-    function go() {
-      if(_go) {
-          $("#form").submit();
-        }
-      }
-    function timer() {
-      var h=$('#timer').html();
-      if(i>0){i--;}  
-      h=h.replace(/\d+/,i);
-      $('#timer').html(h);
-      window.setTimeout('timer()',1000);
-    }
-    $(document).ready(function(){
-      // Check if timer should be activated (true by default)
-      var activeTimer = true;
-      if (!<TMPL_VAR NAME="ACTIVE_TIMER">) {activeTimer = false;}
-  
-      if (activeTimer) {
-      window.setTimeout('go()',10000);
-      window.setTimeout('timer()',1000);
-      } else {
-        stop();
-      }
-    });
-  </script>
+  <script type="text/javascript" src="<TMPL_VAR NAME="SKIN_PATH">/common/js/info.js"></script>
 
 </div>
 

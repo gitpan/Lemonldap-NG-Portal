@@ -31,7 +31,7 @@ hr.solid {
   background: #aaa;
 }
 
-form input[name=user] {
+form input[name=user], form input[name=firstname], form input[name=lastname] {
   border: 1px solid #aaa;
   padding: 5px;
   width: 200px;

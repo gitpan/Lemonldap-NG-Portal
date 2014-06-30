@@ -9,7 +9,7 @@ use strict;
 use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_DBI;    #inherits
 
-our $VERSION = '1.2.3';
+our $VERSION = '1.4.0';
 
 ## @apmethod int userDBInit()
 # Set default values
@@ -102,12 +102,8 @@ sub setSessionInfo {
     # Set _user unless already defined
     $self->{sessionInfo}->{_user} ||= $self->{user};
 
-    # Return if no data to collect
-    return PE_OK
-      unless ( $self->{exportedVars}
-        and ref( $self->{exportedVars} ) eq 'HASH' );
-
-    while ( my ( $var, $attr ) = each %{ $self->{exportedVars} } ) {
+    my %vars = ( %{ $self->{exportedVars} }, %{ $self->{dbiExportedVars} } );
+    while ( my ( $var, $attr ) = each %vars ) {
         $self->{sessionInfo}->{$var} = $self->{entry}->{$attr}
           if ( defined $self->{entry}->{$attr} );
     }

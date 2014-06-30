@@ -9,7 +9,7 @@ use strict;
 use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Common::Regexp;
 
-our $VERSION = '1.3.0';
+our $VERSION = '1.4.0';
 
 ## @apmethod int userDBInit()
 # Check if authentication module is Google
@@ -40,12 +40,14 @@ sub getUser {
 # @return Lemonldap::NG::Portal error code
 sub setSessionInfo {
     my $self = shift;
-    foreach my $k ( keys %{ $self->{exportedVars} } ) {
+
+    my %vars = ( %{ $self->{exportedVars} }, %{ $self->{googleExportedVars} } );
+    while ( my ( $k, $v ) = each %vars ) {
         my $attr = $k;
         next
           unless ( $attr =~ s/^!//
-            and $self->{exportedVars}->{$k} =~
-            Lemonldap::NG::Common::Regexp::GOOGLEAXATTR() );
+            and $v =~ Lemonldap::NG::Common::Regexp::GOOGLEAXATTR() );
+
         unless ( defined( $self->{sessionInfo}->{$attr} ) ) {
             $self->lmLog(
 "Required parameter $attr is not provided by Google server, aborted",
@@ -56,6 +58,7 @@ sub setSessionInfo {
             return PE_MISSINGREQATTR;
         }
     }
+
     PE_OK;
 }
 

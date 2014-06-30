@@ -19,6 +19,8 @@ SKIP: {
                             globalStorage  => 'Apache::Session::File',
                             domain         => 'example.com',
                             authentication => 'LDAP test=1',
+                            userDB         => 'LDAP test=1',
+                            passwordDB     => 'LDAP test=1',
                             user           => '',
                             password       => '',
                         }

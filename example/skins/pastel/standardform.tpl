@@ -51,4 +51,16 @@
     </td></tr>
   </TMPL_IF>
 
+  <TMPL_IF NAME="DISPLAY_REGISTER">
+    <tr><td colspan="2">
+      <div class="buttons">
+        <a class="positive" tabindex="6" href="<TMPL_VAR NAME="REGISTER_URL"><TMPL_IF NAME="key">?<TMPL_VAR NAME="CHOICE_PARAM">=<TMPL_VAR NAME="key"></TMPL_IF>">
+          <img src="<TMPL_VAR NAME="SKIN_PATH">/common/vcard_edit.png" alt="" />
+          <lang en="Create an account" fr="Cr&eacute;er un compte"/>
+        </a>
+      </div>
+    </td></tr>
+  </TMPL_IF>
+
+
 </table>

@@ -41,23 +41,7 @@
 
       <TMPL_IF NAME="ACTIVE_TIMER">
         <p id="timer"><lang en="Automatically accept in 5 seconds" fr="Acceptation automatique dans 5 secondes"/></p>
-        <script>
-          var i=5;
-          function go() {
-            $("#form").submit();
-          }
-          function timer() {
-            var h=$('#timer').html();
-            if(i>0){i--;}
-            h=h.replace(/\d+/,i);
-            $('#timer').html(h);
-            window.setTimeout('timer()',1000);
-          }
-          $(document).ready(function(){
-            window.setTimeout('go()',5000);
-            window.setTimeout('timer()',1000);
-          });
-        </script>
+        <script type="text/javascript" src="<TMPL_VAR NAME="SKIN_PATH">/common/js/info.js"></script>
       </TMPL_IF>
 
       <table><tr><td>

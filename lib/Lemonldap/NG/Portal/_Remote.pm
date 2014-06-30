@@ -7,9 +7,10 @@ package Lemonldap::NG::Portal::_Remote;
 
 use strict;
 use Lemonldap::NG::Portal::Simple;
+use Lemonldap::NG::Common::Session;
 use MIME::Base64;
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.4.0';
 our $initDone;
 
 BEGIN {
@@ -55,18 +56,24 @@ sub checkRemoteId {
         $self->{mustRedirect} = 1;
 
         # Trying to recover session from global session storage
-        # Note that since user has just been redirect to the remote portal, $@
-        # can not be "Object does not exist in the data store"
-        eval {
-            tie %h, $self->{remoteGlobalStorage}, $rId,
-              $self->{remoteGlobalStorageOptions};
-        };
-        if ( $@ or not tied(%h) ) {
-            $self->lmLog( "Remote session error: $@", 'error' );
+
+        my $remoteSession = Lemonldap::NG::Common::Session->new(
+            {
+                storageModule        => $self->{remoteGlobalStorage},
+                storageModuleOptions => $self->{remoteGlobalStorageOptions},
+                cacheModule          => $self->{localSessionStorage},
+                cacheModuleOptions   => $self->{localSessionStorageOptions},
+                id                   => $rId,
+                kind                 => "REMOTE",
+            }
+        );
+
+        unless ( $remoteSession->data ) {
+            $self->lmLog( "Remote session error", 'error' );
             return PE_ERROR;
         }
-        %{ $self->{rSessionInfo} } = %h;
-        untie %h;
+
+        %{ $self->{rSessionInfo} } = %{ $remoteSession->data() };
         delete( $self->{rSessionInfo}->{'_password'} )
           unless ( $self->{storePassword} );
         return PE_OK;

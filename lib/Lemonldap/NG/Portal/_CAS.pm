@@ -7,34 +7,41 @@ package Lemonldap::NG::Portal::_CAS;
 
 use strict;
 use Lemonldap::NG::Portal::_Browser;
+use Lemonldap::NG::Common::Session;
 
 our @ISA     = (qw(Lemonldap::NG::Portal::_Browser));
-our $VERSION = '1.3.0';
+our $VERSION = '1.4.0';
 
 ## @method hashref getCasSession(string id)
 # Try to recover the CAS session corresponding to id and return session datas
 # If id is set to undef, return a new session
 # @param id session reference
-# @return session datas
+# @return CAS session object
 sub getCasSession {
     my ( $self, $id ) = splice @_;
-    my %h;
 
-    # Trying to recover session from CAS session storage
-    eval { tie %h, $self->{casStorage}, $id, $self->{casStorageOptions}; };
-    if ( $@ or not tied(%h) ) {
+    my $casSession = Lemonldap::NG::Common::Session->new(
+        {
+            storageModule        => $self->{casStorage},
+            storageModuleOptions => $self->{casStorageOptions},
+            cacheModule          => $self->{localSessionStorage},
+            cacheModuleOptions   => $self->{localSessionStorageOptions},
+            id                   => $id,
+            kind                 => "CAS",
+        }
+    );
 
-        # Session not available
+    unless ( $casSession->data ) {
         if ($id) {
             $self->_sub( 'userInfo', "CAS session $id isn't yet available" );
         }
         else {
-            $self->lmLog( "Unable to create new CAS session: $@", 'error' );
+            $self->lmLog( "Unable to create new CAS session", 'error' );
         }
-        return 0;
+        return undef;
     }
 
-    return \%h;
+    return $casSession;
 }
 
 ## @method void returnCasValidateError()
@@ -175,9 +182,12 @@ sub deleteCasSecondarySessions {
     my $result = 1;
 
     # Find CAS sessions
+    my $moduleOptions = $self->{casStorageOptions} || {};
+    $moduleOptions->{backend} = $self->{casStorage};
+    my $module = "Lemonldap::NG::Common::Apache::Session";
+
     my $cas_sessions =
-      $self->{casStorage}
-      ->searchOn( $self->{casStorageOptions}, "_cas_id", $session_id );
+      $module->searchOn( $moduleOptions, "_cas_id", $session_id );
 
     if ( my @cas_sessions_keys = keys %$cas_sessions ) {
 
@@ -186,10 +196,10 @@ sub deleteCasSecondarySessions {
             # Get session
             $self->lmLog( "Retrieve CAS session $cas_session", 'debug' );
 
-            my $casSessionInfo = $self->getCasSession($cas_session);
+            my $casSession = $self->getCasSession($cas_session);
 
             # Delete session
-            $result = $self->deleteCasSession($casSessionInfo);
+            $result = $self->deleteCasSession($casSession);
         }
     }
     else {
@@ -201,29 +211,24 @@ sub deleteCasSecondarySessions {
 
 }
 
-## @method boolean deleteCasSession(hashref session)
+## @method boolean deleteCasSession(Lemonldap::NG::Common::Session session)
 # Delete an opened CAS session
-# @param session Tied session object
+# @param session object
 # @return result
 sub deleteCasSession {
     my ( $self, $session ) = splice @_;
 
     # Check session object
-    unless ( ref($session) eq 'HASH' ) {
-        $self->lmLog( "Provided session is not a HASH reference", 'error' );
+    unless ( $session && $session->data ) {
+        $self->lmLog( "No session to delete", 'error' );
         return 0;
     }
 
     # Get session_id
-    my $session_id = $session->{_session_id};
+    my $session_id = $session->id;
 
     # Delete session
-    eval { tied(%$session)->delete() };
-
-    if ($@) {
-        $self->lmLog( "Unable to delete CAS session $session_id: $@", 'error' );
-        return 0;
-    }
+    $session->remove;
 
     $self->lmLog( "CAS session $session_id deleted", 'debug' );
 

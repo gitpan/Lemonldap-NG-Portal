@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::UserDBDemo;
 use strict;
 use Lemonldap::NG::Portal::Simple;
 
-our $VERSION = '1.3.0';
+our $VERSION = '1.4.0';
 
 ## @apmethod int userDBInit()
 # Check AuthDemo use
@@ -62,9 +62,10 @@ sub getUser {
 sub setSessionInfo {
     my $self = shift;
 
-    foreach ( keys %{ $self->{exportedVars} } ) {
-        $self->{sessionInfo}->{$_} =
-          $self->{_demoAccounts}->{ $self->{user} }->{$_}
+    my %vars = ( %{ $self->{exportedVars} }, %{ $self->{demoExportedVars} } );
+    while ( my ( $k, $v ) = each %vars ) {
+        $self->{sessionInfo}->{$k} =
+          $self->{_demoAccounts}->{ $self->{user} }->{$v}
           || "";
     }
 

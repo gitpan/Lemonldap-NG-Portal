@@ -32,6 +32,7 @@ ok(
             authentication    => 'Choice',
             userDB            => 'Null',
             passwordDB        => 'Null',
+            registerDB        => 'Null',
             getUser           => sub { PE_OK },
             setSessionInfo    => sub { PE_OK },
             portal            => 'http://abc',

@@ -7,6 +7,7 @@ package Lemonldap::NG::Portal::_SAML;
 
 use strict;
 use Lemonldap::NG::Common::Conf::SAML::Metadata;
+use Lemonldap::NG::Common::Session;
 use Lemonldap::NG::Portal::_Browser;
 use XML::Simple;
 use MIME::Base64;
@@ -21,7 +22,7 @@ use URI;                   # Get metadata URL path
 #inherits Lemonldap::NG::Common::Conf::SAML::Metadata protected service_metadata
 
 our @ISA     = (qw(Lemonldap::NG::Portal::_Browser));
-our $VERSION = '1.3.2';
+our $VERSION = '1.4.0';
 our $samlCache;
 our $initGlibDone;
 
@@ -978,6 +979,19 @@ sub initAuthnRequest {
     return $self->checkLassoError($@);
 }
 
+## @method boolean initIdpInitiatedAuthnRequest(Lasso::Login login, string idp)
+# Init authentication request
+# @param login Lasso::Login
+# @param idp entityID
+# @return boolean result
+sub initIdpInitiatedAuthnRequest {
+    my ( $self, $login, $idp ) = splice @_;
+
+    eval { Lasso::Login::init_idp_initiated_authn_request( $login, $idp ); };
+
+    return $self->checkLassoError($@);
+}
+
 ## @method boolean buildAuthnRequestMsg(Lasso::Login login)
 # Build authentication request message
 # @param login Lasso::Login
@@ -1176,7 +1190,7 @@ sub storeRelayState {
     return unless $samlSessionInfo;
 
     # Session type
-    $samlSessionInfo->{_type} = "relaystate";
+    $infos->{_type} = "relaystate";
 
     # Set _utime for session autoremove
     # Use default session timeout and relayState session timeout to compute it
@@ -1184,22 +1198,16 @@ sub storeRelayState {
     my $timeout               = $self->{timeout};
     my $samlRelayStateTimeout = $self->{samlRelayStateTimeout} || $timeout;
 
-    $samlSessionInfo->{_utime} = $time + ( $samlRelayStateTimeout - $timeout );
+    $infos->{_utime} = $time + ( $samlRelayStateTimeout - $timeout );
 
     # Store infos in relaystate session
-    foreach ( keys %$infos ) {
-        $samlSessionInfo->{$_} = $infos->{$_};
-    }
+    $samlSessionInfo->update($infos);
 
     # Session ID
-    my $relaystate_id = $samlSessionInfo->{_session_id};
-
-    # Close session
-    untie %$samlSessionInfo;
+    my $relaystate_id = $samlSessionInfo->id;
 
     # Return session ID
     return $relaystate_id;
-
 }
 
 ## @method boolean extractRelayState(string relaystate)
@@ -1217,18 +1225,17 @@ sub extractRelayState {
     return 0 unless $samlSessionInfo;
 
     # Push values in $self
-    foreach ( keys %$samlSessionInfo ) {
+    foreach ( keys %{ $samlSessionInfo->data } ) {
         next if $_ =~ /(type|_session_id|_utime)/;
-        $self->{$_} = $samlSessionInfo->{$_};
+        $self->{$_} = $samlSessionInfo->data->{$_};
     }
 
     # delete relaystate session
-    eval { tied(%$samlSessionInfo)->delete(); };
-    if ($@) {
-        $self->lmLog( "Unable to delete relaystate $relaystate", 'error' );
+    if ( $samlSessionInfo->remove ) {
+        $self->lmLog( "Relaystate $relaystate was deleted", 'debug' );
     }
     else {
-        $self->lmLog( "Relaystate $relaystate was deleted", 'debug' );
+        $self->lmLog( "Unable to delete relaystate $relaystate", 'error' );
     }
 
     return 1;
@@ -1590,17 +1597,19 @@ sub storeReplayProtection {
 
     return 0 unless $samlSessionInfo;
 
-    $samlSessionInfo->{type}       = 'assertion';    # Session type
-    $samlSessionInfo->{_utime}     = time();         # Creation time
-    $samlSessionInfo->{_assert_id} = $samlID;
+    my $infos;
+
+    $infos->{type}       = 'assertion';    # Session type
+    $infos->{_utime}     = time();         # Creation time
+    $infos->{_assert_id} = $samlID;
 
     if ( defined $samlData && $samlData ) {
-        $samlSessionInfo->{data} = $samlData;
+        $infos->{data} = $samlData;
     }
 
-    my $session_id = $samlSessionInfo->{_session_id};
+    $samlSessionInfo->update($infos);
 
-    untie %$samlSessionInfo;
+    my $session_id = $samlSessionInfo->id;
 
     $self->lmLog( "Keep request ID $samlID in assertion session $session_id",
         'debug' );
@@ -1621,9 +1630,11 @@ sub replayProtection {
         return 0;
     }
 
-    my $sessions =
-      $self->{samlStorage}
-      ->searchOn( $self->{samlStorageOptions}, "_assert_id", $samlID );
+    my $moduleOptions = $self->{samlStorageOptions} || {};
+    $moduleOptions->{backend} = $self->{samlStorage};
+    my $module = "Lemonldap::NG::Common::Apache::Session";
+
+    my $sessions = $module->searchOn( $moduleOptions, "_assert_id", $samlID );
 
     if ( my @keys = keys %$sessions ) {
 
@@ -1637,21 +1648,24 @@ sub replayProtection {
 
             return 0 unless $samlSessionInfo;
 
-            if ( defined $samlSessionInfo->{data} ) {
-                $result = $samlSessionInfo->{data};
+            if ( defined $samlSessionInfo->data->{data} ) {
+                $result = $samlSessionInfo->data->{data};
             }
-            eval { tied(%$samlSessionInfo)->delete(); };
-            if ($@) {
+
+            if ( $samlSessionInfo->remove ) {
+                $self->lmLog(
+"Assertion session $session (Message ID $samlID) was deleted",
+                    'debug'
+                );
+                return $result;
+            }
+            else {
                 $self->lmLog(
 "Unable to delete assertion session $session (Message ID $samlID)",
                     'error'
                 );
                 return 0;
             }
-            $self->lmLog(
-                "Assertion session $session (Message ID $samlID) was deleted",
-                'debug' );
-            return $result;
         }
     }
 
@@ -1716,15 +1730,17 @@ sub storeArtifact {
 
     return 0 unless $samlSessionInfo;
 
-    $samlSessionInfo->{type}     = 'artifact';                   # Session type
-    $samlSessionInfo->{_utime}   = time();                       # Creation time
-    $samlSessionInfo->{_art_id}  = $id;
-    $samlSessionInfo->{message}  = $message;
-    $samlSessionInfo->{_saml_id} = $session_id if $session_id;
+    my $infos;
 
-    my $art_session_id = $samlSessionInfo->{_session_id};
+    $infos->{type}     = 'artifact';                   # Session type
+    $infos->{_utime}   = time();                       # Creation time
+    $infos->{_art_id}  = $id;
+    $infos->{message}  = $message;
+    $infos->{_saml_id} = $session_id if $session_id;
 
-    untie %$samlSessionInfo;
+    $samlSessionInfo->update($infos);
+
+    my $art_session_id = $samlSessionInfo->id;
 
     $self->lmLog( "Keep artifact $id in session $art_session_id", 'debug' );
 
@@ -1744,9 +1760,11 @@ sub loadArtifact {
         return;
     }
 
-    my $sessions =
-      $self->{samlStorage}
-      ->searchOn( $self->{samlStorageOptions}, "_art_id", $id );
+    my $moduleOptions = $self->{samlStorageOptions} || {};
+    $moduleOptions->{backend} = $self->{samlStorage};
+    my $module = "Lemonldap::NG::Common::Apache::Session";
+
+    my $sessions = $module->searchOn( $moduleOptions, "_art_id", $id );
 
     if ( my @keys = keys %$sessions ) {
 
@@ -1766,21 +1784,22 @@ sub loadArtifact {
         return unless $samlSessionInfo;
 
         # Get session contents
-        foreach ( keys %$samlSessionInfo ) {
-            $art_session->{$_} = $samlSessionInfo->{$_};
+        foreach ( keys %{ $samlSessionInfo->data } ) {
+            $art_session->{$_} = $samlSessionInfo->data->{$_};
         }
 
         # Delete session
-        eval { tied(%$samlSessionInfo)->delete(); };
-        if ($@) {
+        if ( $samlSessionInfo->remove ) {
+            $self->lmLog( "Artifact session $session (ID $id) was deleted",
+                'debug' );
+
+            return $art_session;
+        }
+        else {
             $self->lmLog( "Unable to delete artifact session $session (ID $id)",
                 'error' );
             return;
         }
-        $self->lmLog( "Artifact session $session (ID $id) was deleted",
-            'debug' );
-
-        return $art_session;
     }
 
     return;
@@ -1813,12 +1832,12 @@ sub createArtifactResponse {
             'debug' );
 
         my $session = $self->getApacheSession( $session_id, 1 );
-        unless ( defined $session ) {
+        unless ( $session->data ) {
             $self->lmLog( "Unable to open session $session_id", 'error' );
             return;
         }
 
-        my $lassoSession = $session->{_lassoSessionDump};
+        my $lassoSession = $session->data->{_lassoSessionDump};
 
         if ($lassoSession) {
             unless ( $self->setSessionFromDump( $login, $lassoSession ) ) {
@@ -2525,14 +2544,18 @@ sub sendLogoutRequestToProvider {
         # Create a new relay session
         my $relayInfos = $self->getSamlSession();
 
-        # Store infos
-        $relayInfos->{type}       = 'relay';
-        $relayInfos->{_utime}     = time;
-        $relayInfos->{url}        = $logout->msg_url;
-        $relayInfos->{body}       = $logout->msg_body;
-        $relayInfos->{relayState} = $logout->msg_relayState;
+        my $infos;
 
-        my $relayID = $relayInfos->{_session_id};
+        # Store infos
+        $infos->{type}       = 'relay';
+        $infos->{_utime}     = time;
+        $infos->{url}        = $logout->msg_url;
+        $infos->{body}       = $logout->msg_body;
+        $infos->{relayState} = $logout->msg_relayState;
+
+        $relayInfos->update($infos);
+
+        my $relayID = $relayInfos->id;
 
         # Build the URL that could be used to play this logout request
         my $slo_url =
@@ -2571,14 +2594,17 @@ sub sendLogoutRequestToProvider {
                 return ( 0, $method, undef );
             }
 
-            $relayInfos->{type}               = 'relay';
-            $relayInfos->{_utime}             = time;
-            $relayInfos->{_lassoSessionDump}  = $logout->get_session->dump;
-            $relayInfos->{_lassoIdentityDump} = $logout->get_identity->dump;
-            $relayInfos->{_providerID}        = $providerID;
-            $relayInfos->{_relayState}        = $logout->msg_relayState;
+            my $infos;
+            $infos->{type}               = 'relay';
+            $infos->{_utime}             = time;
+            $infos->{_lassoSessionDump}  = $logout->get_session->dump;
+            $infos->{_lassoIdentityDump} = $logout->get_identity->dump;
+            $infos->{_providerID}        = $providerID;
+            $infos->{_relayState}        = $logout->msg_relayState;
 
-            my $relayID = $relayInfos->{_session_id};
+            $relayInfos->update($infos);
+
+            my $relayID = $relayInfos->id;
 
             # Build the URL that could be used to play this logout request
             my $slo_url =
@@ -2622,8 +2648,7 @@ sub sendLogoutRequestToProvider {
             my $sloStatusSessionInfos = $self->getSamlSession($relayState);
 
             if ($sloStatusSessionInfos) {
-                $sloStatusSessionInfos->{$confKey} = 1;
-                untie %$sloStatusSessionInfos;
+                $sloStatusSessionInfos->update( { $confKey => 1 } );
                 $self->lmLog(
                     "Store SLO status for $confKey in session $relayState",
                     'debug' );
@@ -2786,29 +2811,35 @@ sub checkDestination {
 }
 
 ## @method hashref getSamlSession(string id)
-# Try to recover the SAML session corresponding to id and return session datas
+# Try to recover the SAML session corresponding to id and return session
 # If id is set to undef, return a new session
 # @param id session reference
-# @return session datas
+# @return Lemonldap::NG::Common::Session object
 sub getSamlSession {
     my ( $self, $id ) = splice @_;
-    my %h;
 
-    # Trying to recover session from SAML session storage
-    eval { tie %h, $self->{samlStorage}, $id, $self->{samlStorageOptions}; };
-    if ( $@ or not tied(%h) ) {
+    my $samlSession = Lemonldap::NG::Common::Session->new(
+        {
+            storageModule        => $self->{samlStorage},
+            storageModuleOptions => $self->{samlStorageOptions},
+            cacheModule          => $self->{localSessionStorage},
+            cacheModuleOptions   => $self->{localSessionStorageOptions},
+            id                   => $id,
+            kind                 => "SAML",
+        }
+    );
 
-        # Session not available
+    unless ( $samlSession->data ) {
         if ($id) {
-            $self->lmLog( "SAML session $id isn't yet available", 'info' );
+            $self->_sub( 'userInfo', "SAML session $id isn't yet available" );
         }
         else {
-            $self->lmLog( "Unable to create new SAML session: $@", 'error' );
+            $self->lmLog( "Unable to create new SAML session", 'error' );
         }
-        return 0;
+        return undef;
     }
 
-    return \%h;
+    return $samlSession;
 }
 
 ## @method Lasso::Saml2Attribute createAttribute(string name, string format, string friendly_name)
@@ -2920,9 +2951,12 @@ sub deleteSAMLSecondarySessions {
     my $result = 1;
 
     # Find SAML sessions
+    my $moduleOptions = $self->{samlStorageOptions} || {};
+    $moduleOptions->{backend} = $self->{samlStorage};
+    my $module = "Lemonldap::NG::Common::Apache::Session";
+
     my $saml_sessions =
-      $self->{samlStorage}
-      ->searchOn( $self->{samlStorageOptions}, "_saml_id", $session_id );
+      $module->searchOn( $moduleOptions, "_saml_id", $session_id );
 
     if ( my @saml_sessions_keys = keys %$saml_sessions ) {
 
@@ -2934,17 +2968,14 @@ sub deleteSAMLSecondarySessions {
             my $samlSessionInfo = $self->getSamlSession($saml_session);
 
             # Delete session
-            eval { tied(%$samlSessionInfo)->delete() };
-
-            if ($@) {
-                $self->lmLog( "Unable to delete SAML session $saml_session: $@",
+            if ( $samlSessionInfo->remove ) {
+                $self->lmLog( "SAML session $saml_session deleted", 'debug' );
+            }
+            else {
+                $self->lmLog( "Unable to delete SAML session $saml_session",
                     'error' );
                 $result = 0;
             }
-            else {
-                $self->lmLog( "SAML session $saml_session deleted", 'debug' );
-            }
-
         }
     }
     else {
@@ -3076,6 +3107,10 @@ Create Lasso::Login object
 =head2 initAuthnRequest
 
 Init authentication request
+
+=head2 initIdpInitiatedAuthnRequest
+
+Init authentication request for IDP initiated
 
 =head2 buildAuthnRequestMsg
 

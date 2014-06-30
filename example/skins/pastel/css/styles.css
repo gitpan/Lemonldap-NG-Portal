@@ -2,10 +2,10 @@
 /* Shipped with LemonLDAP::NG */
 
 /* Use buttons CSS */
-@import url("../../common/buttons.css");
+@import url("../../common/css/buttons.css");
 
 /* Use input icons CSS */
-@import url("../../common/inputicons.css");
+@import url("../../common/css/inputicons.css");
 
 body {
 font-family:Arial, Helvetica, Verdana;
@@ -181,6 +181,10 @@ form input[name=openid_identifier] {
 width: 300px;
 }
 
+form input[type=checkbox] {
+width: auto;
+}
+
 /* JQuery tabs */
 
 .ui-tabs-hide {
@@ -286,7 +290,7 @@ font-style:italic;
 display:block;
 display:inline !important;
 float:none;
-margin:0;
+margin:0 10px 0 0;
 width:150px;
 }
 

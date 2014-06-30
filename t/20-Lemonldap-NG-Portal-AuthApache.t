@@ -21,6 +21,9 @@ ok(
             globalStorage  => 'Apache::Session::File',
             domain         => 'example.com',
             authentication => 'Apache',
+            userDB         => 'Null',
+            passwordDB     => 'Null',
+            registerDB     => 'Null',
         }
     )
 );

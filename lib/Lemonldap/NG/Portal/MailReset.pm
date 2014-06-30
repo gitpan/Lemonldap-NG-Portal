@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::MailReset;
 use strict;
 use warnings;
 
-our $VERSION = '1.3.1';
+our $VERSION = '1.4.0';
 
 use Lemonldap::NG::Portal::Simple qw(:all);
 use base qw(Lemonldap::NG::Portal::SharedConf Exporter);
@@ -36,11 +36,16 @@ use POSIX qw(strftime);
 #   - setMacros
 #   - setLocalGroups
 #   - setGroups
+# - authentication module:
+#   - authInit
+#   - authFinish
 # - userDB module:
 #   - userDBInit
 #   - setSessionInfo
+#   - userDBFinish
 # - passwordDB module:
 #   - passwordDBInit
+#   - passwordDBFinish
 # @return 1 if all is OK
 sub process {
     my ($self) = splice @_;
@@ -49,9 +54,10 @@ sub process {
     $self->{error} = PE_OK;
 
     $self->{error} = $self->_subProcess(
-        qw(smtpInit userDBInit passwordDBInit extractMailInfo
-          getMailUser setSessionInfo setMacros setGroups setPersistentSessionInfo
-          setLocalGroups storeMailSession sendConfirmationMail changePassword sendPasswordMail)
+        qw(smtpInit authInit extractMailInfo userDBInit getMailUser setSessionInfo
+          setMacros setGroups setPersistentSessionInfo setLocalGroups userDBFinish
+          storeMailSession sendConfirmationMail passwordDBInit changePassword passwordDBFinish
+          sendPasswordMail authFinish)
     );
 
     return (
@@ -109,17 +115,14 @@ sub extractMailInfo {
             'debug' );
 
         # Get the corresponding session
-        my $h = $self->getApacheSession( $self->{mail_token} );
+        my $mailSession = $self->getApacheSession( $self->{mail_token} );
 
-        if ( ref $h ) {
-            $self->{mail}        = $h->{user};
-            $self->{mailAddress} = $h->{ $self->{mailSessionKey} };
+        if ( $mailSession->data ) {
+            $self->{mail} = $mailSession->data->{user};
+            $self->{mailAddress} =
+              $mailSession->data->{ $self->{mailSessionKey} };
             $self->lmLog( "User associated to token: " . $self->{mail},
                 'debug' );
-
-            # Close session, it will be deleted after password change success
-            untie %$h;
-
         }
 
         return PE_BADMAILTOKEN unless ( $self->{mail} );
@@ -179,8 +182,6 @@ sub extractMailInfo {
 
     }
 
-    $self->{userControl} ||= '^[\w\.\-@]+$';
-
     # Check mail
     return PE_MALFORMEDUSER unless ( $self->{mail} =~ /$self->{userControl}/o );
 
@@ -196,6 +197,7 @@ sub getMailUser {
     my $error = $self->getUser();
 
     if ( $error == PE_USERNOTFOUND or $error == PE_BADCREDENTIALS ) {
+        $self->_sub('userDBFinish');
         return PE_MAILNOTFOUND;
     }
 
@@ -213,7 +215,7 @@ sub storeMailSession {
       if ( $self->{mail_token} or $self->getMailSession( $self->{mail} ) );
 
     # Create a new session
-    my $h = $self->getApacheSession();
+    my $mailSession = $self->getApacheSession();
 
     # Set _utime for session autoremove
     # Use default session timeout and mail session timeout to compute it
@@ -221,28 +223,29 @@ sub storeMailSession {
     my $timeout     = $self->{timeout};
     my $mailTimeout = $self->{mailTimeout} || $timeout;
 
-    $h->{_utime} = $time + ( $mailTimeout - $timeout );
+    my $infos = {};
+    $infos->{_utime} = $time + ( $mailTimeout - $timeout );
 
     # Store expiration timestamp for further use
-    $h->{mailSessionTimeoutTimestamp}    = $time + $mailTimeout;
-    $self->{mailSessionTimeoutTimestamp} = $time + $mailTimeout;
+    $infos->{mailSessionTimeoutTimestamp} = $time + $mailTimeout;
+    $self->{mailSessionTimeoutTimestamp}  = $time + $mailTimeout;
 
     # Store start timestamp for further use
-    $h->{mailSessionStartTimestamp}    = $time;
-    $self->{mailSessionStartTimestamp} = $time;
+    $infos->{mailSessionStartTimestamp} = $time;
+    $self->{mailSessionStartTimestamp}  = $time;
 
     # Store mail
-    $h->{ $self->{mailSessionKey} } =
+    $infos->{ $self->{mailSessionKey} } =
       $self->getFirstValue( $self->{sessionInfo}->{ $self->{mailSessionKey} } );
 
     # Store user
-    $h->{user} = $self->{mail};
+    $infos->{user} = $self->{mail};
 
     # Store type
-    $h->{_type} = "mail";
+    $infos->{_type} = "mail";
 
-    # Untie session
-    untie %$h;
+    # Update session
+    $mailSession->update($infos);
 
     PE_OK;
 }
@@ -265,10 +268,11 @@ sub sendConfirmationMail {
 
     $self->lmLog( "Mail session found: $mail_session", 'debug' );
 
-    my $h = $self->getApacheSession( $mail_session, 1 );
-    $self->{mailSessionTimeoutTimestamp} = $h->{mailSessionTimeoutTimestamp};
-    $self->{mailSessionStartTimestamp}   = $h->{mailSessionStartTimestamp};
-    untie %$h;
+    my $mailSession = $self->getApacheSession( $mail_session, 1 );
+    $self->{mailSessionTimeoutTimestamp} =
+      $mailSession->data->{mailSessionTimeoutTimestamp};
+    $self->{mailSessionStartTimestamp} =
+      $mailSession->data->{mailSessionStartTimestamp};
 
     # Mail session expiration date
     my $expTimestamp = $self->{mailSessionTimeoutTimestamp};
@@ -379,15 +383,14 @@ sub changePassword {
     if ( $result == PE_PASSWORD_OK or $result == PE_OK ) {
 
         # Get the corresponding session
-        my $h = $self->getApacheSession( $self->{mail_token} );
+        my $mailSession = $self->getApacheSession( $self->{mail_token} );
 
-        if ( ref $h ) {
+        if ( $mailSession->data ) {
 
             $self->lmLog( "Delete mail session " . $self->{mail_token},
                 'debug' );
 
-            # Delete it
-            tied(%$h)->delete();
+            $mailSession->remove;
         }
         else {
             $self->lmLog( "Mail session not found", 'warn' );
@@ -434,6 +437,7 @@ sub sendPasswordMail {
             filename => $tplfile,
             filter   => sub { $self->translate_template(@_) }
         );
+        $template->param( RESET => $self->{forceReset} );
         $body = $template->output();
         $html = 1;
     }

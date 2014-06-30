@@ -12,12 +12,12 @@ use Lemonldap::NG::Portal::UserDBLDAP;      #inherits
 
 #inherits Lemonldap::NG::Portal::_SMTP
 
-our $VERSION = '1.2.0';
+our $VERSION = '1.4.0';
 
 *_formateFilter = *Lemonldap::NG::Portal::UserDBLDAP::formateFilter;
 *_search        = *Lemonldap::NG::Portal::UserDBLDAP::search;
 
-## @apmethod int passwordDBInit()
+## @apmethod int passwordDBInit()
 # Load SMTP functions
 # @return Lemonldap::NG::Portal constant
 sub passwordDBInit {
@@ -57,7 +57,11 @@ sub modifyPassword {
         $self->{confirmpassword}, $self->{oldpassword}
     );
 
-    return $code unless ( $code == PE_PASSWORD_OK );
+    unless ( $code == PE_PASSWORD_OK ) {
+        $self->ldap->unbind;
+        $self->{flags}->{ldapActive} = 0;
+        return $code;
+    }
 
     # If password policy and force reset, set reset flag
     if (    $self->{ldapPpolicyControl}
@@ -80,7 +84,9 @@ sub modifyPassword {
                   . $result->code,
                 'error'
             );
-            $code = PE_LDAPERROR;
+            $self->ldap->unbind;
+            $self->{flags}->{ldapActive} = 0;
+            return PE_LDAPERROR;
         }
 
         $self->lmLog(
@@ -92,6 +98,20 @@ sub modifyPassword {
     }
 
     return $code;
+}
+
+## @apmethod int passwordDBFinish()
+# Unbind.
+# @return Lemonldap::NG::Portal constant
+sub passwordDBFinish {
+    my $self = shift;
+
+    if ( ref( $self->{ldap} ) && $self->{flags}->{ldapActive} ) {
+        $self->ldap->unbind();
+        $self->{flags}->{ldapActive} = 0;
+    }
+
+    PE_OK;
 }
 
 1;
