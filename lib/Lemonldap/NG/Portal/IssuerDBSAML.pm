@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_SAML;
 our @ISA = qw(Lemonldap::NG::Portal::_SAML);
 
-our $VERSION = '1.4.0';
+our $VERSION = '1.4.1';
 
 ## @method void issuerDBInit()
 # Load and check SAML configuration
@@ -1478,8 +1478,18 @@ sub issuerForAuthUser {
 
             $self->lmLog( "Authentication context is $authn_context", 'debug' );
 
+            # Get SP options notOnOrAfterTimeout
+            my $notOnOrAfterTimeout =
+              $self->{samlSPMetaDataOptions}->{$spConfKey}
+              ->{samlSPMetaDataOptionsNotOnOrAfterTimeout};
+
             # Build Assertion
-            unless ( $self->buildAssertion( $login, $authn_context ) ) {
+            unless (
+                $self->buildAssertion(
+                    $login, $authn_context, $notOnOrAfterTimeout
+                )
+              )
+            {
                 $self->lmLog( "Unable to build assertion", 'error' );
                 return PE_SAML_SSO_ERROR;
             }
@@ -1664,9 +1674,11 @@ sub issuerForAuthUser {
               $self->{samlSPMetaDataOptions}->{$spConfKey}
               ->{samlSPMetaDataOptionsOneTimeUse};
 
+            my $conditionNotOnOrAfter = $notOnOrAfterTimeout || "86400";
             eval {
                 $response_assertions[0]
-                  ->set_basic_conditions( 60, 86400, $oneTimeUse );
+                  ->set_basic_conditions( 60, $conditionNotOnOrAfter,
+                    $oneTimeUse );
             };
             if ($@) {
                 $self->lmLog( "Basic conditions not set: $@", 'debug' );
@@ -1708,7 +1720,11 @@ sub issuerForAuthUser {
                 'debug' );
 
             # Set SessionNotOnOrAfter
-            my $timeout             = $time + $self->{timeout};
+            my $sessionNotOnOrAfterTimeout =
+              $self->{samlSPMetaDataOptions}->{$spConfKey}
+              ->{samlSPMetaDataOptionsSessionNotOnOrAfterTimeout};
+            $sessionNotOnOrAfterTimeout ||= $self->{timeout};
+            my $timeout             = $time + $sessionNotOnOrAfterTimeout;
             my $sessionNotOnOrAfter = $self->timestamp2samldate($timeout);
             $authn_statements[0]->SessionNotOnOrAfter($sessionNotOnOrAfter);
 

@@ -8,7 +8,7 @@ package My::Portal;
 
 use strict;
 use IO::String;
-use Test::More tests => 2;
+use Test::More tests => 4;
 
 BEGIN { use_ok( 'Lemonldap::NG::Portal::Simple', ':all' ) }
 our @ISA = qw(Lemonldap::NG::Portal::Simple);
@@ -63,7 +63,7 @@ $ENV{QUERY_STRING}    = '';
 
 SKIP: {
     eval { require SOAP::Lite };
-    skip "SOAP::Lite is not installed, so CGI SOAP functions will not work", 1
+    skip "SOAP::Lite is not installed, so CGI SOAP functions will not work", 3
       if ($@);
 
     ok(
@@ -74,15 +74,47 @@ SKIP: {
                     Directory     => '/tmp/',
                     LockDirectory => '/tmp/',
                 },
-                domain         => 'example.com',
-                authentication => 'Null',
-                userDB         => 'Null',
-                passwordDB     => 'Null',
-                registerDB     => 'Null',
-                soap           => 1,
+                domain           => 'example.com',
+                cookieName       => 'lemonldaptest',
+                authentication   => 'Multi SSL;Demo',
+                userDB           => 'Null',
+                passwordDB       => 'Null',
+                registerDB       => 'Null',
+                soap             => 1,
+                whatToTrace      => 'uid',
+                securedCookie    => 0,
+                hiddenAttributes => '_passwd',
             }
         ),
         'Portal object'
     );
     bless $p, 'My::Portal';
+
+    open STDERR, '>/dev/null';
+
+    $p->getCookies( "dwho", "test" );
+    ok( $p->{error} != 0, 'getCookies with bad password' );
+
+    $p = Lemonldap::NG::Portal::Simple->new(
+        {
+            globalStorage        => 'Apache::Session::File',
+            globalStorageOptions => {
+                Directory     => '/tmp/',
+                LockDirectory => '/tmp/',
+            },
+            domain           => 'example.com',
+            cookieName       => 'lemonldaptest',
+            authentication   => 'Multi SSL;Demo',
+            userDB           => 'Null',
+            passwordDB       => 'Null',
+            registerDB       => 'Null',
+            soap             => 1,
+            whatToTrace      => 'uid',
+            securedCookie    => 0,
+            hiddenAttributes => '_passwd',
+        }
+    );
+
+    $p->getCookies( "dwho", "dwho" );
+    ok( $p->{error} == 0, 'getCookies with good password' );
 }

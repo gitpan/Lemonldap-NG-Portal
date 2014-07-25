@@ -10,7 +10,7 @@ use Lemonldap::NG::Portal::_Browser;
 use Lemonldap::NG::Common::Session;
 
 our @ISA     = (qw(Lemonldap::NG::Portal::_Browser));
-our $VERSION = '1.4.0';
+our $VERSION = '1.4.1';
 
 ## @method hashref getCasSession(string id)
 # Try to recover the CAS session corresponding to id and return session datas
@@ -31,12 +31,13 @@ sub getCasSession {
         }
     );
 
-    unless ( $casSession->data ) {
+    if ( $casSession->error ) {
         if ($id) {
             $self->_sub( 'userInfo', "CAS session $id isn't yet available" );
         }
         else {
             $self->lmLog( "Unable to create new CAS session", 'error' );
+            $self->lmLog( $casSession->error,                 'error' );
         }
         return undef;
     }
@@ -228,7 +229,10 @@ sub deleteCasSession {
     my $session_id = $session->id;
 
     # Delete session
-    $session->remove;
+    unless ( $session->remove ) {
+        $self->lmLog( $session->error, 'error' );
+        return 0;
+    }
 
     $self->lmLog( "CAS session $session_id deleted", 'debug' );
 

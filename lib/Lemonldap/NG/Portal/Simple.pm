@@ -71,7 +71,7 @@ use Digest::MD5;
 #inherits Apache::Session
 #link Lemonldap::NG::Common::Apache::Session::SOAP protected globalStorage
 
-our $VERSION = '1.4.0';
+our $VERSION = '1.4.1';
 
 use base qw(Lemonldap::NG::Common::CGI Exporter);
 our @ISA;
@@ -850,7 +850,10 @@ sub getApacheSession {
         }
     );
 
-    return unless $apacheSession->data;
+    if ( $apacheSession->error ) {
+        $self->lmLog( $apacheSession->error, 'debug' );
+        return;
+    }
 
     unless ($noInfo) {
         $self->setApacheUser( $apacheSession->data->{ $self->{whatToTrace} } )
@@ -879,6 +882,10 @@ sub getPersistentSession {
             kind                 => "Persistent",
         }
     );
+
+    if ( $persistentSession->error ) {
+        $self->lmLog( $persistentSession->error, 'debug' );
+    }
 
     return $persistentSession;
 }
@@ -916,6 +923,14 @@ sub updatePersistentSession {
       $self->getPersistentSession( $self->_md5hash($uid) );
 
     $persistentSession->update($infos);
+
+    if ( $persistentSession->error ) {
+        $self->lmLog(
+            "Cannot update persistent session " . $self->_md5hash($uid),
+            'error' );
+        $self->lmLog( $persistentSession->error, 'error' );
+    }
+
 }
 
 ## @method void updateSession(hashRef infos, string id)
@@ -960,6 +975,11 @@ sub updateSession {
 
             # Store/update session values
             $apacheSession->update($infos);
+
+            if ( $apacheSession->error ) {
+                $self->lmLog( "Cannot update session $id", 'error' );
+                $self->lmLog( $apacheSession->error,       'error' );
+            }
         }
     }
 }
@@ -1197,6 +1217,11 @@ sub _deleteSession {
         if ( my $id2 = $session->data->{_httpSession} ) {
             if ( my $session2 = $self->getApacheSession( $id2, 1 ) ) {
                 $session2->remove;
+                if ( $session2->error ) {
+                    $self->lmLog( "Unable to remove linked session $id2",
+                        'debug' );
+                    $self->lmLog( $session2->error, 'debug' );
+                }
             }
         }
 
@@ -1232,7 +1257,7 @@ sub _deleteSession {
     $self->_sub( 'userNotice', "User $user has been disconnected" )
       if $user;
 
-    return 1;
+    return $session->error ? 0 : 1;
 }
 
 ##@method private void _dump(void* variable)
@@ -1571,6 +1596,7 @@ sub controlExistingSession {
                 # Delete session
                 unless ( $self->_deleteSession($apacheSession) ) {
                     $self->lmLog( "Unable to delete session $id", 'error' );
+                    $self->lmLog( $apacheSession->error,          'error' );
                     return PE_ERROR;
                 }
                 else {

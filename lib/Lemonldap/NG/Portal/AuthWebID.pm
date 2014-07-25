@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::AuthSSL;
 use Lemonldap::NG::Common::Regexp;
 use Regexp::Assemble;
 
-our $VERSION = '1.3.0';
+our $VERSION = '1.4.1';
 our @ISA     = qw(Lemonldap::NG::Portal::AuthSSL);
 our $initDone;
 our $reWebIDWhitelist;
@@ -100,7 +100,7 @@ sub extractFormInfo {
 # @return Lemonldap::NG::Portal constant
 sub authenticate {
     my $self = shift;
-    return $self->{_webIdAuthDone} ? PE_OK : $self->{extractFormInfo};
+    return $self->{_webIdAuthDone} ? PE_OK : PE_ERROR;
 }
 
 1;

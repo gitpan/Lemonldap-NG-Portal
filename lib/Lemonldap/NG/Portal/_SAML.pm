@@ -22,7 +22,7 @@ use URI;                   # Get metadata URL path
 #inherits Lemonldap::NG::Common::Conf::SAML::Metadata protected service_metadata
 
 our @ISA     = (qw(Lemonldap::NG::Portal::_Browser));
-our $VERSION = '1.4.0';
+our $VERSION = '1.4.1';
 our $samlCache;
 our $initGlibDone;
 
@@ -1056,17 +1056,19 @@ sub buildArtifactMsg {
     return $self->checkLassoError($@);
 }
 
-## @method boolean buildAssertion(Lasso::Login login, string authn_context)
+## @method boolean buildAssertion(Lasso::Login login, string authn_context, int notOnOrAfterTimeout)
 # Build assertion
 # @param login Lasso::Login object
 # @param authn_context SAML2 authentication context
+# @param notOnOrAfterTimeout Timeout to apply to notOnOrAfter
 # @return boolean result
 sub buildAssertion {
-    my ( $self, $login, $authn_context ) = splice @_;
+    my ( $self, $login, $authn_context, $notOnOrAfterTimeout ) = splice @_;
+    $notOnOrAfterTimeout ||= $self->{timeout};
 
     # Dates
     my $time                    = $self->{sessionInfo}->{_utime} || time();
-    my $timeout                 = $time + $self->{timeout};
+    my $timeout                 = $time + $notOnOrAfterTimeout;
     my $authenticationInstant   = $self->timestamp2samldate($time);
     my $reauthenticateOnOrAfter = $self->timestamp2samldate($timeout);
     my $notBefore               = $authenticationInstant;
@@ -1236,6 +1238,7 @@ sub extractRelayState {
     }
     else {
         $self->lmLog( "Unable to delete relaystate $relaystate", 'error' );
+        $self->lmLog( $samlSessionInfo->error,                   'error' );
     }
 
     return 1;
@@ -1664,6 +1667,7 @@ sub replayProtection {
 "Unable to delete assertion session $session (Message ID $samlID)",
                     'error'
                 );
+                $self->lmLog( $samlSessionInfo->error, 'error' );
                 return 0;
             }
         }
@@ -1798,6 +1802,7 @@ sub loadArtifact {
         else {
             $self->lmLog( "Unable to delete artifact session $session (ID $id)",
                 'error' );
+            $self->lmLog( $samlSessionInfo->error, 'error' );
             return;
         }
     }
@@ -2829,12 +2834,13 @@ sub getSamlSession {
         }
     );
 
-    unless ( $samlSession->data ) {
+    if ( $samlSession->error ) {
         if ($id) {
             $self->_sub( 'userInfo', "SAML session $id isn't yet available" );
         }
         else {
             $self->lmLog( "Unable to create new SAML session", 'error' );
+            $self->lmLog( $samlSession->error,                 'error' );
         }
         return undef;
     }
@@ -2974,6 +2980,7 @@ sub deleteSAMLSecondarySessions {
             else {
                 $self->lmLog( "Unable to delete SAML session $saml_session",
                     'error' );
+                $self->lmLog( $samlSessionInfo->error, "error" );
                 $result = 0;
             }
         }

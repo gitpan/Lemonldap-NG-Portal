@@ -9,7 +9,7 @@ use strict;
 use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::AuthNull;
 
-our $VERSION = '1.3.0';
+our $VERSION = '1.4.1';
 our @ISA     = qw(Lemonldap::NG::Portal::AuthNull);
 
 ## @apmethod int authInit()
@@ -63,7 +63,7 @@ sub authenticate {
     my $self = shift;
     return ( $self->{user} and $ENV{ $self->{SSLVar} } )
       ? PE_OK
-      : $self->extractFormInfo();
+      : PE_ERROR;
 }
 
 ## @method string getDisplayType

@@ -15,7 +15,7 @@ use Unicode::String qw(utf8);
 use strict;
 
 our @EXPORT   = qw(ldap);
-our $VERSION  = '1.4.0';
+our $VERSION  = '1.4.1';
 our $ppLoaded = 0;
 
 BEGIN {
@@ -344,6 +344,10 @@ sub userModifyPassword {
         return PE_LDAPERROR unless ( $mesg->code == 0 );
         $self->{portal}
           ->_sub( 'userNotice', "Password changed $self->{portal}->{user}" );
+
+        # Rebind as manager for next LDAP operations if we were bound as user
+        $self->bind() if $asUser;
+
         return PE_PASSWORD_OK;
     }
     else {
@@ -419,6 +423,10 @@ sub userModifyPassword {
         if ( $mesg->code == 0 ) {
             $self->{portal}->_sub( 'userNotice',
                 "Password changed $self->{portal}->{user}" );
+
+           # Rebind as manager for next LDAP operations if we were bound as user
+            $self->bind() if $asUser;
+
             return PE_PASSWORD_OK;
         }
 

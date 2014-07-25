@@ -10,7 +10,7 @@ use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Common::Session;
 use MIME::Base64;
 
-our $VERSION = '1.4.0';
+our $VERSION = '1.4.1';
 our $initDone;
 
 BEGIN {
@@ -68,8 +68,9 @@ sub checkRemoteId {
             }
         );
 
-        unless ( $remoteSession->data ) {
+        if ( $remoteSession->error ) {
             $self->lmLog( "Remote session error", 'error' );
+            $self->lmLog( $remoteSession->error,  'error' );
             return PE_ERROR;
         }
 
