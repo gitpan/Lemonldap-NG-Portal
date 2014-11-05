@@ -20,7 +20,7 @@
     <h3><lang en="Forgot your password?" fr="Mot de passe oubli&eacute; ?"/></h3>
 
     <div class="form-group input-group">
-      <span class="input-group-addon glyphicon glyphicon-envelope"> </span>
+      <span class="input-group-addon"><i class="glyphicon glyphicon-envelope"></i> </span>
       <input name="mail" type="text" value="<TMPL_VAR NAME="MAIL">" class="form-control" placeholder="<lang en="Mail" fr="Adresse mail"/>" required />
     </div>
 
@@ -29,7 +29,7 @@
       <img src="<TMPL_VAR NAME=CAPTCHA_IMG>" class="img-thumbnail" />
     </div>
     <div class="form-group input-group">
-      <span class="input-group-addon glyphicon glyphicon-eye-open"> </span>
+      <span class="input-group-addon"><i class="glyphicon glyphicon-eye-open"></i> </span>
       <input type="text" name="captcha_user_code" size="<TMPL_VAR NAME=CAPTCHA_SIZE>" class="form-control" placeholder="Captcha" required />
     </div>
     <input type="hidden" name="captcha_code" value="<TMPL_VAR NAME=CAPTCHA_CODE>" />
@@ -98,12 +98,12 @@
         <h3><lang en="Change your password" fr="Changez votre mot de passe" /></h3>
 
         <div class="form-group input-group">
-          <span class="input-group-addon glyphicon glyphicon-lock"> </span>
+          <span class="input-group-addon"><i class="glyphicon glyphicon-lock"></i> </span>
           <input name="newpassword" type="password" class="form-control" placeholder="<lang en="New password" fr="Nouveau mot de passe" />" />
         </div>
 
         <div class="form-group input-group">
-          <span class="input-group-addon glyphicon glyphicon-lock"> </span>
+          <span class="input-group-addon"><i class="glyphicon glyphicon-lock"></i> </span>
           <input name="confirmpassword" type="password" class="form-control" placeholder="<lang en="Confirm password" fr="Confirmez le mot de passe" />" />
         </div>
 

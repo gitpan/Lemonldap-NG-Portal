@@ -11,7 +11,7 @@ use MIME::Lite;
 use MIME::Base64;
 use Encode;
 
-our $VERSION = '1.4.0';
+our $VERSION = '1.4.2';
 
 ## @method string gen_password(string regexp)
 # Generate a complex password based on a regular expression
@@ -144,7 +144,7 @@ sub getMailSession {
     # Browse found sessions to check if it's a mail session
     foreach my $id ( keys %$sessions ) {
         my $mailSession = $self->getApacheSession( $id, 1 );
-        next unless ( $mailSession->data );
+        next unless ($mailSession);
         return $id if ( $mailSession->data->{_type} =~ /^mail$/ );
     }
 
@@ -169,7 +169,7 @@ sub getRegisterSession {
     # Browse found sessions to check if it's a register session
     foreach my $id ( keys %$sessions ) {
         my $registerSession = $self->getApacheSession( $id, 1 );
-        next unless ( $registerSession->data );
+        next unless ($registerSession);
         return $id if ( $registerSession->data->{_type} =~ /^register$/ );
     }
 

@@ -71,7 +71,7 @@ use Digest::MD5;
 #inherits Apache::Session
 #link Lemonldap::NG::Common::Apache::Session::SOAP protected globalStorage
 
-our $VERSION = '1.4.1';
+our $VERSION = '1.4.2';
 
 use base qw(Lemonldap::NG::Common::CGI Exporter);
 our @ISA;
@@ -2330,7 +2330,7 @@ sub store {
 
     # Main session
     my $session = $self->getApacheSession( $self->{id} );
-    return PE_APACHESESSIONERROR unless ( $session->data );
+    return PE_APACHESESSIONERROR unless ($session);
 
     # Compute unsecure cookie value if needed
     if ( $self->{securedCookie} == 3 ) {

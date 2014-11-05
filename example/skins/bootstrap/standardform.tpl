@@ -1,11 +1,11 @@
 <div class="form">
   <div class="form-group input-group">
-    <span class="input-group-addon glyphicon glyphicon-user"> </span>
+    <span class="input-group-addon"><i class="glyphicon glyphicon-user"></i> </span>
     <input name="user" type="text" value="<TMPL_VAR NAME="LOGIN">" class="form-control" placeholder="<lang en="Login" fr="Identifiant"/>" required />
   </div>
 
   <div class="form-group input-group">
-    <span class="input-group-addon glyphicon glyphicon-lock"> </span>
+    <span class="input-group-addon"><i class="glyphicon glyphicon-lock"></i> </span>
     <input name="password" type="password" class="form-control" placeholder="<lang en="Password" fr="Mot de passe"/>" required />
   </div>
 
@@ -14,7 +14,7 @@
     <img src="<TMPL_VAR NAME=CAPTCHA_IMG>" class="img-thumbnail" />
   </div>
   <div class="form-group input-group">
-    <span class="input-group-addon glyphicon glyphicon-eye-open"> </span>
+    <span class="input-group-addon"><i class="glyphicon glyphicon-eye-open"></i> </span>
     <input type="text" name="captcha_user_code" size="<TMPL_VAR NAME=CAPTCHA_SIZE>" class="form-control" placeholder="Captcha" required />
   </div>
   <input type="hidden" name="captcha_code" value="<TMPL_VAR NAME=CAPTCHA_CODE>" />

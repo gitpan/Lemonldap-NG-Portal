@@ -22,7 +22,7 @@ use URI;                   # Get metadata URL path
 #inherits Lemonldap::NG::Common::Conf::SAML::Metadata protected service_metadata
 
 our @ISA     = (qw(Lemonldap::NG::Portal::_Browser));
-our $VERSION = '1.4.1';
+our $VERSION = '1.4.2';
 our $samlCache;
 our $initGlibDone;
 
@@ -1837,7 +1837,7 @@ sub createArtifactResponse {
             'debug' );
 
         my $session = $self->getApacheSession( $session_id, 1 );
-        unless ( $session->data ) {
+        unless ($session) {
             $self->lmLog( "Unable to open session $session_id", 'error' );
             return;
         }

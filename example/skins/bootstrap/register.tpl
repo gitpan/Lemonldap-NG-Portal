@@ -18,17 +18,17 @@
     </TMPL_IF>
 
     <div class="form-group input-group">
-      <span class="input-group-addon glyphicon glyphicon-user"> </span>
+      <span class="input-group-addon"><i class="glyphicon glyphicon-user"></i> </span>
       <input name="firstname" type="text" value="<TMPL_VAR NAME="FIRSTNAME">" class="form-control" placeholder="<lang en="First name" fr="Prénom"/>" required />
     </div>
 
     <div class="form-group input-group">
-      <span class="input-group-addon glyphicon glyphicon-user"> </span>
+      <span class="input-group-addon"><i class="glyphicon glyphicon-user"></i> </span>
       <input name="lastname" type="text" value="<TMPL_VAR NAME="LASTNAME">" class="form-control" placeholder="<lang en="Last name" fr="Nom"/>" required />
     </div>
 
     <div class="form-group input-group">
-      <span class="input-group-addon glyphicon glyphicon-envelope"> </span>
+      <span class="input-group-addon"><i class="glyphicon glyphicon-envelope"></i> </span>
       <input name="mail" type="text" value="<TMPL_VAR NAME="MAIL">" class="form-control" placeholder="<lang en="Mail" fr="Adresse mail"/>" required />
     </div>
 
@@ -37,7 +37,7 @@
       <img src="<TMPL_VAR NAME=CAPTCHA_IMG>" class="img-thumbnail" />
     </div>
     <div class="form-group input-group">
-      <span class="input-group-addon glyphicon glyphicon-eye-open"> </span>
+      <span class="input-group-addon"><i class="glyphicon glyphicon-eye-open"></i> </span>
       <input type="text" name="captcha_user_code" size="<TMPL_VAR NAME=CAPTCHA_SIZE>" class="form-control" placeholder="Captcha" required />
     </div>
     <input type="hidden" name="captcha_code" value="<TMPL_VAR NAME=CAPTCHA_CODE>" />

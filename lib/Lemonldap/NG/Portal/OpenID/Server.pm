@@ -13,12 +13,15 @@ use Lemonldap::NG::Common::Regexp;
 
 use constant DEBUG => 0;
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.4.2';
 
 my $OPENID2_NS        = qq!http://specs.openid.net/auth/2.0!;
 my $OPENID2_ID_SELECT = qq!http://specs.openid.net/auth/2.0/identifier_select!;
 
-*_push_url_arg = *Net::OpenID::Server::_push_url_arg;
+*_push_url_arg =
+  ( $Net::OpenID::Server::VERSION >= 1.09 )
+  ? *OpenID::util::push_url_arg
+  : *Net::OpenID::Server::_push_url_arg;
 
 ## @cmethod Lemonldap::NG::Portal::OpenID::Server new(hash opts)
 # Call Net::OpenID::Server::new() and store extensions
@@ -81,7 +84,7 @@ sub _mode_checkid {
     my ( %extVars, %is_ext_trusted );
     my $is_exts_trusted = 1;
     if ( ref( $self->{_extensions} ) ) {
-        my @list = $self->get_args->();
+        my @list = $self->args->();
         my %extArgs;
         foreach my $arg (@list) {
             next unless ( $arg =~ /^openid\.(\w+)\.([\w\.]+)?/ );

@@ -10,12 +10,13 @@ use Lemonldap::NG::Portal::Simple qw(:all);
 use Lemonldap::NG::Common::Conf;            #link protected lmConf Configuration
 use Lemonldap::NG::Common::Conf::Constants; #inherits
 use Regexp::Assemble;
+use URI::Split qw(uri_split);
 
 *EXPORT_OK   = *Lemonldap::NG::Portal::Simple::EXPORT_OK;
 *EXPORT_TAGS = *Lemonldap::NG::Portal::Simple::EXPORT_TAGS;
 *EXPORT      = *Lemonldap::NG::Portal::Simple::EXPORT;
 
-our $VERSION = '1.3.0';
+our $VERSION = '1.4.2';
 use base qw(Lemonldap::NG::Portal::Simple);
 our $confCached;
 
@@ -97,8 +98,14 @@ sub getConf {
                 }
             }
         }
-        $confCached->{reVHosts} = $re->as_string;
 
+        # Add portal vhost
+        my ( $portal_scheme, $portal_auth ) =
+          uri_split( $confCached->{portal} );
+        $re->add($portal_auth);
+        $self->lmLog( "Portal vhost $portal_auth added in reVHosts", 'debug' );
+
+        $confCached->{reVHosts} = $re->as_string;
     }
 
     %$self = ( %$self, %$confCached, %args, );

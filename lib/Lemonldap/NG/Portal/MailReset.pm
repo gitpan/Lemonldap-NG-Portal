@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::MailReset;
 use strict;
 use warnings;
 
-our $VERSION = '1.4.0';
+our $VERSION = '1.4.2';
 
 use Lemonldap::NG::Portal::Simple qw(:all);
 use base qw(Lemonldap::NG::Portal::SharedConf Exporter);
@@ -117,7 +117,7 @@ sub extractMailInfo {
         # Get the corresponding session
         my $mailSession = $self->getApacheSession( $self->{mail_token} );
 
-        if ( $mailSession->data ) {
+        if ($mailSession) {
             $self->{mail} = $mailSession->data->{user};
             $self->{mailAddress} =
               $mailSession->data->{ $self->{mailSessionKey} };
@@ -385,7 +385,7 @@ sub changePassword {
         # Get the corresponding session
         my $mailSession = $self->getApacheSession( $self->{mail_token} );
 
-        if ( $mailSession->data ) {
+        if ($mailSession) {
 
             $self->lmLog( "Delete mail session " . $self->{mail_token},
                 'debug' );

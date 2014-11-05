@@ -8,7 +8,7 @@ package Lemonldap::NG::Portal::Register;
 use strict;
 use warnings;
 
-our $VERSION = '1.4.0';
+our $VERSION = '1.4.2';
 
 use Lemonldap::NG::Portal::Simple qw(:all);
 use base qw(Lemonldap::NG::Portal::SharedConf Exporter);
@@ -386,7 +386,7 @@ sub registerUser {
         my $registerSession =
           $self->getApacheSession( $self->{register_token} );
 
-        if ( $registerSession->data ) {
+        if ($registerSession) {
 
             $self->lmLog( "Delete register session " . $self->{register_token},
                 'debug' );

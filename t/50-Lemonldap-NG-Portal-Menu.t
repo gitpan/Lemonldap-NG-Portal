@@ -5,7 +5,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 9;
+use Test::More tests => 10;
 BEGIN { use_ok('Lemonldap::NG::Portal::Menu') }
 
 #########################
@@ -35,6 +35,8 @@ my $p = Lemonldap::NG::Portal::Simple->new(
         },
         cfgNum      => 42,
         sessionInfo => { uid => "coudot", },
+        vhostOptions =>
+          { 'test.example.com' => { vhostAliases => 'alias.example.com' }, },
     }
 );
 
@@ -86,6 +88,14 @@ $p->{applicationList} = {
                 display => 'off',
             },
         },
+        testalias => {
+            type    => 'application',
+            options => {
+                uri     => 'http://alias.example.com/ok/login.php',
+                name    => 'Test application',
+                display => 'auto',
+            },
+        },
     },
     empty => {
         type     => 'category',
@@ -107,29 +117,32 @@ $appLoop = $p->appslist();
 # Check empty category
 # Check display off and on
 # Check display auto ok and nok
-my $emptyCat   = 0;
-my $displayOn  = 0;
-my $displayOff = 0;
-my $displayOk  = 0;
-my $displayNok = 0;
+my $emptyCat     = 0;
+my $displayOn    = 0;
+my $displayOff   = 0;
+my $displayOk    = 0;
+my $displayNok   = 0;
+my $displayAlias = 0;
 
 foreach (@$appLoop) {
     $emptyCat++ if $_->{catid} eq "empty";
     if ( $_->{catid} eq "test" ) {
         foreach ( @{ $_->{'applications'} } ) {
-            $displayOn++  if $_->{appid} eq "teston";
-            $displayOff++ if $_->{appid} eq "testoff";
-            $displayOk++  if $_->{appid} eq "testautook";
-            $displayNok++ if $_->{appid} eq "testautonok";
+            $displayOn++    if $_->{appid} eq "teston";
+            $displayOff++   if $_->{appid} eq "testoff";
+            $displayOk++    if $_->{appid} eq "testautook";
+            $displayNok++   if $_->{appid} eq "testautonok";
+            $displayAlias++ if $_->{appid} eq "testalias";
         }
     }
 }
 
-ok( $emptyCat == 0,   'Hide empty category' );
-ok( $displayOn != 0,  'Display on' );
-ok( $displayOff == 0, 'Display off' );
-ok( $displayOk != 0,  'Display auto ok' );
-ok( $displayNok == 0, 'Display auto nok' );
+ok( $emptyCat == 0,     'Hide empty category' );
+ok( $displayOn != 0,    'Display on' );
+ok( $displayOff == 0,   'Display off' );
+ok( $displayOk != 0,    'Display auto ok' );
+ok( $displayNok == 0,   'Display auto nok' );
+ok( $displayAlias != 0, 'Display alias ok' );
 
 # Connect as another user with different rights
 $p->{sessionInfo}->{uid} = "toto";

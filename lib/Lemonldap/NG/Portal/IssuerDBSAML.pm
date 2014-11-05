@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_SAML;
 our @ISA = qw(Lemonldap::NG::Portal::_SAML);
 
-our $VERSION = '1.4.1';
+our $VERSION = '1.4.2';
 
 ## @method void issuerDBInit()
 # Load and check SAML configuration
@@ -367,7 +367,7 @@ sub issuerForUnAuthUser {
             # Open local session
             my $local_session = $self->getApacheSession( $local_session_id, 1 );
 
-            unless ( $local_session->data ) {
+            unless ($local_session) {
                 $self->lmLog( "No local session found", 'error' );
                 return $self->sendSLOErrorResponse( $logout, $method );
             }
@@ -910,7 +910,7 @@ sub issuerForUnAuthUser {
 
             $sessionInfo = $self->getApacheSession( $real_session, 1 );
 
-            unless ( $sessionInfo->data ) {
+            unless ($sessionInfo) {
                 $self->lmLog( "Cannot get session $real_session", 'error' );
                 $self->returnSOAPMessage();
             }

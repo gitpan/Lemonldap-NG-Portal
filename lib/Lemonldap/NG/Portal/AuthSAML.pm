@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_SAML;    #inherits
 use Lemonldap::NG::Common::Conf::SAML::Metadata;
 
-our $VERSION = '1.4.0';
+our $VERSION = '1.4.2';
 our @ISA     = qw(Lemonldap::NG::Portal::_SAML);
 
 ## @apmethod int authInit()
@@ -579,7 +579,7 @@ sub extractFormInfo {
 
                   # Get Lasso::Session dump
                   # This value is erased if a next session match the SLO request
-                        if (   $ssoSession->data
+                        if (   $ssoSession
                             && $ssoSession->data->{_lassoSessionDump} )
                         {
                             $self->lmLog(

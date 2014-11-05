@@ -10,7 +10,7 @@ use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_CAS;
 use base qw(Lemonldap::NG::Portal::_CAS Lemonldap::NG::Portal::_LibAccess);
 
-our $VERSION = '1.4.0';
+our $VERSION = '1.4.2';
 
 ## @method void issuerDBInit()
 # Nothing to do
@@ -129,7 +129,7 @@ sub issuerForUnAuthUser {
 
         my $casServiceSession = $self->getCasSession($ticket);
 
-        unless ( $casServiceSession->data ) {
+        unless ($casServiceSession) {
             $self->lmLog( "Service ticket session $ticket not found", 'error' );
             $self->returnCasValidateError();
         }
@@ -168,7 +168,7 @@ sub issuerForUnAuthUser {
         my $localSession =
           $self->getApacheSession( $casServiceSession->data->{_cas_id}, 1 );
 
-        unless ( $localSession->data ) {
+        unless ($localSession) {
             $self->lmLog(
                 "Local session "
                   . $casServiceSession->data->{_cas_id}
@@ -246,7 +246,7 @@ sub issuerForUnAuthUser {
 
         my $casServiceSession = $self->getCasSession($ticket);
 
-        unless ( $casServiceSession->data ) {
+        unless ($casServiceSession) {
             $self->lmLog( "$urlType ticket session $ticket not found",
                 'error' );
             $self->returnCasServiceValidateError( 'INVALID_TICKET',
@@ -375,7 +375,7 @@ sub issuerForUnAuthUser {
         my $localSession =
           $self->getApacheSession( $casServiceSession->data->{_cas_id}, 1 );
 
-        unless ( $localSession->data ) {
+        unless ($localSession) {
             $self->lmLog(
                 "Local session "
                   . $casServiceSession->data->{_cas_id}
@@ -432,7 +432,7 @@ sub issuerForUnAuthUser {
 
         my $casProxyGrantingSession = $self->getCasSession($pgt);
 
-        unless ( $casProxyGrantingSession->data ) {
+        unless ($casProxyGrantingSession) {
             $self->lmLog( "Proxy granting ticket session $pgt not found",
                 'error' );
             $self->returnCasProxyError( 'BAD_PGT', 'Ticket not found' );
@@ -446,7 +446,7 @@ sub issuerForUnAuthUser {
 
         my $casProxySession = $self->getCasSession();
 
-        unless ( $casProxySession->data ) {
+        unless ($casProxySession) {
             $self->lmLog( "Unable to create CAS proxy session", 'error' );
             $self->returnCasProxyError( 'INTERNAL_ERROR',
                 'Error in proxy session management' );
@@ -596,7 +596,7 @@ sub issuerForAuthUser {
 
             my $casServiceSession = $self->getCasSession();
 
-            unless ( $casServiceSession->data ) {
+            unless ($casServiceSession) {
                 $self->lmLog( "Unable to create CAS session", 'error' );
                 return PE_ERROR;
             }

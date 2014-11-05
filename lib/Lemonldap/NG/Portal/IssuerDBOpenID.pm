@@ -13,7 +13,7 @@ use Lemonldap::NG::Common::Regexp;
 #inherits Lemonldap::NG::Portal::OpenID::Server
 #link Lemonldap::NG::Portal::OpenID::SREG protected sreg_extension
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.4.2';
 our $initDone;
 
 BEGIN {
@@ -145,14 +145,15 @@ sub restoreOpenIDprm {
 sub openIDServer {
     my $self = shift;
     return $self->{_openidserver} if ( $self->{_openidserver} );
-    $self->{_openidPortal} = $self->{portal} . "/openidserver/";
+    my $path = $self->{issuerDBOpenIDPath};
+    $path =~ s/\^//;
+    $self->{_openidPortal} = $self->{portal} . $path;
     $self->{_openidPortal} =~ s#(?<!:)//#/#g;
 
     my $sub = sub { return $self->param(@_) };
     $self->{_openidserver} = Lemonldap::NG::Portal::OpenID::Server->new(
         server_secret => sub { return $self->{openIdIssuerSecret} },
-        post_args     => $sub,
-        get_args      => $sub,
+        args          => $sub,
         endpoint_url => $self->{_openidPortal},
         setup_url    => $self->{_openidPortal},
         get_user     => sub {
@@ -226,11 +227,14 @@ sub openIDServer {
 sub _openIDResponse {
     my ( $self, $type, $data ) = splice @_;
 
-    # TODO: use autoRedirect instead
+    # Redirect
     if ( $type eq 'redirect' ) {
-        $self->lmLog( 'OpenID redirection', 'debug' );
-        print $self->redirect($data);
+        $self->lmLog( "OpenID redirection to $data", 'debug' );
+        $self->{urldc} = $data;
+        print $self->_sub('autoRedirect');
     }
+
+    # Setup
     elsif ( $type eq 'setup' ) {
         if ( $self->{_openIdTrustRequired} or $self->{_openIdTrustExtMsg} ) {
 

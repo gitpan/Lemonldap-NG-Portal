@@ -11,7 +11,7 @@ use Lemonldap::NG::Portal::_LibAccess;
 require SOAP::Lite;
 use base qw(Lemonldap::NG::Portal::_LibAccess);
 
-our $VERSION = '1.4.0';
+our $VERSION = '1.4.2';
 
 ## @method void startSoapServices()
 # Check the URI requested (PATH_INFO environment variable) and launch the
@@ -139,7 +139,7 @@ sub getAttributes {
     my $session = $self->getApacheSession( $id, 1 );
 
     my @tmp = ();
-    unless ( $session->data ) {
+    unless ($session) {
         $self->_sub( 'userNotice',
             "SOAP attributes request: session $id not found" );
         push @tmp, SOAP::Data->name( error => 1 )->type('int');
@@ -169,7 +169,7 @@ sub setAttributes {
 
     my $session = $self->getApacheSession($id);
 
-    unless ( $session->data ) {
+    unless ($session) {
         $self->lmLog( "Session $id does not exists ($@)", 'warn' );
         return 0;
     }
@@ -213,7 +213,7 @@ sub newSession {
 
     my $session = $self->getApacheSession();
 
-    unless ( $session->data ) {
+    unless ($session) {
         $self->lmLog( "Unable to create session", 'error' );
         return 0;
     }
@@ -242,7 +242,7 @@ sub deleteSession {
 
     my $session = $self->getApacheSession($id);
 
-    return 0 unless ( $session->data );
+    return 0 unless ($session);
 
     $self->lmLog( "SOAP request to delete session $id", 'debug' );
 
@@ -289,7 +289,7 @@ sub isAuthorizedURI {
     # Get user session.
     my $session = $self->getApacheSession( $id, 1 );
 
-    unless ( $session->data ) {
+    unless ($session) {
         $self->lmLog( "Session $id does not exists", 'warn' );
         return 0;
     }
@@ -321,7 +321,7 @@ sub getMenuApplications {
     # Get user session.
     my $session = $self->getApacheSession( $id, 1 );
 
-    unless ( $session->data ) {
+    unless ($session) {
         $self->lmLog( "Session $id does not exists", 'warn' );
         return 0;
     }

@@ -7,7 +7,7 @@ package Lemonldap::NG::Portal::_LibAccess;
 
 use strict;
 
-our $VERSION = '1.2.0';
+our $VERSION = '1.4.2';
 
 # Global variables
 our ( $defaultCondition, $locationCondition, $locationRegexp, $cfgNum ) =
@@ -79,24 +79,29 @@ sub _compileRules {
     my $self = shift;
     foreach my $vhost ( keys %{ $self->{locationRules} } ) {
         my $i = 0;
-        $self->lmLog( "Compiling rules for $vhost", 'debug' );
-        foreach ( keys %{ $self->{locationRules}->{$vhost} } ) {
-            if ( $_ eq 'default' ) {
-                $defaultCondition->{$vhost} =
-                  $self->_conditionSub(
-                    $self->{locationRules}->{$vhost}->{$_} );
+        foreach
+          my $alias ( @{ $self->_getAliases( $vhost, $self->{vhostOptions} ) } )
+        {
+            $self->lmLog( "Compiling rules for $alias", 'debug' );
+            foreach ( keys %{ $self->{locationRules}->{$vhost} } ) {
+                if ( $_ eq 'default' ) {
+                    $defaultCondition->{$alias} =
+                      $self->_conditionSub(
+                        $self->{locationRules}->{$vhost}->{$_} );
+                }
+                else {
+                    $locationCondition->{$alias}->[$i] =
+                      $self->_conditionSub(
+                        $self->{locationRules}->{$vhost}->{$_} );
+                    $locationRegexp->{$alias}->[$i] = qr/$_/;
+                    $i++;
+                }
             }
-            else {
-                $locationCondition->{$vhost}->[$i] =
-                  $self->_conditionSub(
-                    $self->{locationRules}->{$vhost}->{$_} );
-                $locationRegexp->{$vhost}->[$i] = qr/$_/;
-                $i++;
-            }
-        }
 
-        # Default policy
-        $defaultCondition->{$vhost} ||= $self->_conditionSub('accept');
+            # Default policy
+            $defaultCondition->{$alias} ||= $self->_conditionSub('accept');
+
+        }
     }
     $cfgNum = $self->{cfgNum};
     1;
@@ -114,6 +119,25 @@ sub _conditionSub {
       if ( $cond =~ /^(?:deny$|logout)/i );
     my $sub = "sub {my \$self = shift; return ( $cond )}";
     return $self->safe->reval($sub);
+}
+
+## @method arrayref _getAliases(scalar vhost, hashref options)
+# Check aliases of a vhost
+# @param vhost vhost name
+# @param options vhostOptions configuration item
+# @return arrayref of vhost and aliases
+sub _getAliases {
+    my ( $self, $vhost, $options ) = splice @_;
+    my $aliases = [$vhost];
+
+    if ( $options->{$vhost}->{vhostAliases} ) {
+        foreach ( split /\s+/, $options->{$vhost}->{vhostAliases} ) {
+            push @$aliases, $_;
+            $self->lmLog( "$_ is an alias for $vhost", 'debug' );
+        }
+    }
+
+    return $aliases;
 }
 
 1;
