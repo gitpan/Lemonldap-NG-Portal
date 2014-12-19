@@ -10,7 +10,7 @@ use Lemonldap::NG::Portal::Simple;
 use Lemonldap::NG::Portal::_CAS;
 use base qw(Lemonldap::NG::Portal::_CAS Lemonldap::NG::Portal::_LibAccess);
 
-our $VERSION = '1.4.2';
+our $VERSION = '1.4.3';
 
 ## @method void issuerDBInit()
 # Nothing to do
@@ -143,6 +143,7 @@ sub issuerForUnAuthUser {
                   . $casServiceSession->data->{service},
                 'error'
             );
+            $self->deleteCasSession($casServiceSession);
             $self->returnCasValidateError();
         }
 
@@ -160,6 +161,7 @@ sub issuerForUnAuthUser {
 "Authentication renew requested, but not done in former authentication process",
                     'error'
                 );
+                $self->deleteCasSession($casServiceSession);
                 $self->returnCasValidateError();
             }
         }
@@ -175,6 +177,7 @@ sub issuerForUnAuthUser {
                   . " notfound",
                 'error'
             );
+            $self->deleteCasSession($casServiceSession);
             $self->returnCasValidateError();
         }
 
@@ -185,6 +188,7 @@ sub issuerForUnAuthUser {
         $self->lmLog( "Get username $username", 'debug' );
 
         # Return success message
+        $self->deleteCasSession($casServiceSession);
         $self->returnCasValidateSuccess($username);
 
         # We should not be there
@@ -263,9 +267,7 @@ sub issuerForUnAuthUser {
                 'error'
             );
 
-            # CAS protocol: invalidate ticket if service is invalid
             $self->deleteCasSession($casServiceSession);
-
             $self->returnCasServiceValidateError( 'INVALID_SERVICE',
                 'Submitted service does not match initial service' );
         }
@@ -284,6 +286,7 @@ sub issuerForUnAuthUser {
 "Authentication renew requested, but not done in former authentication process",
                     'error'
                 );
+                $self->deleteCasSession($casServiceSession);
                 $self->returnCasValidateError();
             }
 
@@ -382,6 +385,7 @@ sub issuerForUnAuthUser {
                   . " notfound",
                 'error'
             );
+            $self->deleteCasSession($casServiceSession);
             $self->returnCasServiceValidateError( 'INTERNAL_ERROR',
                 'No session associated to ticket' );
         }
@@ -393,6 +397,7 @@ sub issuerForUnAuthUser {
         $self->lmLog( "Get username $username", 'debug' );
 
         # Return success message
+        $self->deleteCasSession($casServiceSession);
         $self->returnCasServiceValidateSuccess( $username,
             $casProxyGrantingTicketIOU, $proxies );
 
